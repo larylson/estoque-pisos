@@ -1,0 +1,2498 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <meta name="theme-color" content="#1a2e1a" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="Estoque Pisos" />
+  <meta name="description" content="Gerenciador de estoque de pisos e revestimentos" />
+  <title>🏗️ Estoque de Pisos</title>
+
+  <!-- Ícone SVG embutido para PWA -->
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='20' fill='%231a2e1a'/><text y='68' x='50' text-anchor='middle' font-size='55'>🏗️</text></svg>" />
+  <link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='20' fill='%231a2e1a'/><text y='68' x='50' text-anchor='middle' font-size='55'>🏗️</text></svg>" />
+
+  <!-- Manifest PWA embutido -->
+  <link rel="manifest" href="data:application/manifest+json,{
+    &quot;name&quot;: &quot;Estoque de Pisos&quot;,
+    &quot;short_name&quot;: &quot;Estoque&quot;,
+    &quot;description&quot;: &quot;Gerenciador de estoque de pisos e revestimentos&quot;,
+    &quot;start_url&quot;: &quot;.&quot;,
+    &quot;display&quot;: &quot;standalone&quot;,
+    &quot;background_color&quot;: &quot;%23f5f2ec&quot;,
+    &quot;theme_color&quot;: &quot;%231a2e1a&quot;,
+    &quot;orientation&quot;: &quot;portrait&quot;,
+    &quot;icons&quot;: [{
+      &quot;src&quot;: &quot;data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='20' fill='%231a2e1a'/><text y='68' x='50' text-anchor='middle' font-size='55'>🏗️</text></svg>&quot;,
+      &quot;sizes&quot;: &quot;any&quot;,
+      &quot;type&quot;: &quot;image/svg+xml&quot;,
+      &quot;purpose&quot;: &quot;any maskable&quot;
+    }]
+  }" />
+  <link rel="apple-touch-icon" href="icon-192.png" />
+  <title>Estoque de Pisos</title>
+
+<!--
+PASSOS PARA RODAR NO GITHUB PAGES:
+
+1. Criar conta no GitHub
+2. Criar repositório
+3. Enviar este arquivo como index.html
+4. Ativar GitHub Pages
+5. Criar projeto no Firebase
+6. Substituir firebaseConfig pelos dados reais
+
+-->
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+
+    :root {
+      --verde-escuro: #1a2e1a;
+      --verde-medio: #2d4f2d;
+      --verde-claro: #3d6b3d;
+      --verde-acento: #5a9e5a;
+      --verde-suave: #c8e6c8;
+      --bege: #f5f0e8;
+      --bege-escuro: #e8e0d0;
+      --texto: #1a1a1a;
+      --texto-suave: #555;
+      --branco: #ffffff;
+      --vermelho: #c0392b;
+      --laranja: #e67e22;
+      --radius: 12px;
+      --sombra: 0 2px 12px rgba(0,0,0,0.12);
+    }
+
+    body {
+      font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+      background: var(--bege);
+      color: var(--texto);
+      min-height: 100vh;
+      max-width: 480px;
+      margin: 0 auto;
+    }
+
+    /* HEADER */
+    .header {
+      background: var(--verde-escuro);
+      color: var(--branco);
+      padding: 16px 20px 12px;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+    }
+    .header-top {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .header h1 {
+      font-size: 18px;
+      font-weight: 600;
+      letter-spacing: 0.3px;
+    }
+    .header p {
+      font-size: 11px;
+      opacity: 0.7;
+      margin-top: 2px;
+    }
+    .header-icon {
+      font-size: 28px;
+    }
+
+    /* NAV TABS */
+    .tabs {
+      display: flex;
+      background: var(--verde-medio);
+    }
+    .tab {
+      flex: 1;
+      padding: 10px 8px;
+      text-align: center;
+      color: rgba(255,255,255,0.6);
+      font-size: 12px;
+      font-weight: 500;
+      cursor: pointer;
+      border-bottom: 3px solid transparent;
+      transition: all 0.2s;
+      user-select: none;
+    }
+    .tab.ativo {
+      color: var(--branco);
+      border-bottom-color: var(--verde-suave);
+    }
+    .tab-icon { font-size: 18px; display: block; margin-bottom: 2px; }
+
+    /* CONTEÚDO */
+    .pagina { display: none; padding: 16px; }
+    .pagina.ativa { display: block; }
+
+    /* FORMULÁRIO */
+    .card {
+      background: var(--branco);
+      border-radius: var(--radius);
+      padding: 20px;
+      box-shadow: var(--sombra);
+      margin-bottom: 16px;
+    }
+    .card-titulo {
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--verde-escuro);
+      margin-bottom: 16px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .card-titulo::before {
+      content: '';
+      display: inline-block;
+      width: 4px;
+      height: 16px;
+      background: var(--verde-acento);
+      border-radius: 2px;
+    }
+
+    .campo-grupo {
+      margin-bottom: 14px;
+    }
+    label {
+      display: block;
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--texto-suave);
+      margin-bottom: 5px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    input, select {
+      width: 100%;
+      padding: 12px 14px;
+      border: 1.5px solid #ddd;
+      border-radius: 8px;
+      font-size: 15px;
+      color: var(--texto);
+      background: #fafafa;
+      transition: border-color 0.2s, background 0.2s;
+      -webkit-appearance: none;
+      appearance: none;
+    }
+    input:focus, select:focus {
+      outline: none;
+      border-color: var(--verde-acento);
+      background: var(--branco);
+    }
+    input[type=number] { -moz-appearance: textfield; }
+    input[type=number]::-webkit-inner-spin-button,
+    input[type=number]::-webkit-outer-spin-button { -webkit-appearance: none; }
+
+    .linha-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    .linha-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; }
+    .linha-4 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+
+    .btn {
+      width: 100%;
+      padding: 14px;
+      border: none;
+      border-radius: var(--radius);
+      font-size: 15px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: opacity 0.2s, transform 0.1s;
+      letter-spacing: 0.3px;
+    }
+    .btn:active { transform: scale(0.98); opacity: 0.85; }
+    .btn-salvar {
+      background: var(--verde-escuro);
+      color: var(--branco);
+    }
+    .btn-limpar {
+      background: var(--bege-escuro);
+      color: var(--texto-suave);
+      margin-top: 8px;
+    }
+    .btn-perigoso {
+      background: #fde8e8;
+      color: var(--vermelho);
+      font-size: 13px;
+      padding: 10px;
+    }
+
+    /* FEEDBACK */
+    .toast {
+      position: fixed;
+      bottom: 80px;
+      left: 50%;
+      transform: translateX(-50%) translateY(20px);
+      background: var(--verde-escuro);
+      color: var(--branco);
+      padding: 12px 24px;
+      border-radius: 50px;
+      font-size: 14px;
+      font-weight: 500;
+      opacity: 0;
+      pointer-events: none;
+      transition: all 0.3s;
+      white-space: nowrap;
+      z-index: 999;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+    }
+    .toast.visivel {
+      opacity: 1;
+      transform: translateX(-50%) translateY(0);
+    }
+
+    /* ESTOQUE - LISTA */
+    .filtro-barra {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 14px;
+    }
+    .filtro-barra input {
+      flex: 1;
+      padding: 10px 14px;
+      font-size: 14px;
+    }
+    .filtro-barra select {
+      width: auto;
+      min-width: 120px;
+      padding: 10px 12px;
+      font-size: 13px;
+    }
+
+    .lista-vazia {
+      text-align: center;
+      padding: 48px 20px;
+      color: var(--texto-suave);
+    }
+    .lista-vazia .emoji { font-size: 48px; margin-bottom: 12px; }
+    .lista-vazia p { font-size: 14px; line-height: 1.6; }
+
+    .item-piso {
+      background: var(--branco);
+      border-radius: var(--radius);
+      padding: 14px 16px;
+      margin-bottom: 10px;
+      box-shadow: 0 1px 6px rgba(0,0,0,0.08);
+      border-left: 4px solid var(--verde-acento);
+      cursor: pointer;
+      transition: box-shadow 0.2s;
+    }
+    .item-piso:active { box-shadow: 0 0 0 2px var(--verde-acento); }
+    .item-nome {
+      font-size: 15px;
+      font-weight: 600;
+      color: var(--verde-escuro);
+      margin-bottom: 4px;
+    }
+    .item-lote {
+      font-size: 12px;
+      color: var(--texto-suave);
+      margin-bottom: 8px;
+    }
+    .item-tags {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+    }
+    .tag {
+      background: var(--verde-suave);
+      color: var(--verde-escuro);
+      font-size: 11px;
+      font-weight: 600;
+      padding: 3px 8px;
+      border-radius: 20px;
+    }
+    .tag.laranja { background: #fdebd0; color: #7d4e0f; }
+    .tag.azul { background: #d6eaf8; color: #1a5276; }
+    .tag.roxo { background: #e8daef; color: #4a235a; }
+    .tag.verde { background: #d5f5dd; color: #1a6b32; font-weight: 700; }
+
+    /* DETALHE */
+    .modal-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.5);
+      z-index: 200;
+      display: flex;
+      align-items: flex-end;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.25s;
+    }
+    .modal-overlay.aberto {
+      opacity: 1;
+      pointer-events: all;
+    }
+    .modal {
+      background: var(--branco);
+      border-radius: 20px 20px 0 0;
+      width: 100%;
+      max-width: 480px;
+      margin: 0 auto;
+      transform: translateY(40px);
+      transition: transform 0.3s;
+      max-height: 92dvh;
+      display: flex;
+      flex-direction: column;
+    }
+    .modal-overlay.aberto .modal {
+      transform: translateY(0);
+    }
+    .modal-handle {
+      width: 40px;
+      height: 4px;
+      background: #ddd;
+      border-radius: 2px;
+      margin: 16px auto 0;
+      flex-shrink: 0;
+    }
+    #modal-body {
+      padding: 12px 20px 32px;
+      overflow-y: auto;
+      -webkit-overflow-scrolling: touch;
+      flex: 1;
+    }
+    .modal-nome {
+      font-size: 20px;
+      font-weight: 700;
+      color: var(--verde-escuro);
+      margin-bottom: 4px;
+    }
+    .modal-lote {
+      font-size: 13px;
+      color: var(--texto-suave);
+      margin-bottom: 20px;
+    }
+    .modal-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 10px;
+      margin-bottom: 20px;
+    }
+    .modal-stat {
+      background: var(--bege);
+      border-radius: 8px;
+      padding: 12px 8px;
+      text-align: center;
+    }
+    .modal-stat-valor {
+      font-size: 22px;
+      font-weight: 700;
+      color: var(--verde-escuro);
+    }
+    .modal-stat-label {
+      font-size: 10px;
+      text-transform: uppercase;
+      color: var(--texto-suave);
+      font-weight: 600;
+      margin-top: 2px;
+    }
+    .modal-info-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+      margin-bottom: 20px;
+    }
+    .modal-info-item {
+      background: var(--bege);
+      border-radius: 8px;
+      padding: 10px 12px;
+    }
+    .modal-info-label {
+      font-size: 10px;
+      text-transform: uppercase;
+      color: var(--texto-suave);
+      font-weight: 600;
+    }
+    .modal-info-valor {
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--texto);
+      margin-top: 2px;
+    }
+    .modal-acoes {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+    }
+
+    /* RELATÓRIO */
+    .resumo-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+      margin-bottom: 16px;
+    }
+    .resumo-card {
+      background: var(--branco);
+      border-radius: var(--radius);
+      padding: 16px;
+      box-shadow: var(--sombra);
+      text-align: center;
+    }
+    .resumo-valor {
+      font-size: 28px;
+      font-weight: 700;
+      color: var(--verde-escuro);
+    }
+    .resumo-label {
+      font-size: 11px;
+      color: var(--texto-suave);
+      text-transform: uppercase;
+      font-weight: 600;
+      margin-top: 4px;
+    }
+
+    .tabela-relatorio {
+      background: var(--branco);
+      border-radius: var(--radius);
+      overflow: hidden;
+      box-shadow: var(--sombra);
+    }
+    .tabela-relatorio table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 13px;
+    }
+    .tabela-relatorio th {
+      background: var(--verde-escuro);
+      color: var(--branco);
+      padding: 10px 12px;
+      text-align: left;
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    .tabela-relatorio td {
+      padding: 10px 12px;
+      border-bottom: 1px solid #f0f0f0;
+      vertical-align: middle;
+    }
+    .tabela-relatorio tr:last-child td { border-bottom: none; }
+    .tabela-relatorio tr:nth-child(even) td { background: #fafafa; }
+
+    .exportar-btn {
+      background: var(--verde-acento);
+      color: var(--branco);
+      margin-top: 12px;
+    }
+
+    /* EDIÇÃO MODAL */
+    .btn-editar {
+      background: var(--bege);
+      color: var(--verde-escuro);
+      border: 1.5px solid var(--verde-suave);
+    }
+    .btn-excluir {
+      background: #fde8e8;
+      color: var(--vermelho);
+      border: none;
+    }
+
+    /* NÃO CONFERIDO */
+    .item-piso.nao-conferido {
+      border-left-color: #e67e22;
+      background: #fffaf4;
+    }
+    .item-piso.nao-conferido .item-nome {
+      color: #7d4e0f;
+    }
+    .tag.alerta {
+      background: #fdebd0;
+      color: #7d4e0f;
+      font-weight: 700;
+      animation: pisca 1.8s ease-in-out infinite;
+    }
+    @keyframes pisca {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.5; }
+    }
+    .btn-conferir {
+      background: #fdebd0;
+      color: #7d4e0f;
+      border: 1.5px solid #e67e22;
+    }
+    .btn-conferido-ok {
+      background: #e8f5e9;
+      color: #1a5e20;
+      border: 1.5px solid #5a9e5a;
+    }
+    .banner-nao-conferido {
+      background: #fff3e0;
+      border: 1.5px solid #e67e22;
+      border-radius: 10px;
+      padding: 10px 14px;
+      font-size: 13px;
+      color: #7d4e0f;
+      font-weight: 600;
+      margin-bottom: 14px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    /* NÃO ADICIONADO AO SISTEMA */
+    .item-piso.nao-sistema {
+      border-left-color: #8e44ad;
+      background: #fdf6ff;
+    }
+    .item-piso.nao-sistema .item-nome {
+      color: #5b2c6f;
+    }
+    .tag.roxo-alerta {
+      background: #e8daef;
+      color: #5b2c6f;
+      font-weight: 700;
+      animation: pisca 1.8s ease-in-out infinite;
+    }
+    .btn-sistema {
+      background: #e8daef;
+      color: #5b2c6f;
+      border: 1.5px solid #8e44ad;
+    }
+    .btn-sistema-ok {
+      background: #e8f5e9;
+      color: #1a5e20;
+      border: 1.5px solid #5a9e5a;
+    }
+    .banner-nao-sistema {
+      background: #f5eef8;
+      border: 1.5px solid #8e44ad;
+      border-radius: 10px;
+      padding: 10px 14px;
+      font-size: 13px;
+      color: #5b2c6f;
+      font-weight: 600;
+      margin-bottom: 10px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    /* NÃO LOCALIZADO */
+    .item-piso.nao-localizado {
+      border-left-color: #e67e22;
+      background: #fff8f0;
+    }
+    .item-piso.nao-localizado .item-nome {
+      color: #935116;
+    }
+    .tag.laranja-alerta {
+      background: #fde8d0;
+      color: #935116;
+      font-weight: 700;
+      animation: pisca 1.8s ease-in-out infinite;
+    }
+    .btn-localizado {
+      background: #fde8d0;
+      color: #935116;
+      border: 1.5px solid #e67e22;
+    }
+    .btn-localizado-ok {
+      background: #e8f5e9;
+      color: #1a5e20;
+      border: 1.5px solid #5a9e5a;
+    }
+    .banner-nao-localizado {
+      background: #fff3e0;
+      border: 1.5px solid #e67e22;
+      border-radius: 10px;
+      padding: 10px 14px;
+      font-size: 13px;
+      color: #7d4e0f;
+      font-weight: 600;
+      margin-bottom: 10px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    /* CÓDIGO DUPLICADO */
+    .item-piso.codigo-duplicado {
+      border-left-color: #c0392b;
+      background: #fff5f5;
+    }
+    .item-piso.codigo-duplicado .item-nome {
+      color: #c0392b;
+    }
+    .tag.vermelho {
+      background: #fde8e8;
+      color: #c0392b;
+      font-weight: 700;
+      animation: pisca 1.8s ease-in-out infinite;
+    }
+    .banner-codigo-duplicado {
+      background: #fde8e8;
+      border: 1.5px solid #c0392b;
+      border-radius: 10px;
+      padding: 10px 14px;
+      font-size: 13px;
+      color: #922b21;
+      font-weight: 600;
+      margin-bottom: 10px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .modal-metragem-destaque {
+      background: #d5f5dd;
+      color: #1a6b32;
+      border-radius: 10px;
+      padding: 10px 14px;
+      font-size: 14px;
+      font-weight: 600;
+      text-align: center;
+      margin-bottom: 14px;
+    }
+
+    /* FOTO DO PISO */
+    .foto-card {
+      background: var(--bege);
+      border: 2px dashed #c5b99a;
+      border-radius: var(--radius);
+      padding: 16px;
+      text-align: center;
+      cursor: pointer;
+      transition: border-color 0.2s;
+    }
+    .foto-card:active { border-color: var(--verde-acento); }
+    .foto-preview {
+      width: 100%;
+      max-height: 220px;
+      object-fit: cover;
+      border-radius: 10px;
+      margin-bottom: 10px;
+      display: block;
+    }
+    .foto-placeholder {
+      color: var(--texto-suave);
+      font-size: 13px;
+      padding: 20px 0;
+    }
+    .foto-placeholder .emoji { font-size: 36px; margin-bottom: 6px; }
+    .foto-acoes { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; }
+    .btn-foto {
+      background: var(--verde-escuro);
+      color: #fff;
+      font-size: 13px;
+      padding: 8px 16px;
+      border: none;
+      border-radius: 8px;
+      font-weight: 600;
+      cursor: pointer;
+    }
+    .btn-foto-remover {
+      background: #fde8e8;
+      color: #c0392b;
+      font-size: 13px;
+      padding: 8px 16px;
+      border: none;
+      border-radius: 8px;
+      font-weight: 600;
+      cursor: pointer;
+    }
+    .modal-foto {
+      width: 100%;
+      max-height: 260px;
+      object-fit: cover;
+      border-radius: 12px;
+      margin-bottom: 14px;
+      display: block;
+    }
+
+    /* MODAL HISTÓRICO */
+    .modal-historico {
+      background: var(--bege);
+      border-radius: 10px;
+      padding: 12px 14px;
+      margin-bottom: 14px;
+      max-height: 160px;
+      overflow-y: auto;
+    }
+    .modal-historico-titulo {
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--verde-escuro);
+      margin-bottom: 8px;
+    }
+    .modal-historico-item {
+      font-size: 12px;
+      color: var(--texto-suave);
+      padding: 4px 0;
+      border-bottom: 1px solid rgba(0,0,0,0.06);
+    }
+    .modal-historico-item:last-child { border-bottom: none; }
+    .modal-historico-num {
+      font-weight: 700;
+      color: var(--verde-acento);
+      margin-right: 4px;
+    }
+
+    /* MOVIMENTAÇÕES */
+    .mov-item {
+      background: var(--branco);
+      border-radius: var(--radius);
+      padding: 14px 16px;
+      margin-bottom: 10px;
+      box-shadow: 0 1px 6px rgba(0,0,0,0.08);
+      border-left: 4px solid var(--verde-acento);
+    }
+    .mov-piso {
+      font-size: 14px;
+      font-weight: 700;
+      color: var(--verde-escuro);
+      margin-bottom: 6px;
+    }
+    .mov-rota {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+      margin-bottom: 6px;
+    }
+    .mov-local {
+      background: var(--bege);
+      border-radius: 8px;
+      padding: 6px 10px;
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--texto);
+      line-height: 1.5;
+    }
+    .mov-local.origem { border: 1.5px solid #e0c8a0; }
+    .mov-local.destino { border: 1.5px solid var(--verde-acento); background: #f0faf0; }
+    .mov-seta {
+      font-size: 18px;
+      color: var(--verde-acento);
+      flex-shrink: 0;
+    }
+    .mov-data {
+      font-size: 11px;
+      color: var(--texto-suave);
+    }
+    .mov-filtro-barra {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 14px;
+    }
+    .mov-filtro-barra input {
+      flex: 1;
+      padding: 10px 14px;
+      font-size: 14px;
+    }
+    .btn-limpar-mov {
+      background: #fde8e8;
+      color: var(--vermelho);
+      font-size: 13px;
+      padding: 10px 14px;
+      border: none;
+      border-radius: 8px;
+      font-weight: 600;
+      cursor: pointer;
+      white-space: nowrap;
+    }
+
+    /* GALERIA */
+    .galeria-busca {
+      padding: 14px 16px 0;
+    }
+    .galeria-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+      padding: 14px 16px 32px;
+    }
+    .galeria-card {
+      background: var(--branco);
+      border-radius: 12px;
+      overflow: hidden;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.09);
+      cursor: pointer;
+      transition: transform 0.15s;
+    }
+    .galeria-card:active { transform: scale(0.97); }
+    .galeria-img {
+      width: 100%;
+      aspect-ratio: 1/1;
+      object-fit: cover;
+      display: block;
+      background: #f0ede6;
+    }
+    .galeria-sem-foto {
+      width: 100%;
+      aspect-ratio: 1/1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      background: #f5f2ec;
+      color: #bbb;
+      font-size: 30px;
+      gap: 4px;
+    }
+    .galeria-sem-foto span {
+      font-size: 11px;
+      color: #ccc;
+    }
+    .galeria-nome {
+      font-size: 12px;
+      font-weight: 700;
+      color: var(--verde-escuro);
+      padding: 8px 10px 4px;
+      line-height: 1.3;
+      word-break: break-word;
+    }
+    .galeria-lote {
+      font-size: 11px;
+      color: var(--texto-suave);
+      padding: 0 10px 10px;
+    }
+    .galeria-vazia {
+      text-align: center;
+      padding: 60px 20px;
+      color: var(--texto-suave);
+    }
+    .galeria-vazia .emoji { font-size: 48px; margin-bottom: 12px; }
+
+    /* SCROLLBAR */
+    ::-webkit-scrollbar { width: 4px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: #ccc; border-radius: 2px; }
+
+    @media (max-width: 360px) {
+      .linha-3 { grid-template-columns: 1fr 1fr; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- HEADER -->
+<div class="header">
+  <div class="header-top">
+    <div>
+      <h1>🏗️ Estoque de Pisos</h1>
+      <p id="subtitulo-header">Gerenciamento de inventário</p>
+    </div>
+  </div>
+  <div class="tabs">
+    <div class="tab ativo" onclick="irPara('cadastrar')">
+      <span class="tab-icon">➕</span>Cadastrar
+    </div>
+    <div class="tab" onclick="irPara('estoque')">
+      <span class="tab-icon">📦</span>Estoque
+    </div>
+    <div class="tab" onclick="irPara('relatorio')">
+      <span class="tab-icon">📊</span>Relatório
+    </div>
+    <div class="tab" onclick="irPara('movimentacoes')">
+      <span class="tab-icon">🔄</span>Movim.
+    </div>
+    <div class="tab" onclick="irPara('galeria')">
+      <span class="tab-icon">🖼️</span>Galeria
+    </div>
+  </div>
+</div>
+
+<!-- ===================== PÁGINA: CADASTRAR ===================== -->
+<div class="pagina ativa" id="pag-cadastrar">
+
+  <div class="card" style="margin-top: 16px;">
+    <div class="card-titulo">Informações do Piso</div>
+
+    <div class="campo-grupo">
+      <label>Nome do Piso *</label>
+      <input type="text" id="nome" placeholder="Ex: Porcelanato Mármore Carrara 60x60" autocomplete="off" />
+    </div>
+
+    <div class="campo-grupo">
+      <label>Lote / Referência *</label>
+      <input type="text" id="lote" placeholder="Ex: LOT-2024-001" autocomplete="off" />
+    </div>
+
+    <div class="linha-3">
+      <div class="campo-grupo">
+        <label>Marca do Piso</label>
+        <input type="text" id="marca" placeholder="Ex: Eliane" autocomplete="off" />
+      </div>
+
+      <div class="campo-grupo">
+        <label>Código do Piso</label>
+        <input type="text" id="codigo" placeholder="Ex: PISO-9080" autocomplete="off" />
+      </div>
+
+      <div class="campo-grupo">
+        <label>Tamanho</label>
+        <input type="text" id="tamanho" placeholder="Ex: 90x90" autocomplete="off" oninput="atualizarPreviewMetragem()" />
+      </div>
+    </div>
+
+    <div class="linha-2">
+      <div class="campo-grupo">
+        <label>Bitola</label>
+        <input type="text" id="bitola" placeholder="Ex: A, B, C" autocomplete="off" />
+      </div>
+
+      <div class="campo-grupo">
+        <label>Tonalidade</label>
+        <input type="text" id="tonalidade" placeholder="Ex: T1, T2, Claro" autocomplete="off" />
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-titulo">Localização no Estoque</div>
+
+    <div class="linha-4">
+      <div class="campo-grupo">
+        <label>Pátio</label>
+        <input type="text" id="patio" placeholder="Ex: A" autocomplete="off" />
+      </div>
+      <div class="campo-grupo">
+        <label>Rua</label>
+        <input type="text" id="rua" placeholder="Ex: 3" autocomplete="off" />
+      </div>
+      <div class="campo-grupo">
+        <label>Apartamento</label>
+        <input type="text" id="apartamento" placeholder="Ex: 12" autocomplete="off" />
+      </div>
+      <div class="campo-grupo">
+        <label>Nível</label>
+        <input type="number" id="nivel" placeholder="Ex: 0" min="0" inputmode="numeric" />
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-titulo">Quantidade</div>
+
+    <div class="linha-4">
+      <div class="campo-grupo">
+        <label>🪵 Pallets</label>
+        <input type="number" id="qtdPallets" placeholder="0" min="0" inputmode="numeric" oninput="atualizarCaixasPorPallet()" />
+      </div>
+      <div class="campo-grupo">
+        <label>🪵 Caixas/Pallet</label>
+        <input type="number" id="caixasPorPallet" placeholder="Ex: 40" min="0" inputmode="numeric" oninput="atualizarCaixasPorPallet()" />
+      </div>
+      <div class="campo-grupo">
+        <label>📦 Caixas Avulsas <span style="font-weight:400;color:var(--texto-suave)">(fora de pallet)</span></label>
+        <input type="number" id="caixasAvulsasFora" placeholder="0" min="0" inputmode="numeric" oninput="atualizarCaixasPorPallet()" />
+      </div>
+      <div class="campo-grupo">
+        <label>📦 Caixas Totais <span style="font-weight:400;color:var(--texto-suave)">(auto)</span></label>
+        <input type="text" id="caixas" placeholder="0" readonly style="background:#f0f0ec;color:var(--texto-suave);font-weight:700" />
+      </div>
+    </div>
+
+    <div class="linha-4">
+      <div class="campo-grupo">
+        <label>🔲 Peças Avulsas</label>
+        <input type="number" id="pecas" placeholder="0" min="0" inputmode="numeric" oninput="atualizarPreviewMetragem()" />
+      </div>
+      <div class="campo-grupo">
+        <label>📐 m²/Caixa</label>
+        <input type="number" id="m2PorCaixa" placeholder="Ex: 2.20" min="0" step="0.01" inputmode="decimal" oninput="atualizarPreviewMetragem()" />
+      </div>
+      <div class="campo-grupo">
+        <label>🔢 Peças/Caixa <span style="font-weight:400;color:var(--texto-suave)">(auto)</span></label>
+        <input type="text" id="pecasPorCaixa" placeholder="Calculado" readonly style="background:#f0f0ec;color:var(--texto-suave)" />
+      </div>
+    </div>
+    <div id="preview-metragem" style="font-size:13px;color:var(--verde-acento);font-weight:700;margin-top:6px"></div>
+  </div>
+
+  <div class="card">
+    <div class="card-titulo">📷 Foto do Piso</div>
+    <div class="foto-card" id="foto-card-area" onclick="document.getElementById('foto-input').click()">
+      <div id="foto-preview-wrap">
+        <div class="foto-placeholder">
+          <div class="emoji">📷</div>
+          <div>Toque para tirar foto ou escolher da galeria</div>
+        </div>
+      </div>
+    </div>
+    <input type="file" id="foto-input" accept="image/*" capture="environment" style="display:none" onchange="carregarFoto(event)" />
+    <div class="foto-acoes" id="foto-acoes" style="display:none;margin-top:10px">
+      <button class="btn-foto" onclick="document.getElementById('foto-input').click()">📷 Trocar foto</button>
+      <button class="btn-foto-remover" onclick="removerFoto()">🗑️ Remover</button>
+    </div>
+  </div>
+
+  <button class="btn btn-salvar" onclick="salvar()">✅ Salvar no Estoque</button>
+  <button class="btn btn-limpar" onclick="limparForm()">🗑️ Limpar Campos</button>
+  <div style="height: 20px;"></div>
+</div>
+
+<!-- ===================== PÁGINA: ESTOQUE ===================== -->
+<div class="pagina" id="pag-estoque">
+  <div style="margin-top: 16px;">
+    <div class="filtro-barra">
+      <input type="search" id="busca" placeholder="🔍 Buscar piso..." oninput="renderLista()" />
+      <select onchange="renderLista()" id="ordem">
+        <option value="nome">A-Z</option>
+        <option value="recente">Recente</option>
+        <option value="caixas">Caixas</option>
+        <option value="nao_conferido">⚠️ Pendentes</option>
+        <option value="nao_sistema">🟣 Não no sistema</option>
+        <option value="nao_localizado">📍 Não está no local</option>
+        <option value="cod_duplicado">🔴 Cód. duplicado</option>
+        <option value="apartamento">Ap. Ímp→Par</option>
+      </select>
+    </div>
+    <div id="banner-pendentes"></div>
+    <div id="banner-sistema"></div>
+    <div id="banner-localizado"></div>
+    <div id="banner-duplicados"></div>
+
+    <div id="lista-estoque"></div>
+  </div>
+</div>
+
+<!-- ===================== PÁGINA: RELATÓRIO ===================== -->
+<div class="pagina" id="pag-relatorio">
+  <div style="margin-top: 16px;">
+    <div class="resumo-grid" id="resumo-cards"></div>
+    <button class="btn" style="margin-bottom:12px;background:#5a9e5a;color:#fff" onclick="recalcularTodasMetragens()">🔄 Recalcular Peças/Caixa e Metragem de todos os pisos</button>
+    <div class="tabela-relatorio" id="tabela-wrap"></div>
+    <div style="margin-top:12px;background:#fff;border-radius:12px;padding:16px;box-shadow:0 2px 12px rgba(0,0,0,0.08)">
+      <div class="card-titulo" style="margin-bottom:12px">📤 Exportar CSV</div>
+
+      <!-- Seleção de colunas -->
+      <div style="font-size:12px;font-weight:700;color:var(--texto-suave);margin-bottom:8px;text-transform:uppercase;letter-spacing:.5px">Colunas a exportar</div>
+      <div id="col-select-wrap" style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:14px"></div>
+      <div style="display:flex;gap:8px;margin-bottom:14px">
+        <button onclick="toggleTodasColunas(true)"  style="flex:1;padding:7px;font-size:12px;font-weight:700;border-radius:8px;border:1.5px solid #5a9e5a;background:#f0faf0;color:#1a6b32;cursor:pointer">✅ Todas</button>
+        <button onclick="toggleTodasColunas(false)" style="flex:1;padding:7px;font-size:12px;font-weight:700;border-radius:8px;border:1.5px solid #e0c8a0;background:#fdf8f0;color:#7d4e0f;cursor:pointer">☐ Nenhuma</button>
+      </div>
+
+      <!-- Filtro por rua -->
+      <div style="font-size:12px;font-weight:700;color:var(--texto-suave);margin-bottom:8px;text-transform:uppercase;letter-spacing:.5px">Filtrar por rua <span style="font-weight:400">(opcional)</span></div>
+      <div id="export-rua-lista" style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px"></div>
+      <input type="text" id="export-rua-input" placeholder="Ou digite a rua ex: 11" style="width:100%;box-sizing:border-box;padding:10px 14px;font-size:14px;border-radius:8px;border:1.5px solid #d0c9bb;margin-bottom:14px" inputmode="numeric" oninput="renderBotoesRua()" />
+
+      <button class="btn" style="background:#1a2e1a;color:#fff;width:100%;margin-bottom:8px" onclick="exportarCSVPersonalizado()">📤 Exportar</button>
+      <p style="font-size:11px;color:#888;text-align:center">Pisos com <b>📍 Não está no local</b> são sempre excluídos quando filtrando por rua</p>
+    </div>
+
+    <button class="btn" style="margin-top:10px;background:#fde8e8;color:#c0392b;font-weight:700" onclick="apagarTodosOsPisos()">🗑️ Apagar todos os pisos</button>
+
+    <div style="margin-top: 12px; background: #fff; border-radius: 12px; padding: 16px; box-shadow: 0 2px 12px rgba(0,0,0,0.12);">
+      <div class="card-titulo" style="margin-bottom: 14px;">📲 Transferir para outro celular</div>
+      <button class="btn btn-salvar" onclick="exportarJSON()" style="margin-bottom: 8px;">⬇️ Exportar dados (backup)</button>
+      <button class="btn btn-salvar" onclick="exportarParaDrive()" style="margin-bottom: 8px;background:#1a73e8">☁️ Salvar backup no Google Drive</button>
+      <label for="importar-input" class="btn" style="display:block; width:100%; padding:14px; background:#e8f5e9; color:#1a2e1a; font-size:15px; font-weight:600; border-radius:12px; text-align:center; cursor:pointer; border: 1.5px dashed #5a9e5a;">
+        ⬆️ Importar dados (restaurar)
+      </label>
+      <input type="file" id="importar-input" accept=".json" style="display:none" onchange="importarJSON(event)" />
+      <p style="font-size:11px; color:#888; margin-top:10px; text-align:center; line-height:1.6;">
+        1. Exporte no celular antigo → compartilhe o arquivo via WhatsApp/Drive<br>
+        2. Abra o arquivo no celular novo → importe aqui
+      </p>
+    </div>
+
+    <div style="height: 20px;"></div>
+  </div>
+</div>
+
+<!-- ===================== PÁGINA: MOVIMENTAÇÕES ===================== -->
+<div class="pagina" id="pag-movimentacoes">
+  <div style="margin-top: 16px;">
+    <div class="mov-filtro-barra">
+      <input type="search" id="busca-mov" placeholder="🔍 Buscar piso ou local..." oninput="renderMovimentacoes()" />
+      <button class="btn-limpar-mov" onclick="limparMovimentacoes()">🗑️ Limpar</button>
+    </div>
+    <button class="btn exportar-btn" style="margin-bottom:14px" onclick="exportarMovimentacoesXLS()">📤 Exportar CSV (.csv)</button>
+    <div id="lista-movimentacoes"></div>
+  </div>
+</div>
+
+<!-- ===================== PÁGINA: GALERIA ===================== -->
+<div class="pagina" id="pag-galeria">
+  <div class="galeria-busca">
+    <input type="search" id="busca-galeria" placeholder="🔍 Buscar piso..." oninput="renderGaleria()" style="width:100%;box-sizing:border-box;padding:11px 14px;font-size:14px;border-radius:10px;border:1.5px solid #d0c9bb;background:#fff" />
+  </div>
+  <div class="galeria-grid" id="galeria-grid"></div>
+</div>
+
+<!-- ===================== MODAL DETALHE ===================== -->
+<div class="modal-overlay" id="modal-overlay" onclick="fecharModal(event)">
+  <div class="modal" id="modal-conteudo">
+    <div class="modal-handle"></div>
+    <div id="modal-body"></div>
+  </div>
+</div>
+
+<!-- TOAST -->
+<div class="toast" id="toast"></div>
+
+<!-- PWA INSTALL BANNER -->
+<div id="pwa-install-banner" style="display:none;position:fixed;bottom:80px;left:16px;right:16px;background:#1a2e1a;color:#fff;border-radius:14px;padding:14px 16px;align-items:center;gap:12px;box-shadow:0 4px 20px rgba(0,0,0,0.3);z-index:9999">
+  <span style="font-size:24px">📲</span>
+  <div style="flex:1">
+    <div style="font-weight:700;font-size:14px">Instalar como App</div>
+    <div style="font-size:12px;opacity:0.8">Acesse mais rápido na tela inicial</div>
+  </div>
+  <button onclick="instalarApp()" style="background:#5a9e5a;color:#fff;border:none;border-radius:8px;padding:8px 14px;font-weight:700;font-size:13px;cursor:pointer">Instalar</button>
+  <button onclick="document.getElementById('pwa-install-banner').style.display='none'" style="background:transparent;color:#fff;border:none;font-size:20px;cursor:pointer;padding:0 4px">✕</button>
+</div>
+
+<!-- SERVICE WORKER REGISTER -->
+<script>
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('sw.js').catch(() => {});
+}
+
+// ===================== DADOS =====================
+const CHAVE = 'estoque_pisos_v2';
+
+// MODO GITHUB + FIREBASE
+// O sistema já está preparado para hospedagem no GitHub Pages.
+// Basta configurar o Firebase nas informações acima.
+
+function carregar() {
+  try { return JSON.parse(localStorage.getItem(CHAVE)) || []; }
+  catch(e) { return []; }
+}
+
+function salvarDados(dados) {
+  localStorage.setItem(CHAVE, JSON.stringify(dados));
+  atualizarSubtitulo();
+}
+
+function atualizarSubtitulo() {
+  const d = carregar();
+  const sub = document.getElementById('subtitulo-header');
+  if (sub) sub.textContent = d.length === 0 ? 'Nenhum item cadastrado' :
+    `${d.length} tipo${d.length > 1 ? 's' : ''} de piso cadastrado${d.length > 1 ? 's' : ''}`;
+}
+
+// ===================== CÁLCULO DE METRAGEM =====================
+// Extrai a área de uma peça a partir do texto de tamanho (ex: "82x82", "90 x 90 cm", "60x120")
+function areaPorPeca(tamanho) {
+  if (!tamanho) return 0;
+  const match = String(tamanho).replace(',', '.').match(/(\d+(?:\.\d+)?)\s*[xX×]\s*(\d+(?:\.\d+)?)/);
+  if (!match) return 0;
+  let a = parseFloat(match[1]);
+  let b = parseFloat(match[2]);
+  // Se os valores forem grandes (>10), assume-se que estão em centímetros e converte para metros
+  if (a > 10) a = a / 100;
+  if (b > 10) b = b / 100;
+  return a * b;
+}
+
+// Calcula a metragem total (m²) de um item.
+// Prioridade para as caixas: se "m² por caixa" foi informado, usa ele.
+// Caso contrário, se "peças por caixa" foi informado, calcula a partir da área da peça.
+// Peças avulsas sempre usam a área da peça (calculada do tamanho).
+function calcularMetragemTotal(item) {
+  const caixas = parseFloat(item.caixas) || 0;
+  const m2PorCaixa = parseFloat(item.m2PorCaixa) || 0;
+  const pecasPorCaixa = parseFloat(item.pecasPorCaixa) || 0;
+  const pecasAvulsas = parseFloat(item.pecas) || 0;
+  const areaPeca = areaPorPeca(item.tamanho);
+
+  let metragemCaixas = 0;
+  if (m2PorCaixa > 0) {
+    metragemCaixas = caixas * m2PorCaixa;
+  } else if (pecasPorCaixa > 0 && areaPeca > 0) {
+    metragemCaixas = caixas * pecasPorCaixa * areaPeca;
+  }
+
+  const metragemAvulsas = pecasAvulsas * areaPeca;
+
+  return metragemCaixas + metragemAvulsas;
+}
+
+function fmtM2(valor) {
+  return valor.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' m²';
+}
+
+// Calcula quantas peças cabem em uma caixa: m²/Caixa ÷ área de cada peça
+function calcularPecasPorCaixa(tamanho, m2PorCaixa) {
+  const areaPeca = areaPorPeca(tamanho);
+  const m2cx = parseFloat(String(m2PorCaixa).replace(',', '.')) || 0;
+  if (!areaPeca || !m2cx) return 0;
+  return Math.round(m2cx / areaPeca);
+}
+
+// Calcula o total de Caixas automaticamente: (Pallets × Caixas/Pallet) + Caixas Avulsas (fora de pallet)
+function atualizarCaixasPorPallet() {
+  const qtdPallets = parseFloat(document.getElementById('qtdPallets')?.value) || 0;
+  const caixasPorPallet = parseFloat(document.getElementById('caixasPorPallet')?.value) || 0;
+  const caixasAvulsasFora = parseFloat(document.getElementById('caixasAvulsasFora')?.value) || 0;
+
+  const totalCaixas = (qtdPallets * caixasPorPallet) + caixasAvulsasFora;
+  const caixasEl = document.getElementById('caixas');
+  if (caixasEl) caixasEl.value = totalCaixas > 0 ? totalCaixas : '';
+
+  atualizarPreviewMetragem();
+}
+
+function atualizarPreviewMetragem() {
+  const tamanho = document.getElementById('tamanho')?.value.trim();
+  const caixas = parseFloat(document.getElementById('caixas')?.value) || 0;
+  const pecasRaw = parseFloat(document.getElementById('pecas')?.value) || 0;
+  const m2PorCaixaInput = document.getElementById('m2PorCaixa')?.value;
+  const previewEl = document.getElementById('preview-metragem');
+  const pecasPorCaixaEl = document.getElementById('pecasPorCaixa');
+
+  // Calcula e exibe peças/caixa automaticamente (somente leitura)
+  const pecasPorCaixaCalc = calcularPecasPorCaixa(tamanho, m2PorCaixaInput);
+  if (pecasPorCaixaEl) pecasPorCaixaEl.value = pecasPorCaixaCalc > 0 ? pecasPorCaixaCalc : '';
+
+  // Converte peças avulsas que completam caixas
+  let caixasExtra = 0;
+  let pecasRestantes = pecasRaw;
+  if (pecasPorCaixaCalc > 0 && pecasRaw >= pecasPorCaixaCalc) {
+    caixasExtra = Math.floor(pecasRaw / pecasPorCaixaCalc);
+    pecasRestantes = pecasRaw % pecasPorCaixaCalc;
+  }
+
+  const totalCaixas = caixas + caixasExtra;
+
+  // Mostra aviso se alguma peça avulsa virou caixa
+  if (!previewEl) return;
+  const total = calcularMetragemTotal({ tamanho, caixas: totalCaixas, pecas: pecasRestantes, m2PorCaixa: m2PorCaixaInput, pecasPorCaixa: pecasPorCaixaCalc });
+
+  let msg = total > 0 ? `📐 Total estimado: ${fmtM2(total)}` : '';
+  if (caixasExtra > 0) {
+    msg += ` · ${caixasExtra} cx + ${pecasRestantes} pç avulsas`;
+  }
+  previewEl.textContent = msg;
+}
+
+// ===================== NAVEGAÇÃO =====================
+function irPara(pag) {
+  document.querySelectorAll('.pagina').forEach(p => p.classList.remove('ativa'));
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('ativo'));
+  document.getElementById('pag-' + pag).classList.add('ativa');
+  const tabs = document.querySelectorAll('.tab');
+  const idx = { cadastrar: 0, estoque: 1, relatorio: 2, movimentacoes: 3, galeria: 4 };
+  tabs[idx[pag]].classList.add('ativo');
+  if (pag === 'estoque') renderLista();
+  if (pag === 'relatorio') { renderRelatorio(); renderSeletorColunas(); renderBotoesRua(); }
+  if (pag === 'movimentacoes') renderMovimentacoes();
+  if (pag === 'galeria') renderGaleria();
+}
+
+// ===================== FORMULÁRIO =====================
+// ===================== FOTO DO PISO =====================
+let fotoAtual = null; // base64 da foto atual no formulário
+
+function carregarFoto(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    // Redimensiona para max 800px para não explodir o localStorage
+    const img = new Image();
+    img.onload = function() {
+      const MAX = 800;
+      let w = img.width, h = img.height;
+      if (w > MAX || h > MAX) {
+        if (w > h) { h = Math.round(h * MAX / w); w = MAX; }
+        else       { w = Math.round(w * MAX / h); h = MAX; }
+      }
+      const canvas = document.createElement('canvas');
+      canvas.width = w; canvas.height = h;
+      canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+      fotoAtual = canvas.toDataURL('image/jpeg', 0.80);
+      mostrarPreviewFoto(fotoAtual);
+    };
+    img.src = e.target.result;
+  };
+  reader.readAsDataURL(file);
+  event.target.value = ''; // permite reselecionar o mesmo arquivo
+}
+
+function mostrarPreviewFoto(src) {
+  const wrap = document.getElementById('foto-preview-wrap');
+  const acoes = document.getElementById('foto-acoes');
+  const cardArea = document.getElementById('foto-card-area');
+  if (!wrap) return;
+  wrap.innerHTML = `<img src="${src}" class="foto-preview" alt="Foto do piso" />`;
+  if (acoes) acoes.style.display = 'flex';
+  if (cardArea) cardArea.onclick = null; // clique na imagem não reabre o seletor
+}
+
+function removerFoto() {
+  fotoAtual = null;
+  const wrap = document.getElementById('foto-preview-wrap');
+  const acoes = document.getElementById('foto-acoes');
+  const cardArea = document.getElementById('foto-card-area');
+  if (wrap) wrap.innerHTML = `<div class="foto-placeholder"><div class="emoji">📷</div><div>Toque para tirar foto ou escolher da galeria</div></div>`;
+  if (acoes) acoes.style.display = 'none';
+  if (cardArea) cardArea.onclick = () => document.getElementById('foto-input').click();
+}
+
+function limparPreviewFoto() {
+  fotoAtual = null;
+  removerFoto();
+}
+
+function carregarPreviewFotoExistente(src) {
+  if (!src) { limparPreviewFoto(); return; }
+  fotoAtual = src;
+  mostrarPreviewFoto(src);
+}
+
+function salvar() {
+  const nome = document.getElementById('nome').value.trim();
+  const lote = document.getElementById('lote').value.trim();
+  const marca = document.getElementById('marca').value.trim();
+  const codigo = document.getElementById('codigo').value.trim();
+  const tamanho = document.getElementById('tamanho').value.trim();
+  const bitola = document.getElementById('bitola').value.trim();
+  const tonalidade = document.getElementById('tonalidade').value.trim();
+  const patio = document.getElementById('patio').value.trim();
+  const rua = document.getElementById('rua').value.trim();
+  const apartamento = document.getElementById('apartamento').value.trim();
+  const nivel = document.getElementById('nivel').value.trim();
+  const caixasBruto = parseInt(document.getElementById('caixas').value) || 0;
+  const pecasBruto = parseInt(document.getElementById('pecas').value) || 0;
+  const pecasPorCaixaVal = parseInt(document.getElementById('pecasPorCaixa').value) || 0;
+
+  // Converte peças avulsas que completam caixas
+  let caixasExtra = 0;
+  let pecas = pecasBruto;
+  if (pecasPorCaixaVal > 0 && pecasBruto >= pecasPorCaixaVal) {
+    caixasExtra = Math.floor(pecasBruto / pecasPorCaixaVal);
+    pecas = pecasBruto % pecasPorCaixaVal;
+  }
+  const caixas = caixasBruto + caixasExtra;
+  const m2PorCaixa = parseFloat(document.getElementById('m2PorCaixa').value.replace(',', '.')) || 0;
+  const pecasPorCaixa = pecasPorCaixaVal;
+  const caixasPorPallet = parseInt(document.getElementById('caixasPorPallet').value) || 0;
+  const qtdPallets = parseInt(document.getElementById('qtdPallets').value) || 0;
+  const caixasAvulsasFora = parseInt(document.getElementById('caixasAvulsasFora').value) || 0;
+
+  if (!nome || !lote) {
+    toast('⚠️ Nome e Lote são obrigatórios!', true);
+    return;
+  }
+
+  const dados = carregar();
+  const editId = document.getElementById('nome').dataset.editId;
+
+  if (editId) {
+    const idx = dados.findIndex(d => d.id === editId);
+    if (idx >= 0) {
+      const anterior = dados[idx];
+
+      // Detecta mudança de localização e registra movimentação
+      const locFields = ['patio','rua','apartamento','nivel'];
+      const localAntes = { patio: anterior.patio, rua: anterior.rua, apartamento: anterior.apartamento, nivel: anterior.nivel };
+      const localDepois = { patio, rua, apartamento, nivel };
+      const mudouLocal = locFields.some(f => (localAntes[f] || '') !== (localDepois[f] || ''));
+
+      const temLocalAntes = localAntes.patio || localAntes.rua || localAntes.apartamento || (localAntes.nivel !== '' && localAntes.nivel !== undefined);
+
+      if (mudouLocal && temLocalAntes) {
+        registrarMovimentacao({
+          pisoId: editId,
+          pisoNome: anterior.nome,
+          lote: anterior.lote,
+          bitola: anterior.bitola,
+          tonalidade: anterior.tonalidade,
+          origem: localAntes,
+          destino: localDepois
+        });
+      }
+
+      const agora = new Date().toLocaleString('pt-BR');
+      const historicoAnterior = anterior.historico || [];
+      const novoHistorico = [...historicoAnterior, { dataHora: agora, tipo: mudouLocal && temLocalAntes ? 'localizacao' : 'edicao' }];
+
+      dados[idx] = { ...dados[idx], nome, lote, marca, codigo, tamanho, bitola, tonalidade, patio, rua, apartamento, nivel, caixas, pecas, m2PorCaixa, pecasPorCaixa, caixasPorPallet, qtdPallets, caixasAvulsasFora, foto: fotoAtual !== undefined ? fotoAtual : dados[idx].foto, dataAlteracao: agora, historico: novoHistorico };
+      salvarDados(dados);
+      toast('✏️ Registro atualizado!');
+      limparForm();
+      fecharModalDireto();
+      return;
+    }
+  }
+
+  const item = {
+    id: Date.now().toString(),
+    nome, lote, marca, codigo, tamanho, bitola, tonalidade, patio, rua, apartamento, nivel, caixas, pecas, m2PorCaixa, pecasPorCaixa, caixasPorPallet, qtdPallets, caixasAvulsasFora, foto: fotoAtual || null,
+    data: new Date().toLocaleDateString('pt-BR')
+  };
+
+  dados.push(item);
+  salvarDados(dados);
+  toast('✅ Piso salvo com sucesso!');
+  limparForm();
+}
+
+function limparForm() {
+  ['nome','lote','marca','codigo','tamanho','bitola','tonalidade','patio','rua','apartamento','nivel','caixas','pecas','m2PorCaixa','pecasPorCaixa','caixasPorPallet','qtdPallets','caixasAvulsasFora'].forEach(id => {
+    const el = document.getElementById(id);
+    el.value = '';
+    delete el.dataset.editId;
+  });
+  document.getElementById('nome').dataset.editId = '';
+  const btn = document.querySelector('.btn-salvar');
+  btn.textContent = '✅ Salvar no Estoque';
+  limparPreviewFoto();
+  atualizarPreviewMetragem();
+}
+
+// ===================== LISTA =====================
+function sortImparesPares(dados) {
+  // Agrupa por rua, dentro de cada rua ordena: ímpares crescente, depois pares crescente
+  return dados.sort((a, b) => {
+    const ruaA = parseInt(a.rua) || 0;
+    const ruaB = parseInt(b.rua) || 0;
+    if (ruaA !== ruaB) return ruaA - ruaB;
+
+    const apA = parseInt(a.apartamento) || 0;
+    const apB = parseInt(b.apartamento) || 0;
+    const imparA = apA % 2 !== 0 ? 0 : 1;
+    const imparB = apB % 2 !== 0 ? 0 : 1;
+    if (imparA !== imparB) return imparA - imparB;
+    return apA - apB;
+  });
+}
+
+function renderLista() {
+  const busca = (document.getElementById('busca').value || '').toLowerCase().trim();
+  const ordem = document.getElementById('ordem').value;
+  let dados = carregar();
+
+  // Banner de pendentes
+  const todosOsDados = dados; // usa os dados já carregados
+  const totalPendentes = todosOsDados.filter(d => d.naoConferido).length;
+  const totalSistema = todosOsDados.filter(d => d.naoSistema).length;
+  const totalLocalizado = todosOsDados.filter(d => d.naoLocalizado).length;
+
+  // Detecta códigos duplicados (ignora vazios)
+  const contagemCodigos = {};
+  todosOsDados.forEach(d => {
+    const cod = (d.codigo || '').trim().toLowerCase();
+    if (cod) contagemCodigos[cod] = (contagemCodigos[cod] || 0) + 1;
+  });
+  const codigosDuplicados = new Set(Object.keys(contagemCodigos).filter(c => contagemCodigos[c] > 1));
+  const totalDuplicados = todosOsDados.filter(d => codigosDuplicados.has((d.codigo || '').trim().toLowerCase())).length;
+
+  // Detecta se a busca é "rua XX" para aplicar ordenação especial
+  const buscaRua = busca.match(/^rua\s+(\d+)$/);
+
+  if (busca) dados = dados.filter(d =>
+    d.nome.toLowerCase().includes(busca) ||
+    d.lote.toLowerCase().includes(busca) ||
+    (d.marca || '').toLowerCase().includes(busca) ||
+    (d.codigo || '').toLowerCase().includes(busca) ||
+    (d.tamanho || '').toLowerCase().includes(busca) ||
+    (d.nivel || '').toString().toLowerCase().includes(busca) ||
+    (d.patio || '').toLowerCase().includes(busca) ||
+    (`rua ${d.rua || ''}`).toLowerCase().includes(busca)
+  );
+
+  if (buscaRua) {
+    // Quando busca for "rua XX": ordenar ímpares → pares por apartamento
+    dados = sortImparesPares(dados);
+  } else if (ordem === 'nome') dados.sort((a, b) => a.nome.localeCompare(b.nome));
+  else if (ordem === 'recente') dados.sort((a, b) => parseInt(b.id) - parseInt(a.id));
+  else if (ordem === 'caixas') dados.sort((a, b) => b.caixas - a.caixas);
+  else if (ordem === 'nao_conferido') dados = dados.filter(d => d.naoConferido);
+  else if (ordem === 'nao_sistema') dados = dados.filter(d => d.naoSistema);
+  else if (ordem === 'nao_localizado') dados = dados.filter(d => d.naoLocalizado);
+  else if (ordem === 'cod_duplicado') dados = dados.filter(d => codigosDuplicados.has((d.codigo || '').trim().toLowerCase()));
+  else if (ordem === 'apartamento') dados = sortImparesPares(dados);
+
+  const bannerEl = document.getElementById('banner-pendentes');
+  if (bannerEl) {
+    bannerEl.innerHTML = totalPendentes > 0
+      ? `<div class="banner-nao-conferido">⚠️ ${totalPendentes} item${totalPendentes > 1 ? 's' : ''} marcado${totalPendentes > 1 ? 's' : ''} como não conferido${totalPendentes > 1 ? 's' : ''}</div>`
+      : '';
+  }
+  const bannerSistEl = document.getElementById('banner-sistema');
+  if (bannerSistEl) {
+    bannerSistEl.innerHTML = totalSistema > 0
+      ? `<div class="banner-nao-sistema">🟣 ${totalSistema} item${totalSistema > 1 ? 's' : ''} não adicionado${totalSistema > 1 ? 's' : ''} ao sistema</div>`
+      : '';
+  }
+  const bannerLocEl = document.getElementById('banner-localizado');
+  if (bannerLocEl) {
+    bannerLocEl.innerHTML = totalLocalizado > 0
+      ? `<div class="banner-nao-localizado">📍 ${totalLocalizado} piso${totalLocalizado > 1 ? 's' : ''} não encontrado${totalLocalizado > 1 ? 's' : ''} no local marcado</div>`
+      : '';
+  }
+  const bannerDupEl = document.getElementById('banner-duplicados');
+  if (bannerDupEl) {
+    bannerDupEl.innerHTML = totalDuplicados > 0
+      ? `<div class="banner-codigo-duplicado">🔴 ${totalDuplicados} piso${totalDuplicados > 1 ? 's' : ''} com código duplicado</div>`
+      : '';
+  }
+
+  const el = document.getElementById('lista-estoque');
+
+  if (dados.length === 0) {
+    el.innerHTML = `
+      <div class="lista-vazia">
+        <div class="emoji">${busca ? '🔍' : '📦'}</div>
+        <p>${busca ? 'Nenhum piso encontrado para essa busca.' : 'Nenhum piso cadastrado ainda.<br>Vá em <b>Cadastrar</b> para adicionar.'}</p>
+      </div>`;
+    return;
+  }
+
+  el.innerHTML = dados.map(d => {
+    const isDuplicado = codigosDuplicados.has((d.codigo || '').trim().toLowerCase());
+    const metragem = calcularMetragemTotal(d);
+    return `
+    <div class="item-piso${d.naoConferido ? ' nao-conferido' : ''}${d.naoSistema ? ' nao-sistema' : ''}${d.naoLocalizado ? ' nao-localizado' : ''}${isDuplicado ? ' codigo-duplicado' : ''}" onclick="abrirDetalhe('${d.id}')">
+      <div class="item-nome">${d.nome}</div>
+      <div class="item-lote">Lote: ${d.lote} • ${d.data || ''}${d.dataAlteracao ? ` <span style="color:#1a7a3a">✏️ Alterado: ${d.dataAlteracao}</span>` : ''}</div>
+      <div class="item-tags">
+        ${d.naoConferido ? '<span class="tag alerta">⚠️ NÃO CONFERIDO</span>' : ''}
+        ${d.naoSistema ? '<span class="tag roxo-alerta">🟣 NÃO NO SISTEMA</span>' : ''}
+        ${d.naoLocalizado ? '<span class="tag laranja-alerta">📍 NÃO ESTÁ NO LOCAL</span>' : ''}
+        ${isDuplicado ? '<span class="tag vermelho">🔴 CÓDIGO DUPLICADO</span>' : ''}
+        ${d.patio ? `<span class="tag">Pátio ${d.patio}</span>` : ''}
+        ${d.rua ? `<span class="tag azul">Rua ${d.rua}</span>` : ''}
+        ${d.apartamento ? `<span class="tag roxo">Ap ${d.apartamento}</span>` : ''}
+        ${d.marca ? `<span class="tag azul">🏷️ ${d.marca}</span>` : ''}
+        ${d.codigo ? `<span class="tag">🔢 ${d.codigo}</span>` : ''}
+        ${d.tamanho ? `<span class="tag roxo">📐 ${d.tamanho}</span>` : ''}
+        ${d.bitola ? `<span class="tag">📏 Bitola ${d.bitola}</span>` : ''}
+        ${d.tonalidade ? `<span class="tag laranja">🎨 Tom ${d.tonalidade}</span>` : ''}
+        ${d.nivel !== undefined && d.nivel !== '' ? `<span class="tag azul">🏢 Nível ${d.nivel}</span>` : ''}
+        <span class="tag laranja">📦 ${d.caixas} cx</span>
+        ${d.pecas > 0 ? `<span class="tag">🔲 ${d.pecas} pç</span>` : ''}
+        ${metragem > 0 ? `<span class="tag verde">📐 ${fmtM2(metragem)}</span>` : ''}
+      </div>
+    </div>
+  `}).join('');
+}
+
+// ===================== DETALHE =====================
+function abrirDetalhe(id) {
+  const dados = carregar();
+  const d = dados.find(x => x.id === id);
+  if (!d) return;
+
+  document.getElementById('modal-body').innerHTML = `
+    <div class="modal-nome">${d.nome}</div>
+    <div class="modal-lote">Lote: ${d.lote} • Cadastrado em: ${d.data || '-'}${d.dataAlteracao ? `<br>✏️ Última alteração: ${d.dataAlteracao}` : ''}</div>
+
+    ${d.foto ? `<img src="${d.foto}" class="modal-foto" alt="Foto do piso" />` : ''}
+
+    <div class="modal-grid">
+      <div class="modal-stat">
+        <div class="modal-stat-valor">${d.caixas}</div>
+        <div class="modal-stat-label">Caixas</div>
+      </div>
+      <div class="modal-stat">
+        <div class="modal-stat-valor">${d.pecas}</div>
+        <div class="modal-stat-label">Peças</div>
+      </div>
+      <div class="modal-stat">
+        <div class="modal-stat-valor" style="font-size:16px">${d.patio || '-'}</div>
+        <div class="modal-stat-label">Pátio</div>
+      </div>
+    </div>
+
+    ${calcularMetragemTotal(d) > 0 ? `
+    <div class="modal-metragem-destaque">📐 Metragem total: <strong>${fmtM2(calcularMetragemTotal(d))}</strong></div>
+    ` : ''}
+
+    <div class="modal-info-grid">
+      <div class="modal-info-item">
+        <div class="modal-info-label">Marca</div>
+        <div class="modal-info-valor">${d.marca || '—'}</div>
+      </div>
+      <div class="modal-info-item">
+        <div class="modal-info-label">Código</div>
+        <div class="modal-info-valor">${d.codigo || '—'}</div>
+      </div>
+      <div class="modal-info-item">
+        <div class="modal-info-label">Tamanho</div>
+        <div class="modal-info-valor">${d.tamanho || '—'}</div>
+      </div>
+      <div class="modal-info-item">
+        <div class="modal-info-label">Bitola</div>
+        <div class="modal-info-valor">${d.bitola || '—'}</div>
+      </div>
+      <div class="modal-info-item">
+        <div class="modal-info-label">Tonalidade</div>
+        <div class="modal-info-valor">${d.tonalidade || '—'}</div>
+      </div>
+      <div class="modal-info-item">
+        <div class="modal-info-label">m²/Caixa</div>
+        <div class="modal-info-valor">${d.m2PorCaixa ? d.m2PorCaixa.toString().replace('.', ',') + ' m²' : '—'}</div>
+      </div>
+      <div class="modal-info-item">
+        <div class="modal-info-label">Peças/Caixa</div>
+        <div class="modal-info-valor">${d.pecasPorCaixa || '—'}</div>
+      </div>
+      <div class="modal-info-item">
+        <div class="modal-info-label">Caixas/Pallet</div>
+        <div class="modal-info-valor">${d.caixasPorPallet || '—'}</div>
+      </div>
+      <div class="modal-info-item">
+        <div class="modal-info-label">Pallets</div>
+        <div class="modal-info-valor">${d.qtdPallets || '—'}</div>
+      </div>
+      <div class="modal-info-item">
+        <div class="modal-info-label">Cx. Avulsas (fora)</div>
+        <div class="modal-info-valor">${d.caixasAvulsasFora || '—'}</div>
+      </div>
+      <div class="modal-info-item">
+        <div class="modal-info-label">Rua</div>
+        <div class="modal-info-valor">${d.rua || '—'}</div>
+      </div>
+      <div class="modal-info-item">
+        <div class="modal-info-label">Apartamento</div>
+        <div class="modal-info-valor">${d.apartamento || '—'}</div>
+      </div>
+      <div class="modal-info-item">
+        <div class="modal-info-label">Nível</div>
+        <div class="modal-info-valor">${d.nivel || '—'}</div>
+      </div>
+    </div>
+
+    ${(d.historico && d.historico.length > 0) ? `
+    <div class="modal-historico">
+      <div class="modal-historico-titulo">🕐 Histórico de alterações</div>
+      ${d.historico.slice().reverse().map((h, i) => `
+        <div class="modal-historico-item">
+          <span class="modal-historico-num">${d.historico.length - i}.</span>
+          ${h.tipo === 'localizacao' ? '📍 Localização alterada' : '✏️ Dados alterados'} — ${h.dataHora}
+        </div>
+      `).join('')}
+    </div>
+    ` : ''}
+
+    <div style="margin-bottom:8px">
+      <button class="btn ${d.naoConferido ? 'btn-conferido-ok' : 'btn-conferir'}" onclick="toggleConferido('${d.id}')">
+        ${d.naoConferido ? '✅ Marcar como Conferido' : '⚠️ Marcar como Não Conferido'}
+      </button>
+    </div>
+    <div style="margin-bottom:8px">
+      <button class="btn ${d.naoSistema ? 'btn-sistema-ok' : 'btn-sistema'}" onclick="toggleSistema('${d.id}')">
+        ${d.naoSistema ? '✅ Marcar como Adicionado ao Sistema' : '🟣 Marcar como Não Adicionado ao Sistema'}
+      </button>
+    </div>
+    <div style="margin-bottom:10px">
+      <button class="btn ${d.naoLocalizado ? 'btn-localizado-ok' : 'btn-localizado'}" onclick="toggleLocalizado('${d.id}')">
+        ${d.naoLocalizado ? '✅ Piso Encontrado no Local' : '📍 Piso Não Está no Local Marcado'}
+      </button>
+    </div>
+    <div class="modal-acoes">
+      <button class="btn btn-editar" onclick="editarItem('${d.id}')">✏️ Editar</button>
+      <button class="btn" style="background:#e8f5e9;color:#1a5e20;border:1.5px solid #5a9e5a;font-weight:600" onclick="duplicarItem('${d.id}')">📋 Duplicar</button>
+      <button class="btn btn-excluir" onclick="excluirItem('${d.id}')">🗑️ Excluir</button>
+    </div>
+  `;
+
+  document.getElementById('modal-overlay').classList.add('aberto');
+}
+
+function fecharModal(event) {
+  if (event.target === document.getElementById('modal-overlay')) fecharModalDireto();
+}
+function fecharModalDireto() {
+  document.getElementById('modal-overlay').classList.remove('aberto');
+}
+
+function toggleConferido(id) {
+  let dados = carregar();
+  const idx = dados.findIndex(x => x.id === id);
+  if (idx < 0) return;
+  dados[idx].naoConferido = !dados[idx].naoConferido;
+  salvarDados(dados);
+  const isNaoConferido = dados[idx].naoConferido;
+  toast(isNaoConferido ? '⚠️ Marcado como NÃO CONFERIDO' : '✅ Marcado como Conferido');
+  // Reopen detail with updated state
+  fecharModalDireto();
+  setTimeout(() => abrirDetalhe(id), 100);
+  renderLista();
+}
+
+function toggleSistema(id) {
+  let dados = carregar();
+  const idx = dados.findIndex(x => x.id === id);
+  if (idx < 0) return;
+  dados[idx].naoSistema = !dados[idx].naoSistema;
+  salvarDados(dados);
+  const isNaoSistema = dados[idx].naoSistema;
+  toast(isNaoSistema ? '🟣 Marcado como NÃO ADICIONADO AO SISTEMA' : '✅ Marcado como Adicionado ao Sistema');
+  fecharModalDireto();
+  setTimeout(() => abrirDetalhe(id), 100);
+  renderLista();
+}
+
+function toggleLocalizado(id) {
+  let dados = carregar();
+  const idx = dados.findIndex(x => x.id === id);
+  if (idx < 0) return;
+  dados[idx].naoLocalizado = !dados[idx].naoLocalizado;
+  salvarDados(dados);
+  const isNaoLocalizado = dados[idx].naoLocalizado;
+  toast(isNaoLocalizado ? '📍 Marcado como NÃO ESTÁ NO LOCAL' : '✅ Piso encontrado no local');
+  fecharModalDireto();
+  setTimeout(() => abrirDetalhe(id), 100);
+  renderLista();
+}
+
+function editarItem(id) {
+  const dados = carregar();
+  const d = dados.find(x => x.id === id);
+  if (!d) return;
+
+  fecharModalDireto();
+  irPara('cadastrar');
+
+  setTimeout(() => {
+    document.getElementById('nome').value = d.nome;
+    document.getElementById('nome').dataset.editId = d.id;
+    document.getElementById('lote').value = d.lote;
+    document.getElementById('marca').value = d.marca || '';
+    document.getElementById('codigo').value = d.codigo || '';
+    document.getElementById('tamanho').value = d.tamanho || '';
+    document.getElementById('bitola').value = d.bitola || '';
+    document.getElementById('tonalidade').value = d.tonalidade || '';
+    document.getElementById('patio').value = d.patio || '';
+    document.getElementById('rua').value = d.rua || '';
+    document.getElementById('apartamento').value = d.apartamento || '';
+    document.getElementById('nivel').value = d.nivel || '';
+    document.getElementById('caixas').value = d.caixas;
+    document.getElementById('pecas').value = d.pecas;
+    document.getElementById('m2PorCaixa').value = d.m2PorCaixa || '';
+    document.getElementById('caixasPorPallet').value = d.caixasPorPallet || '';
+    document.getElementById('qtdPallets').value = d.qtdPallets || '';
+    // Itens antigos não têm "caixasAvulsasFora" separado — preserva o total de
+    // caixas já cadastrado como avulsas, para não perder a quantidade ao editar
+    document.getElementById('caixasAvulsasFora').value =
+      (d.qtdPallets || d.caixasAvulsasFora) ? (d.caixasAvulsasFora || 0) : (d.caixas || '');
+    document.querySelector('.btn-salvar').textContent = '💾 Atualizar Registro';
+    carregarPreviewFotoExistente(d.foto || null);
+    atualizarCaixasPorPallet();
+    window.scrollTo(0, 0);
+  }, 200);
+}
+
+function excluirItem(id) {
+  if (!confirm('Excluir este registro do estoque?')) return;
+  let dados = carregar();
+  const antes = dados.length;
+  dados = dados.filter(x => x.id !== String(id));
+  if (dados.length === antes) {
+    toast('⚠️ Registro não encontrado.', true);
+    return;
+  }
+  salvarDados(dados);
+  fecharModalDireto();
+  renderLista();
+  toast('🗑️ Registro excluído.');
+}
+
+function duplicarItem(id) {
+  const dados = carregar();
+  const original = dados.find(d => d.id === id);
+  if (!original) return;
+
+  // Gera ID garantidamente único: timestamp + random para evitar colisão
+  const novoId = `${Date.now()}_${Math.random().toString(36).slice(2, 9)}`;
+
+  const copia = {
+    ...original,
+    id: novoId,
+    lote: '',
+    foto: null,
+    data: new Date().toLocaleDateString('pt-BR'),
+    dataAlteracao: undefined,
+    historico: [],
+    naoConferido: false,
+    naoSistema: false,
+    naoLocalizado: false
+  };
+
+  // Garante que o id original não foi alterado
+  if (dados.some(d => d.id === novoId)) {
+    toast('❌ Erro ao gerar ID único. Tente novamente.', true);
+    return;
+  }
+
+  dados.push(copia);
+  salvarDados(dados);
+  fecharModalDireto();
+  renderLista();
+  toast('📋 Piso duplicado! Preencha o Lote no formulário.');
+  setTimeout(() => editarItem(novoId), 300);
+}
+
+// Garante que todos os IDs no storage são strings (compatibilidade com registros antigos)
+function normalizarIds() {
+  const dados = carregar();
+  let precisou = false;
+  const normalizados = dados.map(d => {
+    if (typeof d.id !== 'string') { precisou = true; return { ...d, id: String(d.id) }; }
+    return d;
+  });
+  if (precisou) salvarDados(normalizados);
+}
+
+// ===================== RELATÓRIO =====================
+// Recalcula "Peças/Caixa" para TODOS os pisos já cadastrados, com base no
+// Tamanho e no m²/Caixa de cada um — sem precisar abrir e salvar cada item.
+// Apaga TODOS os pisos cadastrados no estoque (ação irreversível)
+function apagarTodosOsPisos() {
+  const dados = carregar();
+  if (dados.length === 0) { toast('ℹ️ Não há pisos cadastrados.', true); return; }
+
+  if (!confirm(`⚠️ Isso vai apagar TODOS os ${dados.length} pisos cadastrados no estoque. Esta ação não pode ser desfeita. Continuar?`)) return;
+  if (!confirm('Tem certeza mesmo? Todos os dados de estoque serão perdidos permanentemente.')) return;
+
+  salvarDados([]);
+  renderRelatorio();
+  renderLista();
+  toast('🗑️ Todos os pisos foram apagados.');
+}
+
+function recalcularTodasMetragens() {
+  const dados = carregar();
+  if (dados.length === 0) { toast('⚠️ Nenhum piso cadastrado ainda.', true); return; }
+
+  let atualizados = 0;
+  const novosDados = dados.map(d => {
+    const pecasCalc = calcularPecasPorCaixa(d.tamanho, d.m2PorCaixa);
+    if (pecasCalc > 0 && pecasCalc !== d.pecasPorCaixa) {
+      atualizados++;
+      return { ...d, pecasPorCaixa: pecasCalc };
+    }
+    return d;
+  });
+
+  salvarDados(novosDados);
+  renderRelatorio();
+  toast(atualizados > 0
+    ? `🔄 ${atualizados} piso${atualizados > 1 ? 's' : ''} recalculado${atualizados > 1 ? 's' : ''} com sucesso!`
+    : '✅ Todos os pisos já estavam atualizados.');
+}
+
+function renderRelatorio() {
+  const dados = carregar();
+  const totalPisos = dados.length;
+  const totalCaixas = dados.reduce((s, d) => s + d.caixas, 0);
+  const totalPecas = dados.reduce((s, d) => s + d.pecas, 0);
+  const lotes = new Set(dados.map(d => d.lote)).size;
+  const totalMetragem = dados.reduce((s, d) => s + calcularMetragemTotal(d), 0);
+
+  document.getElementById('resumo-cards').innerHTML = `
+    <div class="resumo-card">
+      <div class="resumo-valor">${totalPisos}</div>
+      <div class="resumo-label">Tipos de Piso</div>
+    </div>
+    <div class="resumo-card">
+      <div class="resumo-valor">${totalCaixas}</div>
+      <div class="resumo-label">Total Caixas</div>
+    </div>
+    <div class="resumo-card">
+      <div class="resumo-valor">${totalPecas}</div>
+      <div class="resumo-label">Peças Avulsas</div>
+    </div>
+    <div class="resumo-card">
+      <div class="resumo-valor">${lotes}</div>
+      <div class="resumo-label">Lotes</div>
+    </div>
+    <div class="resumo-card">
+      <div class="resumo-valor" style="font-size:18px">${fmtM2(totalMetragem)}</div>
+      <div class="resumo-label">Metragem Total</div>
+    </div>
+  `;
+
+  if (dados.length === 0) {
+    document.getElementById('tabela-wrap').innerHTML = `<div class="lista-vazia" style="padding:32px"><div class="emoji">📊</div><p>Nenhum dado ainda.</p></div>`;
+    return;
+  }
+
+  const pendentes = dados.filter(d => d.naoConferido).length;
+  const naoNoSistema = dados.filter(d => d.naoSistema).length;
+  const linhas = [...dados].sort((a, b) => a.nome.localeCompare(b.nome)).map(d => `
+    <tr style="${d.naoConferido ? 'background:#fff8f0;' : ''}">
+      <td>
+        <b>${d.nome}</b>${d.naoConferido ? ' <span style="color:#e67e22;font-size:11px;font-weight:700;">⚠️ NÃO CONF.</span>' : ''}${d.naoSistema ? ' <span style="color:#8e44ad;font-size:11px;font-weight:700;">🟣 N.SIST.</span>' : ''}${d.naoLocalizado ? ' <span style="color:#e67e22;font-size:11px;font-weight:700;">📍 N.LOCAL</span>' : ''}<br>
+        <small style="color:#888">${d.lote}</small><br>
+        <small>${d.marca || '-'} • ${d.codigo || '-'} • ${d.tamanho || '-'} • Bit: ${d.bitola || '-'} • Tom: ${d.tonalidade || '-'}</small>
+      </td>
+      <td style="text-align:center">${d.patio || '-'}/${d.rua || '-'}/${d.apartamento || '-'}<br><small>Nível ${d.nivel || '-'}</small></td>
+      <td style="text-align:center">${d.caixas}</td>
+      <td style="text-align:center">${d.pecas}</td>
+      <td style="text-align:center">${calcularMetragemTotal(d) > 0 ? fmtM2(calcularMetragemTotal(d)) : '-'}</td>
+    </tr>
+  `).join('');
+  const aviso = (pendentes > 0 ? `<div style="background:#fff3e0;border:1.5px solid #e67e22;border-radius:10px;padding:10px 14px;font-size:13px;color:#7d4e0f;font-weight:600;margin-bottom:8px;">⚠️ ${pendentes} item${pendentes > 1 ? 's' : ''} não conferido${pendentes > 1 ? 's' : ''} no estoque</div>` : '') + (naoNoSistema > 0 ? `<div style="background:#f5eef8;border:1.5px solid #8e44ad;border-radius:10px;padding:10px 14px;font-size:13px;color:#5b2c6f;font-weight:600;margin-bottom:12px;">🟣 ${naoNoSistema} item${naoNoSistema > 1 ? 's' : ''} não adicionado${naoNoSistema > 1 ? 's' : ''} ao sistema</div>` : '');
+
+  document.getElementById('tabela-wrap').innerHTML = aviso + `
+    <table>
+      <thead>
+        <tr>
+          <th>Piso / Lote</th>
+          <th>Localização</th>
+          <th>Caixas</th>
+          <th>Peças</th>
+          <th>Metragem</th>
+        </tr>
+      </thead>
+      <tbody>${linhas}</tbody>
+    </table>
+  `;
+}
+
+// ===================== EXPORTAR CSV =====================
+// ===================== EXPORTAR CSV PERSONALIZADO =====================
+let ruaSelecionada = null;
+
+// Definição de todas as colunas disponíveis
+const COLUNAS_EXPORT = [
+  { id: 'nome',             label: 'Nome',                 fn: d => d.nome },
+  { id: 'lote',             label: 'Lote',                 fn: d => d.lote },
+  { id: 'marca',            label: 'Marca',                fn: d => d.marca||'' },
+  { id: 'codigo',           label: 'Código',               fn: d => d.codigo||'' },
+  { id: 'tamanho',          label: 'Tamanho',              fn: d => d.tamanho||'' },
+  { id: 'bitola',           label: 'Bitola',               fn: d => d.bitola||'' },
+  { id: 'tonalidade',       label: 'Tonalidade',           fn: d => d.tonalidade||'' },
+  { id: 'patio',            label: 'Pátio',                fn: d => d.patio||'' },
+  { id: 'rua',              label: 'Rua',                  fn: d => d.rua||'' },
+  { id: 'apartamento',      label: 'Apt',                  fn: d => d.apartamento||'' },
+  { id: 'nivel',            label: 'Nível',                fn: d => d.nivel||'' },
+  { id: 'caixas',           label: 'Caixas',               fn: d => d.caixas||0 },
+  { id: 'qtdPallets',       label: 'Pallets',              fn: d => d.qtdPallets||'' },
+  { id: 'caixasPorPallet',  label: 'Caixas/Pallet',        fn: d => d.caixasPorPallet||'' },
+  { id: 'caixasAvulsas',    label: 'Cx. Avulsas',          fn: d => d.caixasAvulsasFora||'' },
+  { id: 'pecas',            label: 'Peças Avulsas',        fn: d => d.pecas||0 },
+  { id: 'm2PorCaixa',       label: 'm²/Caixa',             fn: d => d.m2PorCaixa ? d.m2PorCaixa.toString().replace('.',',') : '' },
+  { id: 'pecasPorCaixa',    label: 'Peças/Caixa',          fn: d => d.pecasPorCaixa||'' },
+  { id: 'metragem',         label: 'Metragem (m²)',        fn: d => calcularMetragemTotal(d) > 0 ? calcularMetragemTotal(d).toFixed(2).replace('.',',') : '' },
+  { id: 'data',             label: 'Data Cadastro',        fn: d => d.data||'' },
+  { id: 'dataAlteracao',    label: 'Última Alteração',     fn: d => d.dataAlteracao||'' },
+];
+
+// Guarda estado das colunas selecionadas (começa com todas ativas)
+const colunasAtivas = new Set(COLUNAS_EXPORT.map(c => c.id));
+
+function renderSeletorColunas() {
+  const wrap = document.getElementById('col-select-wrap');
+  if (!wrap) return;
+  wrap.innerHTML = COLUNAS_EXPORT.map(col => {
+    const ativo = colunasAtivas.has(col.id);
+    return `<button onclick="toggleColuna('${col.id}')" style="
+      padding:6px 12px;border-radius:20px;font-size:12px;font-weight:600;cursor:pointer;
+      border:1.5px solid ${ativo ? '#1a2e1a' : '#d0c9bb'};
+      background:${ativo ? '#1a2e1a' : '#fff'};
+      color:${ativo ? '#fff' : '#666'}">
+      ${col.label}
+    </button>`;
+  }).join('');
+}
+
+function toggleColuna(id) {
+  if (colunasAtivas.has(id)) colunasAtivas.delete(id);
+  else colunasAtivas.add(id);
+  renderSeletorColunas();
+}
+
+function toggleTodasColunas(ligar) {
+  COLUNAS_EXPORT.forEach(c => ligar ? colunasAtivas.add(c.id) : colunasAtivas.delete(c.id));
+  renderSeletorColunas();
+}
+
+function renderBotoesRua() {
+  const dados = carregar();
+  const ruas = [...new Set(
+    dados.filter(d => d.rua && !d.naoLocalizado).map(d => String(d.rua).trim())
+  )].sort((a, b) => {
+    const na = parseFloat(a), nb = parseFloat(b);
+    return isNaN(na) || isNaN(nb) ? a.localeCompare(b) : na - nb;
+  });
+
+  const input = (document.getElementById('export-rua-input')?.value || '').trim().toLowerCase();
+  const el = document.getElementById('export-rua-lista');
+  if (!el) return;
+
+  const ruasFiltradas = input ? ruas.filter(r => r.toLowerCase().includes(input)) : ruas;
+
+  el.innerHTML = ruasFiltradas.map(r => `
+    <button onclick="selecionarRua('${r}')" style="
+      padding:6px 14px;border-radius:20px;border:1.5px solid ${ruaSelecionada === r ? '#1a2e1a' : '#d0c9bb'};
+      background:${ruaSelecionada === r ? '#1a2e1a' : '#fff'};
+      color:${ruaSelecionada === r ? '#fff' : '#333'};
+      font-size:13px;font-weight:600;cursor:pointer">
+      Rua ${r}
+    </button>
+  `).join('');
+}
+
+function selecionarRua(rua) {
+  ruaSelecionada = ruaSelecionada === rua ? null : rua;
+  renderBotoesRua();
+}
+
+function exportarCSVPersonalizado() {
+  if (colunasAtivas.size === 0) { toast('⚠️ Selecione ao menos uma coluna.', true); return; }
+
+  const inputRua = (document.getElementById('export-rua-input')?.value || '').trim();
+  const rua = ruaSelecionada || inputRua || null;
+
+  let todos = carregar();
+
+  // Filtra por rua se selecionada (exclui também os não localizados)
+  if (rua) {
+    todos = todos.filter(d =>
+      String(d.rua || '').trim().toLowerCase() === rua.toLowerCase() &&
+      !d.naoLocalizado
+    );
+    if (todos.length === 0) {
+      toast(`⚠️ Nenhum piso encontrado na Rua ${rua}.`, true);
+      return;
+    }
+  }
+
+  if (todos.length === 0) { toast('⚠️ Nenhum dado para exportar.', true); return; }
+
+  // Ordena por pátio → apartamento
+  todos.sort((a, b) => {
+    const pa = parseFloat(a.patio)||0, pb = parseFloat(b.patio)||0;
+    if (pa !== pb) return pa - pb;
+    return (parseFloat(a.apartamento)||0) - (parseFloat(b.apartamento)||0);
+  });
+
+  const colunas = COLUNAS_EXPORT.filter(c => colunasAtivas.has(c.id));
+  const sep = ';';
+  const header = colunas.map(c => c.label).join(sep);
+  const linhas = todos.map(d =>
+    colunas.map(c => `"${String(c.fn(d)).replace(/"/g, '""')}"`).join(sep)
+  );
+
+  const csv = '\uFEFF' + [header, ...linhas].join('\r\n');
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  const sufixo = rua ? `_rua${rua}` : '_todos';
+  a.download = `estoque${sufixo}_${new Date().toLocaleDateString('pt-BR').replace(/\//g,'-')}.csv`;
+  a.click();
+  toast(`📤 Exportado — ${todos.length} piso${todos.length > 1 ? 's' : ''}${rua ? ` da Rua ${rua}` : ''}`);
+}
+
+// Mantém compatibilidade com botão legado
+function exportarCSV() { exportarCSVPersonalizado(); }
+function exportarPorRua() { exportarCSVPersonalizado(); }
+
+// ===================== EXPORTAR / IMPORTAR JSON =====================
+function exportarJSON() {
+  const dados = carregar();
+  const movs = carregarMovimentacoes();
+  if (dados.length === 0 && movs.length === 0) { toast('⚠️ Nenhum dado para exportar.', true); return; }
+  const backup = {
+    tipo: 'estoque_pisos_backup',
+    versao: 2,
+    estoque: dados,
+    movimentacoes: movs
+  };
+  const json = JSON.stringify(backup, null, 2);
+  const blob = new Blob([json], { type: 'application/json;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `estoque_pisos_backup_${new Date().toLocaleDateString('pt-BR').replace(/\//g, '-')}.json`;
+  a.click();
+  toast('✅ Backup exportado! Compartilhe o arquivo.');
+}
+
+function exportarParaDrive() {
+  const dados = carregar();
+  const movs = carregarMovimentacoes();
+  if (dados.length === 0 && movs.length === 0) { toast('⚠️ Nenhum dado para exportar.', true); return; }
+
+  // 1. Baixa o arquivo normalmente
+  const backup = {
+    tipo: 'estoque_pisos_backup',
+    versao: 2,
+    estoque: dados,
+    movimentacoes: movs
+  };
+  const json = JSON.stringify(backup, null, 2);
+  const blob = new Blob([json], { type: 'application/json;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `estoque_pisos_backup_${new Date().toLocaleDateString('pt-BR').replace(/\//g, '-')}.json`;
+  a.click();
+
+  // 2. Abre o Google Drive após 1.5s (tempo para o download iniciar)
+  toast('⬇️ Baixando backup... O Google Drive abrirá em seguida.');
+  setTimeout(() => {
+    window.open('https://drive.google.com/drive/my-drive', '_blank');
+    toast('☁️ Arraste o arquivo baixado para o Google Drive!');
+  }, 1500);
+}
+
+function importarJSON(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+
+  const reader = new FileReader();
+
+  reader.onload = function(e) {
+    try {
+      const conteudo = JSON.parse(e.target.result);
+
+      // Aceita dois formatos:
+      // - Antigo: um array puro só com o estoque
+      // - Novo: { estoque: [...], movimentacoes: [...] }
+      let dadosImportados;
+      let movsImportadas = [];
+      if (Array.isArray(conteudo)) {
+        dadosImportados = conteudo;
+      } else if (conteudo && Array.isArray(conteudo.estoque)) {
+        dadosImportados = conteudo.estoque;
+        movsImportadas = Array.isArray(conteudo.movimentacoes) ? conteudo.movimentacoes : [];
+      } else {
+        throw new Error('Formato inválido');
+      }
+
+      const existentes = carregar();
+
+      // Campos que identificam o piso como sendo o mesmo: NOME + LOTE
+      // (o código pode se repetir entre pisos diferentes — isso é só sinalizado
+      // visualmente em vermelho na lista, não impede a importação. Lotes iguais
+      // entre pisos com nomes diferentes também não são considerados duplicados.)
+      const mesmoPiso = (a, b) =>
+        (a.nome || '').trim().toLowerCase() === (b.nome || '').trim().toLowerCase() &&
+        (a.lote || '').trim().toLowerCase() === (b.lote || '').trim().toLowerCase();
+
+      // Campos que serão atualizados se mudaram
+      const camposAtualizaveis = ['marca', 'codigo', 'tamanho', 'bitola', 'tonalidade', 'patio', 'rua', 'apartamento', 'nivel', 'caixas', 'pecas', 'm2PorCaixa', 'pecasPorCaixa', 'caixasPorPallet', 'data'];
+
+      let novos = 0;
+      let atualizados = 0;
+
+      dadosImportados.forEach(itemImportado => {
+        const idxExistente = existentes.findIndex(item => mesmoPiso(item, itemImportado));
+
+        if (idxExistente >= 0) {
+          // Piso já existe — verifica se algum campo mudou e atualiza
+          let houveMudanca = false;
+          camposAtualizaveis.forEach(campo => {
+            const valAtual = (existentes[idxExistente][campo] ?? '').toString().trim();
+            const valNovo  = (itemImportado[campo] ?? '').toString().trim();
+            if (valAtual !== valNovo) {
+              existentes[idxExistente][campo] = itemImportado[campo];
+              houveMudanca = true;
+            }
+          });
+          if (houveMudanca) atualizados++;
+        } else {
+          // Piso novo — adiciona preservando o id original ou gerando um novo
+          existentes.push({
+            ...itemImportado,
+            id: itemImportado.id || (Date.now().toString() + Math.random().toString(16).slice(2))
+          });
+          novos++;
+        }
+      });
+
+      salvarDados(existentes);
+
+      // Importa movimentações (se houver no arquivo), evitando duplicar
+      // pelas mesmas: piso + data/hora + origem + destino
+      let movsNovas = 0;
+      if (movsImportadas.length > 0) {
+        const movsExistentes = carregarMovimentacoes();
+        const mesmaMov = (a, b) =>
+          (a.pisoNome || '') === (b.pisoNome || '') &&
+          (a.dataHora || '') === (b.dataHora || '') &&
+          JSON.stringify(a.origem || {}) === JSON.stringify(b.origem || {}) &&
+          JSON.stringify(a.destino || {}) === JSON.stringify(b.destino || {});
+
+        movsImportadas.forEach(movImportada => {
+          const jaExiste = movsExistentes.some(m => mesmaMov(m, movImportada));
+          if (!jaExiste) {
+            movsExistentes.push({
+              ...movImportada,
+              id: movImportada.id || (Date.now().toString() + Math.random().toString(16).slice(2))
+            });
+            movsNovas++;
+          }
+        });
+
+        // Mantém ordem cronológica (mais recente primeiro)
+        movsExistentes.sort((a, b) => (b.id || '').localeCompare(a.id || ''));
+        salvarMovimentacoes(movsExistentes);
+      }
+
+      const partes = [];
+      if (novos > 0) partes.push(`✅ ${novos} novo(s) adicionado(s)`);
+      if (atualizados > 0) partes.push(`🔄 ${atualizados} atualizado(s)`);
+      if (movsNovas > 0) partes.push(`🔁 ${movsNovas} movimentação(ões) importada(s)`);
+      if (partes.length === 0) partes.push('ℹ️ Nenhuma alteração encontrada');
+
+      toast(partes.join(' | '));
+
+      renderRelatorio();
+      renderLista();
+
+    } catch(err) {
+      toast(
+        '❌ Arquivo inválido. Use um backup gerado por este app.',
+        true
+      );
+    }
+
+    event.target.value = '';
+  };
+
+  reader.readAsText(file);
+}
+
+
+// ===================== MOVIMENTAÇÕES =====================
+const CHAVE_MOV = 'estoque_movimentacoes_v1';
+
+function carregarMovimentacoes() {
+  try { return JSON.parse(localStorage.getItem(CHAVE_MOV)) || []; }
+  catch(e) { return []; }
+}
+
+function salvarMovimentacoes(movs) {
+  localStorage.setItem(CHAVE_MOV, JSON.stringify(movs));
+}
+
+function fmtLocal(l) {
+  const partes = [];
+  if (l.patio) partes.push(`Pátio ${l.patio}`);
+  if (l.rua) partes.push(`Rua ${l.rua}`);
+  if (l.apartamento) partes.push(`Apt ${l.apartamento}`);
+  if (l.nivel !== '' && l.nivel !== undefined && l.nivel !== null) partes.push(`Nível ${l.nivel}`);
+  return partes.length ? partes.join(' • ') : '(sem local)';
+}
+
+function registrarMovimentacao({ pisoId, pisoNome, lote, bitola, tonalidade, origem, destino }) {
+  const movs = carregarMovimentacoes();
+  movs.unshift({
+    id: Date.now().toString(),
+    pisoId,
+    pisoNome,
+    lote: lote || '',
+    bitola: bitola || '',
+    tonalidade: tonalidade || '',
+    origem,
+    destino,
+    dataHora: new Date().toLocaleString('pt-BR')
+  });
+  salvarMovimentacoes(movs);
+}
+
+// ===================== GALERIA =====================
+function renderGaleria() {
+  const busca = (document.getElementById('busca-galeria')?.value || '').toLowerCase().trim();
+  let dados = carregar();
+
+  if (busca) dados = dados.filter(d =>
+    d.nome.toLowerCase().includes(busca) ||
+    (d.lote || '').toLowerCase().includes(busca) ||
+    (d.marca || '').toLowerCase().includes(busca)
+  );
+
+  dados.sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR'));
+
+  const el = document.getElementById('galeria-grid');
+  if (!el) return;
+
+  if (dados.length === 0) {
+    el.innerHTML = `<div class="galeria-vazia" style="grid-column:span 2">
+      <div class="emoji">🖼️</div>
+      <p>${busca ? 'Nenhum piso encontrado.' : 'Nenhum piso cadastrado ainda.'}</p>
+    </div>`;
+    return;
+  }
+
+  el.innerHTML = dados.map(d => `
+    <div class="galeria-card" onclick="abrirDetalhe('${d.id}')">
+      ${d.foto
+        ? `<img src="${d.foto}" class="galeria-img" alt="${d.nome}" loading="lazy" />`
+        : `<div class="galeria-sem-foto">📷<span>Sem foto</span></div>`
+      }
+      <div class="galeria-nome">${d.nome}</div>
+      <div class="galeria-lote">${d.tamanho || '—'}</div>
+    </div>
+  `).join('');
+}
+
+function renderMovimentacoes() {
+  const busca = (document.getElementById('busca-mov').value || '').toLowerCase().trim();
+  let movs = carregarMovimentacoes();
+
+  if (busca) {
+    movs = movs.filter(m =>
+      m.pisoNome.toLowerCase().includes(busca) ||
+      fmtLocal(m.origem).toLowerCase().includes(busca) ||
+      fmtLocal(m.destino).toLowerCase().includes(busca)
+    );
+  }
+
+  const el = document.getElementById('lista-movimentacoes');
+
+  if (movs.length === 0) {
+    el.innerHTML = `
+      <div class="lista-vazia">
+        <div class="emoji">🔄</div>
+        <p>${busca ? 'Nenhuma movimentação encontrada.' : 'Nenhuma movimentação registrada ainda.<br>Edite a localização de um piso para registrar.'}</p>
+      </div>`;
+    return;
+  }
+
+  el.innerHTML = movs.map(m => {
+    const infos = [];
+    if (m.lote) infos.push(`Lote: ${m.lote}`);
+    if (m.bitola) infos.push(`Bitola: ${m.bitola}`);
+    if (m.tonalidade) infos.push(`Tom: ${m.tonalidade}`);
+    return `
+    <div class="mov-item">
+      <div class="mov-piso">📦 ${m.pisoNome}</div>
+      ${infos.length ? `<div class="mov-data" style="margin-bottom:6px;color:#555">${infos.join(' • ')}</div>` : ''}
+      <div class="mov-rota">
+        <div class="mov-local origem">${fmtLocal(m.origem)}</div>
+        <div class="mov-seta">➜</div>
+        <div class="mov-local destino">${fmtLocal(m.destino)}</div>
+      </div>
+      <div class="mov-data">🕐 ${m.dataHora}</div>
+    </div>
+  `}).join('');
+}
+
+function limparMovimentacoes() {
+  if (!confirm('Apagar todo o histórico de movimentações?')) return;
+  salvarMovimentacoes([]);
+  renderMovimentacoes();
+  toast('🗑️ Histórico limpo.');
+}
+
+function exportarMovimentacoesXLS() {
+  const movs = carregarMovimentacoes();
+  if (movs.length === 0) { toast('⚠️ Nenhuma movimentação para exportar.', true); return; }
+  const sep = ';';
+  const header = ['Piso','Lote','Bitola','Tonalidade','Origem Pátio','Origem Rua','Origem Apt','Origem Nível','Destino Pátio','Destino Rua','Destino Apt','Destino Nível','Data/Hora'].join(sep);
+  const linhas = movs.map(m =>
+    [m.pisoNome, m.lote||'', m.bitola||'', m.tonalidade||'',
+     m.origem.patio||'', m.origem.rua||'', m.origem.apartamento||'', m.origem.nivel!==undefined?m.origem.nivel:'',
+     m.destino.patio||'', m.destino.rua||'', m.destino.apartamento||'', m.destino.nivel!==undefined?m.destino.nivel:'',
+     m.dataHora||'']
+    .map(v => `"${String(v).replace(/"/g, '""')}"`)
+    .join(sep)
+  );
+  const csv = '\uFEFF' + [header, ...linhas].join('\n');
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `movimentacoes_${new Date().toLocaleDateString('pt-BR').replace(/\//g, '-')}.csv`;
+  a.click();
+  toast('📤 CSV exportado com sucesso!');
+}
+
+function toast(msg, erro = false) {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.style.background = erro ? '#c0392b' : 'var(--verde-escuro)';
+  el.classList.add('visivel');
+  setTimeout(() => el.classList.remove('visivel'), 2600);
+}
+
+// INIT
+normalizarIds();
+atualizarSubtitulo();
+</script>
+
+<!-- FIREBASE -->
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+import {
+  getFirestore,
+  collection,
+  addDoc,
+  getDocs,
+  deleteDoc,
+  doc,
+  updateDoc
+} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+
+// CONFIGURE COM OS DADOS DO SEU FIREBASE
+const firebaseConfig = {
+  apiKey: "SUA_API_KEY",
+  authDomain: "SEU_PROJETO.firebaseapp.com",
+  projectId: "SEU_PROJECT_ID",
+  storageBucket: "SEU_PROJETO.appspot.com",
+  messagingSenderId: "000000000",
+  appId: "APP_ID"
+};
+
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
+
+window.db = db;
+window.firebaseFns = {
+  collection,
+  addDoc,
+  getDocs,
+  deleteDoc,
+  doc,
+  updateDoc
+};
+</script>
+
+<!-- ===================== PWA: SERVICE WORKER EMBUTIDO ===================== -->
+<script>
+if ('serviceWorker' in navigator) {
+  // Service worker embutido como blob — funciona sem servidor
+  const swCode = `
+    const CACHE = 'estoque-pisos-v1';
+    self.addEventListener('install', e => {
+      self.skipWaiting();
+    });
+    self.addEventListener('activate', e => {
+      self.clients.claim();
+    });
+    self.addEventListener('fetch', e => {
+      e.respondWith(fetch(e.request).catch(() => caches.match(e.request)));
+    });
+  `;
+  const blob = new Blob([swCode], { type: 'application/javascript' });
+  const swUrl = URL.createObjectURL(blob);
+  navigator.serviceWorker.register(swUrl).catch(() => {});
+}
+
+// Banner de instalação PWA
+let deferredPrompt = null;
+window.addEventListener('beforeinstallprompt', e => {
+  e.preventDefault();
+  deferredPrompt = e;
+  // Mostra botão de instalar se ainda não instalado
+  const banner = document.getElementById('pwa-install-banner');
+  if (banner) banner.style.display = 'flex';
+});
+
+window.addEventListener('appinstalled', () => {
+  const banner = document.getElementById('pwa-install-banner');
+  if (banner) banner.style.display = 'none';
+  deferredPrompt = null;
+});
+
+function instalarApp() {
+  if (deferredPrompt) {
+    deferredPrompt.prompt();
+    deferredPrompt.userChoice.then(() => { deferredPrompt = null; });
+  }
+}
+</script>
+
+</body>
+</html>
