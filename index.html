@@ -1371,16 +1371,21 @@ async function uploadFotoCloudinary(base64, pisoId, idx) {
     formData.append('file', base64);
     formData.append('upload_preset', CLOUDINARY_PRESET);
     formData.append('folder', `estoque-pisos/${window._usuarioUid || 'local'}/${pisoId}`);
-    formData.append('public_id', `foto_${idx}`);
+    formData.append('public_id', `foto_${idx}_${Date.now()}`);
 
     const res = await fetch(`https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD}/image/upload`, {
       method: 'POST',
       body: formData
     });
-    if (!res.ok) throw new Error(`HTTP ${res.status}`);
     const data = await res.json();
+    if (!res.ok) {
+      toast(`❌ Cloudinary: ${data.error?.message || 'Erro ' + res.status}`, true);
+      console.error('Cloudinary erro:', data);
+      return null;
+    }
     return data.secure_url;
   } catch(e) {
+    toast(`❌ Erro ao enviar foto: ${e.message}`, true);
     console.error('Erro upload Cloudinary:', e);
     return null;
   }
@@ -1834,11 +1839,13 @@ function salvar() {
 
       // Faz upload das fotos para Cloudinary em background
       if (fotosAtuais.length > 0) {
-        toast('☁️ Enviando fotos para a nuvem...');
+        toast(`☁️ Enviando ${fotosAtuais.length} foto(s)...`);
         uploadFotosPiso(editId, fotosAtuais).then(urls => {
           if (urls.length > 0) {
-            salvarFotosDB(editId, urls); // salva URLs no IndexedDB
-            toast(`✅ ${urls.length} foto(s) salva(s) na nuvem!`);
+            salvarFotosDB(editId, urls);
+            toast(`✅ ${urls.length}/${fotosAtuais.length} foto(s) enviada(s)!`);
+          } else {
+            toast('❌ Nenhuma foto foi enviada. Verifique o console.', true);
           }
         });
       } else {
