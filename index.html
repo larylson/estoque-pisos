@@ -1591,9 +1591,7 @@ function redimensionarImagem(file, callback) {
   reader.onload = e => {
     const img = new Image();
     img.onload = () => {
-      // Duas passagens: primeira reduz para 800px, segunda para 400px com qualidade baixa
-      // Garante que cada foto ocupe no máximo ~100KB em base64
-      const MAX = 400;
+      const MAX = 800;
       let w = img.width, h = img.height;
       if (w > MAX || h > MAX) {
         if (w > h) { h = Math.round(h * MAX / w); w = MAX; }
@@ -1602,11 +1600,7 @@ function redimensionarImagem(file, callback) {
       const canvas = document.createElement('canvas');
       canvas.width = w; canvas.height = h;
       canvas.getContext('2d').drawImage(img, 0, 0, w, h);
-      let base64 = canvas.toDataURL('image/jpeg', 0.50);
-      // Se ainda muito grande, comprime mais
-      if (base64.length > 150000) {
-        base64 = canvas.toDataURL('image/jpeg', 0.35);
-      }
+      const base64 = canvas.toDataURL('image/jpeg', 0.80);
       callback(base64);
     };
     img.src = e.target.result;
@@ -1620,7 +1614,7 @@ function carregarFotos(event) {
   const files = Array.from(event.target.files);
   if (!files.length) return;
 
-  const MAX_FOTOS = 3;
+  const MAX_FOTOS = 10;
   const disponiveis = MAX_FOTOS - fotosAtuais.length;
   if (disponiveis <= 0) {
     toast(`⚠️ Limite de ${MAX_FOTOS} fotos por piso atingido.`, true);
@@ -1837,19 +1831,22 @@ function salvar() {
       limparForm();
       fecharModalDireto();
 
-      // Faz upload das fotos para Cloudinary em background
-      if (fotosAtuais.length > 0) {
-        toast(`☁️ Enviando ${fotosAtuais.length} foto(s)...`);
+      // Salva imediatamente no IndexedDB (URLs existentes + base64 novas)
+      // e faz upload das novas para Cloudinary em background
+      const temNovasBase64 = fotosAtuais.some(f => f && f.startsWith('data:'));
+      if (temNovasBase64) {
+        salvarFotosDB(editId, fotosAtuais); // salva temporariamente com base64
+        toast(`☁️ Enviando ${fotosAtuais.filter(f=>f.startsWith('data:')).length} foto(s) nova(s)...`);
         uploadFotosPiso(editId, fotosAtuais).then(urls => {
           if (urls.length > 0) {
-            salvarFotosDB(editId, urls);
-            toast(`✅ ${urls.length}/${fotosAtuais.length} foto(s) enviada(s)!`);
+            salvarFotosDB(editId, urls); // substitui por URLs
+            toast(`✅ ${urls.length} foto(s) salva(s) na nuvem!`);
           } else {
-            toast('❌ Nenhuma foto foi enviada. Verifique o console.', true);
+            toast('❌ Erro ao enviar fotos. Salvas localmente.', true);
           }
         });
       } else {
-        salvarFotosDB(editId, []);
+        salvarFotosDB(editId, fotosAtuais); // só URLs, salva direto
       }
       return;
     }
@@ -1866,13 +1863,16 @@ function salvar() {
   toast('✅ Piso salvo com sucesso!');
   limparForm();
 
-  // Faz upload das fotos para Cloudinary em background
+  // Salva imediatamente no IndexedDB e faz upload para Cloudinary em background
   if (fotosAtuais.length > 0) {
-    toast('☁️ Enviando fotos para a nuvem...');
+    salvarFotosDB(item.id, fotosAtuais); // salva temporariamente com base64
+    toast(`☁️ Enviando ${fotosAtuais.length} foto(s) para a nuvem...`);
     uploadFotosPiso(item.id, fotosAtuais).then(urls => {
       if (urls.length > 0) {
-        salvarFotosDB(item.id, urls);
+        salvarFotosDB(item.id, urls); // substitui por URLs
         toast(`✅ ${urls.length} foto(s) salva(s) na nuvem!`);
+      } else {
+        toast('❌ Erro ao enviar fotos. Salvas localmente.', true);
       }
     });
   }
