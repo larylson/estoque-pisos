@@ -1340,6 +1340,74 @@ async function carregarTodasFotosDB() {
   } catch(e) { return {}; }
 }
 
+// Migra fotos base64 existentes no IndexedDB para o Cloudinary (roda uma vez em background)
+async function migrarFotosParaCloudinary() {
+  const mapaFotos = await carregarTodasFotosDB();
+  const pisoIds = Object.keys(mapaFotos);
+  let migrados = 0;
+
+  for (const pisoId of pisoIds) {
+    const fotos = mapaFotos[pisoId];
+    const temBase64 = fotos.some(f => f && f.startsWith('data:'));
+    if (!temBase64) continue; // já são URLs, pula
+
+    const urls = await uploadFotosPiso(pisoId, fotos);
+    if (urls.length > 0) {
+      await salvarFotosDB(pisoId, urls);
+      migrados++;
+    }
+  }
+  if (migrados > 0) toast(`☁️ ${migrados} piso(s) com fotos migradas para a nuvem!`);
+}
+
+// ===================== CLOUDINARY =====================
+const CLOUDINARY_CLOUD = 'jkbk1o5z';
+const CLOUDINARY_PRESET = 'pisosSM';
+
+// Faz upload de uma foto (base64) para o Cloudinary e retorna a URL
+async function uploadFotoCloudinary(base64, pisoId, idx) {
+  try {
+    const formData = new FormData();
+    formData.append('file', base64);
+    formData.append('upload_preset', CLOUDINARY_PRESET);
+    formData.append('folder', `estoque-pisos/${window._usuarioUid || 'local'}/${pisoId}`);
+    formData.append('public_id', `foto_${idx}`);
+
+    const res = await fetch(`https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD}/image/upload`, {
+      method: 'POST',
+      body: formData
+    });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const data = await res.json();
+    return data.secure_url;
+  } catch(e) {
+    console.error('Erro upload Cloudinary:', e);
+    return null;
+  }
+}
+
+// Faz upload de todas as fotos de um piso e retorna array de URLs
+async function uploadFotosPiso(pisoId, fotosBase64) {
+  if (!fotosBase64 || !fotosBase64.length) return [];
+
+  // Separa fotos que já são URLs (já estão no Cloudinary) das que ainda são base64
+  const uploads = fotosBase64.map(async (foto, i) => {
+    if (foto && foto.startsWith('http')) return foto; // já é URL, não faz upload novamente
+    return await uploadFotoCloudinary(foto, pisoId, i);
+  });
+
+  const urls = await Promise.all(uploads);
+  return urls.filter(Boolean);
+}
+
+// Deleta fotos do Cloudinary (best-effort, falha silenciosa)
+async function deletarFotosCloudinary(pisoId) {
+  // Cloudinary delete requer API secret (server-side), então apenas removemos do IndexedDB
+  await excluirFotosDB(pisoId);
+}
+
+
+
 // Migra fotos que ainda estão no localStorage para o IndexedDB
 async function migrarFotosParaDB() {
   const dados = carregar();
@@ -1760,10 +1828,22 @@ function salvar() {
 
       dados[idx] = { ...dados[idx], nome, lote, marca, codigo, tamanho, bitola, tonalidade, patio, rua, apartamento, nivel, caixas, pecas, m2PorCaixa, pecasPorCaixa, caixasPorPallet, qtdPallets, caixasAvulsasFora, dataAlteracao: agora, historico: novoHistorico };
       salvarDados(dados);
-      salvarFotosDB(editId, fotosAtuais);
       toast('✏️ Registro atualizado!');
       limparForm();
       fecharModalDireto();
+
+      // Faz upload das fotos para Cloudinary em background
+      if (fotosAtuais.length > 0) {
+        toast('☁️ Enviando fotos para a nuvem...');
+        uploadFotosPiso(editId, fotosAtuais).then(urls => {
+          if (urls.length > 0) {
+            salvarFotosDB(editId, urls); // salva URLs no IndexedDB
+            toast(`✅ ${urls.length} foto(s) salva(s) na nuvem!`);
+          }
+        });
+      } else {
+        salvarFotosDB(editId, []);
+      }
       return;
     }
   }
@@ -1776,9 +1856,19 @@ function salvar() {
 
   dados.push(item);
   salvarDados(dados);
-  salvarFotosDB(item.id, fotosAtuais);
   toast('✅ Piso salvo com sucesso!');
   limparForm();
+
+  // Faz upload das fotos para Cloudinary em background
+  if (fotosAtuais.length > 0) {
+    toast('☁️ Enviando fotos para a nuvem...');
+    uploadFotosPiso(item.id, fotosAtuais).then(urls => {
+      if (urls.length > 0) {
+        salvarFotosDB(item.id, urls);
+        toast(`✅ ${urls.length} foto(s) salva(s) na nuvem!`);
+      }
+    });
+  }
 }
 
 function limparForm() {
@@ -2875,6 +2965,8 @@ const provider = new GoogleAuthProvider();
 // Monitora estado de autenticação
 onAuthStateChanged(auth, user => {
   if (user) {
+    window._usuarioUid = user.uid;
+    window._usuarioEmail = user.email;
     // Usuário logado — esconde tela de login e mostra o app
     document.getElementById('tela-login').style.display = 'none';
     document.getElementById('app-root').style.display = 'flex';
@@ -2889,7 +2981,11 @@ onAuthStateChanged(auth, user => {
     }
     normalizarIds();
     atualizarSubtitulo();
-    abrirDB().then(() => migrarFotosParaDB()).catch(() => {});
+    // Inicializa IndexedDB, migra fotos do localStorage e faz upload para Cloudinary
+    abrirDB().then(async () => {
+      await migrarFotosParaDB();
+      migrarFotosParaCloudinary(); // migra base64 para URLs do Cloudinary em background
+    }).catch(() => {});
   } else {
     // Não logado — mostra tela de login
     document.getElementById('tela-login').style.display = 'flex';
