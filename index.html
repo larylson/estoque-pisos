@@ -1827,26 +1827,32 @@ function salvar() {
 
       dados[idx] = { ...dados[idx], nome, lote, marca, codigo, tamanho, bitola, tonalidade, patio, rua, apartamento, nivel, caixas, pecas, m2PorCaixa, pecasPorCaixa, caixasPorPallet, qtdPallets, caixasAvulsasFora, dataAlteracao: agora, historico: novoHistorico };
       salvarDados(dados);
+
+      // Captura cópia das fotos ANTES de limparForm() zerar fotosAtuais
+      const fotosParaSalvar = [...fotosAtuais];
+      const idParaSalvar = editId;
+
       toast('✏️ Registro atualizado!');
       limparForm();
       fecharModalDireto();
 
-      // Salva imediatamente no IndexedDB (URLs existentes + base64 novas)
-      // e faz upload das novas para Cloudinary em background
-      const temNovasBase64 = fotosAtuais.some(f => f && f.startsWith('data:'));
-      if (temNovasBase64) {
-        salvarFotosDB(editId, fotosAtuais); // salva temporariamente com base64
-        toast(`☁️ Enviando ${fotosAtuais.filter(f=>f.startsWith('data:')).length} foto(s) nova(s)...`);
-        uploadFotosPiso(editId, fotosAtuais).then(urls => {
-          if (urls.length > 0) {
-            salvarFotosDB(editId, urls); // substitui por URLs
-            toast(`✅ ${urls.length} foto(s) salva(s) na nuvem!`);
-          } else {
-            toast('❌ Erro ao enviar fotos. Salvas localmente.', true);
-          }
-        });
+      // Salva imediatamente no IndexedDB e faz upload para Cloudinary em background
+      const temNovasBase64 = fotosParaSalvar.some(f => f && f.startsWith('data:'));
+      if (fotosParaSalvar.length > 0) {
+        salvarFotosDB(idParaSalvar, fotosParaSalvar);
+        if (temNovasBase64) {
+          toast(`☁️ Enviando foto(s) para a nuvem...`);
+          uploadFotosPiso(idParaSalvar, fotosParaSalvar).then(urls => {
+            if (urls.length > 0) {
+              salvarFotosDB(idParaSalvar, urls);
+              toast(`✅ ${urls.length} foto(s) salva(s) na nuvem!`);
+            } else {
+              toast('❌ Erro ao enviar fotos. Salvas localmente.', true);
+            }
+          });
+        }
       } else {
-        salvarFotosDB(editId, fotosAtuais); // só URLs, salva direto
+        salvarFotosDB(idParaSalvar, []);
       }
       return;
     }
@@ -1860,16 +1866,21 @@ function salvar() {
 
   dados.push(item);
   salvarDados(dados);
+
+  // Captura cópia das fotos ANTES de limparForm() zerar fotosAtuais
+  const fotosParaSalvar = [...fotosAtuais];
+  const idParaSalvar = item.id;
+
   toast('✅ Piso salvo com sucesso!');
   limparForm();
 
-  // Salva imediatamente no IndexedDB e faz upload para Cloudinary em background
-  if (fotosAtuais.length > 0) {
-    salvarFotosDB(item.id, fotosAtuais); // salva temporariamente com base64
-    toast(`☁️ Enviando ${fotosAtuais.length} foto(s) para a nuvem...`);
-    uploadFotosPiso(item.id, fotosAtuais).then(urls => {
+  // Salva no IndexedDB e faz upload para Cloudinary em background
+  if (fotosParaSalvar.length > 0) {
+    salvarFotosDB(idParaSalvar, fotosParaSalvar);
+    toast(`☁️ Enviando ${fotosParaSalvar.length} foto(s) para a nuvem...`);
+    uploadFotosPiso(idParaSalvar, fotosParaSalvar).then(urls => {
       if (urls.length > 0) {
-        salvarFotosDB(item.id, urls); // substitui por URLs
+        salvarFotosDB(idParaSalvar, urls);
         toast(`✅ ${urls.length} foto(s) salva(s) na nuvem!`);
       } else {
         toast('❌ Erro ao enviar fotos. Salvas localmente.', true);
