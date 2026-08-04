@@ -1357,7 +1357,10 @@ async function migrarFotosParaCloudinary() {
       migrados++;
     }
   }
-  if (migrados > 0) toast(`☁️ ${migrados} piso(s) com fotos migradas para a nuvem!`);
+  if (migrados > 0) {
+    toast(`☁️ ${migrados} piso(s) com fotos migradas para a nuvem!`);
+    if (window._usuarioUid) sincronizarFotosFirestore(window._usuarioUid);
+  }
 }
 
 // ===================== CLOUDINARY =====================
@@ -1846,6 +1849,7 @@ function salvar() {
           uploadFotosPiso(idParaSalvar, fotosParaSalvar).then(urls => {
             if (urls.length > 0) {
               salvarFotosDB(idParaSalvar, urls);
+              if (window._usuarioUid) sincronizarFotosFirestore(window._usuarioUid);
               toast(`✅ ${urls.length} foto(s) salva(s) na nuvem!`);
             } else {
               toast('❌ Erro ao enviar fotos. Salvas localmente.', true);
@@ -1882,6 +1886,7 @@ function salvar() {
     uploadFotosPiso(idParaSalvar, fotosParaSalvar).then(urls => {
       if (urls.length > 0) {
         salvarFotosDB(idParaSalvar, urls);
+        if (window._usuarioUid) sincronizarFotosFirestore(window._usuarioUid);
         toast(`✅ ${urls.length} foto(s) salva(s) na nuvem!`);
       } else {
         toast('❌ Erro ao enviar fotos. Salvas localmente.', true);
@@ -2986,6 +2991,21 @@ const provider = new GoogleAuthProvider();
 // Referências dos documentos do usuário
 function refEstoque(uid) { return doc(db, 'usuarios', uid, 'dados', 'estoque'); }
 function refMovimentacoes(uid) { return doc(db, 'usuarios', uid, 'dados', 'movimentacoes'); }
+function refFotos(uid) { return doc(db, 'usuarios', uid, 'dados', 'fotos'); }
+
+// Sincroniza URLs das fotos com o Firestore
+window.sincronizarFotosFirestore = async function(uid) {
+  try {
+    const mapaFotos = await carregarTodasFotosDB();
+    // Filtra só URLs (não base64) para não estourar o Firestore
+    const mapaUrls = {};
+    Object.entries(mapaFotos).forEach(([pisoId, fotos]) => {
+      const urls = (fotos || []).filter(f => f && f.startsWith('http'));
+      if (urls.length) mapaUrls[pisoId] = urls;
+    });
+    await setDoc(refFotos(uid), { fotos: mapaUrls, atualizadoEm: serverTimestamp() });
+  } catch(e) { console.error('Erro ao sincronizar fotos:', e); }
+};
 
 // Salva estoque no Firestore
 window.sincronizarEstoqueFirestore = async function(uid) {
@@ -3016,9 +3036,10 @@ async function carregarDoFirestore(uid) {
   try {
     toast('☁️ Carregando dados da nuvem...');
 
-    const [snapEstoque, snapMovs] = await Promise.all([
+    const [snapEstoque, snapMovs, snapFotos] = await Promise.all([
       getDoc(refEstoque(uid)),
-      getDoc(refMovimentacoes(uid))
+      getDoc(refMovimentacoes(uid)),
+      getDoc(refFotos(uid))
     ]);
 
     let foiAtualizado = false;
@@ -3063,6 +3084,25 @@ async function carregarDoFirestore(uid) {
       }
     }
 
+    // Carrega URLs das fotos do Firestore para o IndexedDB local
+    if (snapFotos.exists()) {
+      const mapaFotosNuvem = snapFotos.data().fotos || {};
+      const mapaFotosLocal = await carregarTodasFotosDB();
+      let fotosAtualizadas = 0;
+      for (const [pisoId, urls] of Object.entries(mapaFotosNuvem)) {
+        const fotosLocais = mapaFotosLocal[pisoId] || [];
+        const jaTemUrls = fotosLocais.some(f => f && f.startsWith('http'));
+        if (!jaTemUrls && urls.length > 0) {
+          await salvarFotosDB(pisoId, urls);
+          fotosAtualizadas++;
+        }
+      }
+      if (fotosAtualizadas > 0) {
+        toast(`🖼️ ${fotosAtualizadas} piso(s) com fotos carregadas da nuvem!`);
+        foiAtualizado = true;
+      }
+    }
+
     if (foiAtualizado) {
       toast('✅ Dados sincronizados da nuvem!');
       renderLista();
@@ -3074,6 +3114,7 @@ async function carregarDoFirestore(uid) {
     // Sincroniza dados locais para a nuvem após carregar
     sincronizarEstoqueFirestore(uid);
     sincronizarMovimentacoesFirestore(uid);
+    sincronizarFotosFirestore(uid);
 
   } catch(e) {
     console.error('Erro ao carregar do Firestore:', e);
