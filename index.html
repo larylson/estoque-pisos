@@ -1367,6 +1367,7 @@ const CLOUDINARY_PRESET = 'pisosSM';
 // Faz upload de uma foto (base64) para o Cloudinary e retorna a URL
 async function uploadFotoCloudinary(base64, pisoId, idx) {
   try {
+    toast(`📤 Enviando foto ${idx+1}...`);
     const formData = new FormData();
     formData.append('file', base64);
     formData.append('upload_preset', CLOUDINARY_PRESET);
@@ -1379,14 +1380,13 @@ async function uploadFotoCloudinary(base64, pisoId, idx) {
     });
     const data = await res.json();
     if (!res.ok) {
-      toast(`❌ Cloudinary: ${data.error?.message || 'Erro ' + res.status}`, true);
-      console.error('Cloudinary erro:', data);
+      toast(`❌ Cloudinary erro: ${data.error?.message || res.status}`, true);
       return null;
     }
+    toast(`✅ Foto ${idx+1} enviada!`);
     return data.secure_url;
   } catch(e) {
-    toast(`❌ Erro ao enviar foto: ${e.message}`, true);
-    console.error('Erro upload Cloudinary:', e);
+    toast(`❌ Falha na conexão: ${e.message}`, true);
     return null;
   }
 }
@@ -1831,6 +1831,7 @@ function salvar() {
       // Captura cópia das fotos ANTES de limparForm() zerar fotosAtuais
       const fotosParaSalvar = [...fotosAtuais];
       const idParaSalvar = editId;
+      toast(`📸 ${fotosParaSalvar.length} foto(s) capturada(s) para salvar`);
 
       toast('✏️ Registro atualizado!');
       limparForm();
@@ -2950,20 +2951,19 @@ function toast(msg, erro = false) {
 
 </div><!-- fim app-root -->
 
-<!-- FIREBASE AUTH -->
+<!-- FIREBASE AUTH + FIRESTORE -->
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/12.16.0/firebase-app.js";
 import { getAnalytics } from "https://www.gstatic.com/firebasejs/12.16.0/firebase-analytics.js";
 import {
-  getAuth,
-  GoogleAuthProvider,
-  signInWithPopup,
-  signOut,
-  onAuthStateChanged,
-  setPersistence,
-  browserLocalPersistence,
-  browserSessionPersistence
+  getAuth, GoogleAuthProvider, signInWithPopup, signOut,
+  onAuthStateChanged, setPersistence,
+  browserLocalPersistence, browserSessionPersistence
 } from "https://www.gstatic.com/firebasejs/12.16.0/firebase-auth.js";
+import {
+  getFirestore, doc, getDoc, setDoc, collection,
+  onSnapshot, writeBatch, serverTimestamp
+} from "https://www.gstatic.com/firebasejs/12.16.0/firebase-firestore.js";
 
 const firebaseConfig = {
   apiKey: "AIzaSyCmd1WI-JLNFi4QkmktjlrPRrwaJR6JFVc",
@@ -2978,17 +2978,136 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const analytics = getAnalytics(app);
 const auth = getAuth(app);
+const db = getFirestore(app);
 const provider = new GoogleAuthProvider();
 
-// Monitora estado de autenticação
-onAuthStateChanged(auth, user => {
+// ===================== FIRESTORE SYNC =====================
+
+// Referências dos documentos do usuário
+function refEstoque(uid) { return doc(db, 'usuarios', uid, 'dados', 'estoque'); }
+function refMovimentacoes(uid) { return doc(db, 'usuarios', uid, 'dados', 'movimentacoes'); }
+
+// Salva estoque no Firestore
+window.sincronizarEstoqueFirestore = async function(uid) {
+  try {
+    const dados = carregar();
+    // Remove fotos base64 para não estourar o Firestore (1MB por doc)
+    const semFotos = dados.map(d => { const c = {...d}; delete c.fotos; delete c.foto; return c; });
+    await setDoc(refEstoque(uid), {
+      pisos: semFotos,
+      atualizadoEm: serverTimestamp()
+    });
+  } catch(e) { console.error('Erro ao sincronizar estoque:', e); }
+};
+
+// Salva movimentações no Firestore
+window.sincronizarMovimentacoesFirestore = async function(uid) {
+  try {
+    const movs = carregarMovimentacoes();
+    await setDoc(refMovimentacoes(uid), {
+      movimentacoes: movs,
+      atualizadoEm: serverTimestamp()
+    });
+  } catch(e) { console.error('Erro ao sincronizar movimentações:', e); }
+};
+
+// Carrega dados do Firestore (ao logar em novo aparelho)
+async function carregarDoFirestore(uid) {
+  try {
+    toast('☁️ Carregando dados da nuvem...');
+
+    const [snapEstoque, snapMovs] = await Promise.all([
+      getDoc(refEstoque(uid)),
+      getDoc(refMovimentacoes(uid))
+    ]);
+
+    let foiAtualizado = false;
+
+    if (snapEstoque.exists()) {
+      const dadosNuvem = snapEstoque.data().pisos || [];
+      const dadosLocais = carregar();
+
+      // Mescla: mantém o mais recente por id (nuvem tem prioridade se mais recente)
+      const mapaLocal = {};
+      dadosLocais.forEach(d => { mapaLocal[String(d.id)] = d; });
+
+      dadosNuvem.forEach(dNuvem => {
+        const id = String(dNuvem.id);
+        const local = mapaLocal[id];
+        if (!local) {
+          mapaLocal[id] = dNuvem; // novo na nuvem
+          foiAtualizado = true;
+        } else {
+          // Usa o mais recente baseado em dataAlteracao ou data
+          const tsNuvem = dNuvem.dataAlteracao || dNuvem.data || '';
+          const tsLocal = local.dataAlteracao || local.data || '';
+          if (tsNuvem > tsLocal) {
+            mapaLocal[id] = { ...dNuvem, fotos: local.fotos, foto: local.foto }; // preserva fotos locais
+            foiAtualizado = true;
+          }
+        }
+      });
+
+      if (foiAtualizado || dadosNuvem.length !== dadosLocais.length) {
+        const merged = Object.values(mapaLocal);
+        localStorage.setItem(CHAVE, JSON.stringify(merged));
+      }
+    }
+
+    if (snapMovs.exists()) {
+      const movsNuvem = snapMovs.data().movimentacoes || [];
+      const movsLocais = carregarMovimentacoes();
+      if (movsNuvem.length > movsLocais.length) {
+        salvarMovimentacoes(movsNuvem);
+        foiAtualizado = true;
+      }
+    }
+
+    if (foiAtualizado) {
+      toast('✅ Dados sincronizados da nuvem!');
+      renderLista();
+      atualizarSubtitulo();
+    } else {
+      toast('✅ Dados já atualizados.');
+    }
+
+    // Sincroniza dados locais para a nuvem após carregar
+    sincronizarEstoqueFirestore(uid);
+    sincronizarMovimentacoesFirestore(uid);
+
+  } catch(e) {
+    console.error('Erro ao carregar do Firestore:', e);
+    toast('⚠️ Sem conexão, usando dados locais.', true);
+  }
+}
+
+// Intercepta salvarDados para sincronizar automaticamente com Firestore
+const _salvarDadosOriginal = salvarDados;
+window.salvarDados = function(dados) {
+  _salvarDadosOriginal(dados);
+  if (window._usuarioUid) {
+    sincronizarEstoqueFirestore(window._usuarioUid);
+  }
+};
+
+// Intercepta salvarMovimentacoes para sincronizar automaticamente
+const _salvarMovsOriginal = salvarMovimentacoes;
+window.salvarMovimentacoes = function(movs) {
+  _salvarMovsOriginal(movs);
+  if (window._usuarioUid) {
+    sincronizarMovimentacoesFirestore(window._usuarioUid);
+  }
+};
+
+// ===================== AUTH =====================
+onAuthStateChanged(auth, async user => {
   if (user) {
     window._usuarioUid = user.uid;
     window._usuarioEmail = user.email;
-    // Usuário logado — esconde tela de login e mostra o app
+
     document.getElementById('tela-login').style.display = 'none';
     document.getElementById('app-root').style.display = 'flex';
-    // Atualiza header com nome e foto do usuário
+
     const headerUser = document.getElementById('header-user');
     if (headerUser) {
       headerUser.innerHTML = `
@@ -2997,38 +3116,38 @@ onAuthStateChanged(auth, user => {
         <button onclick="window.fazerLogout()" style="background:rgba(255,255,255,0.15);border:none;color:#fff;font-size:11px;padding:4px 8px;border-radius:6px;cursor:pointer">Sair</button>
       `;
     }
+
     normalizarIds();
     atualizarSubtitulo();
-    // Inicializa IndexedDB, migra fotos do localStorage e faz upload para Cloudinary
-    abrirDB().then(async () => {
-      await migrarFotosParaDB();
-      migrarFotosParaCloudinary(); // migra base64 para URLs do Cloudinary em background
-    }).catch(() => {});
+
+    // Inicializa IndexedDB e migra fotos
+    await abrirDB().catch(() => {});
+    await migrarFotosParaDB().catch(() => {});
+    migrarFotosParaCloudinary().catch(() => {});
+
+    // Carrega e sincroniza dados do Firestore
+    await carregarDoFirestore(user.uid);
+
   } else {
-    // Não logado — mostra tela de login
+    window._usuarioUid = null;
     document.getElementById('tela-login').style.display = 'flex';
     document.getElementById('app-root').style.display = 'none';
   }
 });
 
-// Login com Google
 window.fazerLogin = async function() {
   const manterConectado = document.getElementById('manter-conectado')?.checked;
   const btnLogin = document.getElementById('btn-login-google');
   try {
     if (btnLogin) { btnLogin.disabled = true; btnLogin.textContent = '⏳ Entrando...'; }
-    // Define persistência antes de logar
     await setPersistence(auth, manterConectado ? browserLocalPersistence : browserSessionPersistence);
     await signInWithPopup(auth, provider);
   } catch(e) {
     if (btnLogin) { btnLogin.disabled = false; btnLogin.textContent = '🔵 Entrar com Google'; }
-    if (e.code !== 'auth/popup-closed-by-user') {
-      alert('Erro ao fazer login: ' + (e.message || e.code));
-    }
+    if (e.code !== 'auth/popup-closed-by-user') alert('Erro ao fazer login: ' + (e.message || e.code));
   }
 };
 
-// Logout
 window.fazerLogout = async function() {
   if (!confirm('Sair da conta Google?')) return;
   await signOut(auth);
