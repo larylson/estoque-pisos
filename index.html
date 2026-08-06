@@ -2896,6 +2896,7 @@ function carregarUsuarios() {
 function salvarUsuarios(lista) {
   localStorage.setItem(CHAVE_USUARIOS, JSON.stringify(lista));
   atualizarSelectResponsavel();
+  if (window._usuarioUid) sincronizarUsuariosFirestore(window._usuarioUid);
 }
 
 function adicionarUsuario() {
@@ -3136,6 +3137,15 @@ const provider = new GoogleAuthProvider();
 function refEstoque(uid) { return doc(db, 'usuarios', uid, 'dados', 'estoque'); }
 function refMovimentacoes(uid) { return doc(db, 'usuarios', uid, 'dados', 'movimentacoes'); }
 function refFotos(uid) { return doc(db, 'usuarios', uid, 'dados', 'fotos'); }
+function refUsuarios(uid) { return doc(db, 'usuarios', uid, 'dados', 'usuarios'); }
+
+// Sincroniza lista de usuários com Firestore
+window.sincronizarUsuariosFirestore = async function(uid) {
+  try {
+    const lista = carregarUsuarios();
+    await setDoc(refUsuarios(uid), { lista, atualizadoEm: serverTimestamp() });
+  } catch(e) { console.error('Erro ao sincronizar usuários:', e); }
+};
 
 // Sincroniza URLs das fotos com o Firestore
 window.sincronizarFotosFirestore = async function(uid) {
@@ -3180,10 +3190,11 @@ async function carregarDoFirestore(uid) {
   try {
     toast('☁️ Carregando dados da nuvem...');
 
-    const [snapEstoque, snapMovs, snapFotos] = await Promise.all([
+    const [snapEstoque, snapMovs, snapFotos, snapUsuarios] = await Promise.all([
       getDoc(refEstoque(uid)),
       getDoc(refMovimentacoes(uid)),
-      getDoc(refFotos(uid))
+      getDoc(refFotos(uid)),
+      getDoc(refUsuarios(uid))
     ]);
 
     let foiAtualizado = false;
@@ -3255,10 +3266,24 @@ async function carregarDoFirestore(uid) {
       toast('✅ Dados já atualizados.');
     }
 
+    // Carrega usuários do Firestore
+    if (snapUsuarios.exists()) {
+      const listaRemota = snapUsuarios.data().lista || [];
+      const listaLocal = carregarUsuarios();
+      // Mescla: une as duas listas sem duplicar
+      const merged = [...new Set([...listaLocal, ...listaRemota])];
+      if (merged.length !== listaLocal.length) {
+        localStorage.setItem(CHAVE_USUARIOS, JSON.stringify(merged));
+        atualizarSelectResponsavel();
+        foiAtualizado = true;
+      }
+    }
+
     // Sincroniza dados locais para a nuvem após carregar
     sincronizarEstoqueFirestore(uid);
     sincronizarMovimentacoesFirestore(uid);
     sincronizarFotosFirestore(uid);
+    sincronizarUsuariosFirestore(uid);
 
   } catch(e) {
     console.error('Erro ao carregar do Firestore:', e);
