@@ -798,6 +798,30 @@ PASSOS PARA RODAR NO GITHUB PAGES:
       white-space: nowrap;
     }
 
+    /* CONFIG - USUÁRIOS */
+    .usuario-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 10px 12px;
+      background: var(--bege);
+      border-radius: 8px;
+      margin-bottom: 8px;
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--verde-escuro);
+    }
+    .usuario-item button {
+      background: #fde8e8;
+      color: #c0392b;
+      border: none;
+      border-radius: 6px;
+      padding: 4px 10px;
+      font-size: 12px;
+      cursor: pointer;
+      font-weight: 700;
+    }
+
     /* GALERIA */
     .galeria-busca {
       padding: 14px 16px 0;
@@ -999,6 +1023,9 @@ PASSOS PARA RODAR NO GITHUB PAGES:
     <div class="tab" onclick="irPara('galeria')">
       <span class="tab-icon">🖼️</span>Galeria
     </div>
+    <div class="tab" onclick="irPara('config')">
+      <span class="tab-icon">⚙️</span>Config
+    </div>
   </div>
 </div>
 
@@ -1045,6 +1072,13 @@ PASSOS PARA RODAR NO GITHUB PAGES:
         <label>Tonalidade</label>
         <input type="text" id="tonalidade" placeholder="Ex: T1, T2, Claro" autocomplete="off" />
       </div>
+    </div>
+
+    <div class="campo-grupo" style="margin-top:10px">
+      <label>👤 Responsável pela alteração</label>
+      <select id="responsavel" style="width:100%;padding:11px 14px;font-size:14px;border-radius:8px;border:1.5px solid #d0c9bb;background:#fff;color:var(--texto)">
+        <option value="">— Selecionar usuário —</option>
+      </select>
     </div>
   </div>
 
@@ -1219,6 +1253,28 @@ PASSOS PARA RODAR NO GITHUB PAGES:
     <input type="search" id="busca-galeria" placeholder="🔍 Buscar piso..." oninput="renderGaleria()" style="width:100%;box-sizing:border-box;padding:11px 14px;font-size:14px;border-radius:10px;border:1.5px solid #d0c9bb;background:#fff" />
   </div>
   <div class="galeria-grid" id="galeria-grid"></div>
+</div>
+
+<!-- ===================== PÁGINA: CONFIG ===================== -->
+<div class="pagina" id="pag-config">
+  <div style="padding:16px">
+
+    <div class="card">
+      <div class="card-titulo">👥 Usuários do Sistema</div>
+      <p style="font-size:13px;color:var(--texto-suave);margin-bottom:14px">Adicione os nomes das pessoas que trabalham com o estoque. Ao editar ou adicionar um piso, você poderá indicar quem fez a alteração.</p>
+      <div style="display:flex;gap:8px;margin-bottom:12px">
+        <input type="text" id="input-novo-usuario" placeholder="Nome do usuário ex: Lorran" style="flex:1;padding:10px 14px;font-size:14px;border-radius:8px;border:1.5px solid #d0c9bb" maxlength="30" onkeydown="if(event.key==='Enter')adicionarUsuario()" />
+        <button onclick="adicionarUsuario()" style="background:var(--verde-escuro);color:#fff;border:none;border-radius:8px;padding:10px 16px;font-weight:700;font-size:14px;cursor:pointer">+ Add</button>
+      </div>
+      <div id="lista-usuarios"></div>
+    </div>
+
+    <div class="card" style="margin-top:12px">
+      <div class="card-titulo">ℹ️ Conta conectada</div>
+      <div id="config-conta" style="font-size:13px;color:var(--texto-suave)">Carregando...</div>
+    </div>
+
+  </div>
 </div>
 
 <!-- ===================== MODAL DETALHE ===================== -->
@@ -1575,12 +1631,13 @@ function irPara(pag) {
   document.querySelectorAll('.tab').forEach(t => t.classList.remove('ativo'));
   document.getElementById('pag-' + pag).classList.add('ativa');
   const tabs = document.querySelectorAll('.tab');
-  const idx = { cadastrar: 0, estoque: 1, relatorio: 2, movimentacoes: 3, galeria: 4 };
+  const idx = { cadastrar: 0, estoque: 1, relatorio: 2, movimentacoes: 3, galeria: 4, config: 5 };
   tabs[idx[pag]].classList.add('ativo');
   if (pag === 'estoque') renderLista();
   if (pag === 'relatorio') { renderRelatorio(); renderSeletorColunas(); renderBotoesRua(); }
   if (pag === 'movimentacoes') renderMovimentacoes();
   if (pag === 'galeria') renderGaleria();
+  if (pag === 'config') renderConfig();
 }
 
 // ===================== FORMULÁRIO =====================
@@ -1769,6 +1826,7 @@ function salvar() {
   const tamanho = document.getElementById('tamanho').value.trim();
   const bitola = document.getElementById('bitola').value.trim();
   const tonalidade = document.getElementById('tonalidade').value.trim();
+  const responsavel = document.getElementById('responsavel')?.value || '';
   const patio = document.getElementById('patio').value.trim();
   const rua = document.getElementById('rua').value.trim();
   const apartamento = document.getElementById('apartamento').value.trim();
@@ -1826,9 +1884,9 @@ function salvar() {
 
       const agora = new Date().toLocaleString('pt-BR');
       const historicoAnterior = anterior.historico || [];
-      const novoHistorico = [...historicoAnterior, { dataHora: agora, tipo: mudouLocal && temLocalAntes ? 'localizacao' : 'edicao' }];
+      const novoHistorico = [...historicoAnterior, { dataHora: agora, tipo: mudouLocal && temLocalAntes ? 'localizacao' : 'edicao', responsavel: responsavel || '' }];
 
-      dados[idx] = { ...dados[idx], nome, lote, marca, codigo, tamanho, bitola, tonalidade, patio, rua, apartamento, nivel, caixas, pecas, m2PorCaixa, pecasPorCaixa, caixasPorPallet, qtdPallets, caixasAvulsasFora, dataAlteracao: agora, historico: novoHistorico };
+      dados[idx] = { ...dados[idx], nome, lote, marca, codigo, tamanho, bitola, tonalidade, patio, rua, apartamento, nivel, caixas, pecas, m2PorCaixa, pecasPorCaixa, caixasPorPallet, qtdPallets, caixasAvulsasFora, responsavel, dataAlteracao: agora, historico: novoHistorico };
       salvarDados(dados);
 
       // Captura cópia das fotos ANTES de limparForm() zerar fotosAtuais
@@ -1865,7 +1923,7 @@ function salvar() {
 
   const item = {
     id: Date.now().toString(),
-    nome, lote, marca, codigo, tamanho, bitola, tonalidade, patio, rua, apartamento, nivel, caixas, pecas, m2PorCaixa, pecasPorCaixa, caixasPorPallet, qtdPallets, caixasAvulsasFora,
+    nome, lote, marca, codigo, tamanho, bitola, tonalidade, patio, rua, apartamento, nivel, caixas, pecas, m2PorCaixa, pecasPorCaixa, caixasPorPallet, qtdPallets, caixasAvulsasFora, responsavel,
     data: new Date().toLocaleDateString('pt-BR')
   };
 
@@ -1901,6 +1959,8 @@ function limparForm() {
     el.value = '';
     delete el.dataset.editId;
   });
+  const selResp = document.getElementById('responsavel');
+  if (selResp) selResp.value = '';
   document.getElementById('nome').dataset.editId = '';
   const btn = document.querySelector('.btn-salvar');
   btn.textContent = '✅ Salvar no Estoque';
@@ -2149,7 +2209,8 @@ function renderModalDetalhe(d, fotos) {
       ${d.historico.slice().reverse().map((h, i) => `
         <div class="modal-historico-item">
           <span class="modal-historico-num">${d.historico.length - i}.</span>
-          ${h.tipo === 'localizacao' ? '📍 Localização alterada' : '✏️ Dados alterados'} — ${h.dataHora}
+          ${h.tipo === 'localizacao' ? '📍 Localização alterada' : '✏️ Dados alterados'}
+          ${h.responsavel ? `<b>por ${h.responsavel}</b>` : ''} — ${h.dataHora}
         </div>
       `).join('')}
     </div>
@@ -2244,6 +2305,8 @@ function editarItem(id) {
     document.getElementById('tamanho').value = d.tamanho || '';
     document.getElementById('bitola').value = d.bitola || '';
     document.getElementById('tonalidade').value = d.tonalidade || '';
+    const selResp = document.getElementById('responsavel');
+    if (selResp) selResp.value = d.responsavel || '';
     document.getElementById('patio').value = d.patio || '';
     document.getElementById('rua').value = d.rua || '';
     document.getElementById('apartamento').value = d.apartamento || '';
@@ -2822,6 +2885,86 @@ function registrarMovimentacao({ pisoId, pisoNome, lote, bitola, tonalidade, ori
 }
 
 // ===================== GALERIA =====================
+// ===================== CONFIGURAÇÕES / USUÁRIOS =====================
+const CHAVE_USUARIOS = 'estoque_usuarios_v1';
+
+function carregarUsuarios() {
+  try { return JSON.parse(localStorage.getItem(CHAVE_USUARIOS)) || []; }
+  catch(e) { return []; }
+}
+
+function salvarUsuarios(lista) {
+  localStorage.setItem(CHAVE_USUARIOS, JSON.stringify(lista));
+  atualizarSelectResponsavel();
+}
+
+function adicionarUsuario() {
+  const input = document.getElementById('input-novo-usuario');
+  const nome = (input?.value || '').trim();
+  if (!nome) { toast('⚠️ Digite um nome.', true); return; }
+  const lista = carregarUsuarios();
+  if (lista.some(u => u.toLowerCase() === nome.toLowerCase())) {
+    toast('⚠️ Usuário já existe.', true); return;
+  }
+  lista.push(nome);
+  salvarUsuarios(lista);
+  if (input) input.value = '';
+  renderConfig();
+  toast(`✅ Usuário "${nome}" adicionado!`);
+}
+
+function removerUsuario(nome) {
+  if (!confirm(`Remover "${nome}" da lista?`)) return;
+  const lista = carregarUsuarios().filter(u => u !== nome);
+  salvarUsuarios(lista);
+  renderConfig();
+  toast(`🗑️ "${nome}" removido.`);
+}
+
+function atualizarSelectResponsavel() {
+  const sel = document.getElementById('responsavel');
+  if (!sel) return;
+  const atual = sel.value;
+  const lista = carregarUsuarios();
+  sel.innerHTML = `<option value="">— Selecionar usuário —</option>` +
+    lista.map(u => `<option value="${u}" ${atual === u ? 'selected' : ''}>${u}</option>`).join('');
+}
+
+function renderConfig() {
+  // Lista de usuários
+  const el = document.getElementById('lista-usuarios');
+  const lista = carregarUsuarios();
+  if (el) {
+    el.innerHTML = lista.length === 0
+      ? `<p style="font-size:13px;color:var(--texto-suave);text-align:center;padding:10px">Nenhum usuário cadastrado ainda.</p>`
+      : lista.map(u => `
+        <div class="usuario-item">
+          <span>👤 ${u}</span>
+          <button onclick="removerUsuario('${u}')">✕ Remover</button>
+        </div>`).join('');
+  }
+
+  // Info da conta
+  const contaEl = document.getElementById('config-conta');
+  if (contaEl) {
+    const email = window._usuarioEmail || 'Não logado';
+    const uid = window._usuarioUid || '';
+    contaEl.innerHTML = `
+      <div style="display:flex;align-items:center;gap:10px;padding:8px 0">
+        <span style="font-size:24px">👤</span>
+        <div>
+          <div style="font-weight:700;color:var(--texto)">${email}</div>
+          <div style="font-size:11px;opacity:0.6">${uid.slice(0,16)}...</div>
+        </div>
+      </div>
+      <button onclick="window.fazerLogout()" style="width:100%;padding:10px;background:#fde8e8;color:#c0392b;border:none;border-radius:8px;font-weight:700;font-size:13px;cursor:pointer;margin-top:8px">🚪 Sair da conta</button>
+    `;
+  }
+
+  // Atualiza select no formulário
+  atualizarSelectResponsavel();
+}
+
 function renderGaleria() {
   const busca = (document.getElementById('busca-galeria')?.value || '').toLowerCase().trim();
   let dados = carregar();
@@ -2952,6 +3095,7 @@ function toast(msg, erro = false) {
 
 // INIT — inicialização básica (restante roda após login via onAuthStateChanged)
 // A tela de login fica visível até o Firebase confirmar o estado de auth
+atualizarSelectResponsavel(); // popula o select de responsável ao carregar
 </script>
 
 </div><!-- fim app-root -->
