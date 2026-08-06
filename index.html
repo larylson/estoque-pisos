@@ -1289,7 +1289,7 @@ PASSOS PARA RODAR NO GITHUB PAGES:
 <div id="lightbox" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.95);z-index:99999;flex-direction:column;align-items:center;justify-content:center" onclick="if(event.target===this)fecharLightbox()">
   <button onclick="fecharLightbox()" style="position:absolute;top:16px;right:16px;background:transparent;border:none;color:#fff;font-size:28px;cursor:pointer;z-index:2">✕</button>
   <button id="lb-prev" onclick="event.stopPropagation();lightboxNav(-1)" style="position:absolute;left:12px;top:50%;transform:translateY(-50%);background:rgba(255,255,255,0.15);border:none;color:#fff;font-size:28px;border-radius:50%;width:44px;height:44px;cursor:pointer;display:none">‹</button>
-  <img id="lightbox-img" style="max-width:100%;max-height:90dvh;object-fit:contain;border-radius:8px;user-select:none" />
+  <img id="lightbox-img" style="max-width:100%;max-height:90dvh;object-fit:contain;border-radius:8px;user-select:none;touch-action:none;transition:transform 0.1s" />
   <div id="lightbox-counter" style="color:#fff;font-size:13px;margin-top:10px;opacity:0.7"></div>
   <button id="lb-next" onclick="event.stopPropagation();lightboxNav(1)" style="position:absolute;right:12px;top:50%;transform:translateY(-50%);background:rgba(255,255,255,0.15);border:none;color:#fff;font-size:28px;border-radius:50%;width:44px;height:44px;cursor:pointer;display:none">›</button>
 </div>
@@ -1801,16 +1801,104 @@ function atualizarLightbox() {
   }
 }
 
-// Swipe no lightbox
+// Swipe, pinch zoom e duplo toque no lightbox
 (function() {
-  let sx = 0;
+  let sx = 0, sy = 0;
+  let scale = 1, lastScale = 1;
+  let tx = 0, ty = 0, lastTx = 0, lastTy = 0;
+  let lastTap = 0;
+  let initialDist = 0;
+  let isPinching = false;
+
+  function getImg() { return document.getElementById('lightbox-img'); }
+  function isOpen() { return document.getElementById('lightbox').style.display === 'flex'; }
+
+  function aplicarTransform() {
+    const img = getImg();
+    if (img) img.style.transform = `translate(${tx}px, ${ty}px) scale(${scale})`;
+  }
+
+  function resetZoom() {
+    scale = 1; tx = 0; ty = 0; lastScale = 1; lastTx = 0; lastTy = 0;
+    const img = getImg();
+    if (img) img.style.transform = '';
+  }
+
+  // Ao trocar de foto, reseta zoom
+  const _orig = window.atualizarLightbox;
+  window.atualizarLightbox = function() {
+    resetZoom();
+    if (_orig) _orig();
+  };
+
   document.addEventListener('touchstart', e => {
-    if (document.getElementById('lightbox').style.display === 'flex') sx = e.touches[0].clientX;
-  });
+    if (!isOpen()) return;
+    if (e.touches.length === 1) {
+      sx = e.touches[0].clientX;
+      sy = e.touches[0].clientY;
+      isPinching = false;
+
+      // Duplo toque — zoom in/out
+      const now = Date.now();
+      if (now - lastTap < 300) {
+        if (scale > 1) { resetZoom(); }
+        else { scale = 2.5; aplicarTransform(); }
+        lastTap = 0;
+        e.preventDefault();
+      } else {
+        lastTap = now;
+      }
+    } else if (e.touches.length === 2) {
+      isPinching = true;
+      initialDist = Math.hypot(
+        e.touches[0].clientX - e.touches[1].clientX,
+        e.touches[0].clientY - e.touches[1].clientY
+      );
+      lastScale = scale;
+      lastTx = tx; lastTy = ty;
+      e.preventDefault();
+    }
+  }, { passive: false });
+
+  document.addEventListener('touchmove', e => {
+    if (!isOpen()) return;
+    if (e.touches.length === 2 && isPinching) {
+      const dist = Math.hypot(
+        e.touches[0].clientX - e.touches[1].clientX,
+        e.touches[0].clientY - e.touches[1].clientY
+      );
+      scale = Math.min(5, Math.max(1, lastScale * (dist / initialDist)));
+      aplicarTransform();
+      e.preventDefault();
+    } else if (e.touches.length === 1 && scale > 1) {
+      // Pan quando com zoom
+      tx = lastTx + (e.touches[0].clientX - sx);
+      ty = lastTy + (e.touches[0].clientY - sy);
+      aplicarTransform();
+      e.preventDefault();
+    }
+  }, { passive: false });
+
   document.addEventListener('touchend', e => {
-    if (document.getElementById('lightbox').style.display !== 'flex') return;
+    if (!isOpen()) return;
+    if (isPinching) {
+      lastScale = scale;
+      lastTx = tx; lastTy = ty;
+      isPinching = false;
+      if (scale <= 1) resetZoom();
+      return;
+    }
+    if (scale > 1) {
+      // Com zoom ativo, não faz swipe
+      lastTx = tx; lastTy = ty;
+      return;
+    }
+    // Swipe para trocar foto (só sem zoom)
     const dx = e.changedTouches[0].clientX - sx;
-    if (Math.abs(dx) > 50) lightboxNav(dx < 0 ? 1 : -1);
+    const dy = e.changedTouches[0].clientY - sy;
+    if (Math.abs(dx) > 50 && Math.abs(dx) > Math.abs(dy)) {
+      lightboxNav(dx < 0 ? 1 : -1);
+    }
   });
 })();
 
@@ -3335,8 +3423,77 @@ onAuthStateChanged(auth, async user => {
     await migrarFotosParaDB().catch(() => {});
     migrarFotosParaCloudinary().catch(() => {});
 
-    // Carrega e sincroniza dados do Firestore
+    // Carrega dados iniciais do Firestore
     await carregarDoFirestore(user.uid);
+
+    // ===================== SYNC EM TEMPO REAL =====================
+    // Cancela listeners anteriores se existirem
+    if (window._unsubListeners) window._unsubListeners.forEach(u => u());
+    window._unsubListeners = [];
+    let _primeiraVezEstoque = true;
+    let _primeiraVezMovs = true;
+    let _primeiraVezUsuarios = true;
+
+    // Listener em tempo real — Estoque
+    const unsubEstoque = onSnapshot(refEstoque(user.uid), snap => {
+      if (_primeiraVezEstoque) { _primeiraVezEstoque = false; return; } // ignora carga inicial
+      if (!snap.exists()) return;
+      const dadosNuvem = snap.data().pisos || [];
+      const dadosLocais = carregar();
+      // Só atualiza se vier de outro dispositivo (compara tamanho e conteúdo)
+      const mapaLocal = {};
+      dadosLocais.forEach(d => { mapaLocal[String(d.id)] = d; });
+      let mudou = false;
+      dadosNuvem.forEach(dN => {
+        const id = String(dN.id);
+        const local = mapaLocal[id];
+        if (!local) { mapaLocal[id] = dN; mudou = true; }
+        else {
+          const tsN = dN.dataAlteracao || dN.data || '';
+          const tsL = local.dataAlteracao || local.data || '';
+          if (tsN > tsL) { mapaLocal[id] = { ...dN, fotos: local.fotos, foto: local.foto }; mudou = true; }
+        }
+      });
+      // Detecta exclusões na nuvem
+      const idsNuvem = new Set(dadosNuvem.map(d => String(d.id)));
+      dadosLocais.forEach(d => {
+        if (!idsNuvem.has(String(d.id))) { delete mapaLocal[String(d.id)]; mudou = true; }
+      });
+      if (mudou) {
+        localStorage.setItem(CHAVE, JSON.stringify(Object.values(mapaLocal)));
+        renderLista();
+        atualizarSubtitulo();
+        toast('🔄 Estoque atualizado em tempo real');
+      }
+    }, e => console.error('onSnapshot estoque:', e));
+
+    // Listener em tempo real — Movimentações
+    const unsubMovs = onSnapshot(refMovimentacoes(user.uid), snap => {
+      if (_primeiraVezMovs) { _primeiraVezMovs = false; return; }
+      if (!snap.exists()) return;
+      const movsNuvem = snap.data().movimentacoes || [];
+      const movsLocais = carregarMovimentacoes();
+      if (movsNuvem.length !== movsLocais.length) {
+        salvarMovimentacoes(movsNuvem);
+        toast('🔄 Movimentações atualizadas');
+      }
+    }, e => console.error('onSnapshot movs:', e));
+
+    // Listener em tempo real — Usuários
+    const unsubUsuarios = onSnapshot(refUsuarios(user.uid), snap => {
+      if (_primeiraVezUsuarios) { _primeiraVezUsuarios = false; return; }
+      if (!snap.exists()) return;
+      const listaRemota = snap.data().lista || [];
+      const listaLocal = carregarUsuarios();
+      const merged = [...new Set([...listaLocal, ...listaRemota])];
+      if (merged.join() !== listaLocal.join()) {
+        localStorage.setItem(CHAVE_USUARIOS, JSON.stringify(merged));
+        atualizarSelectResponsavel();
+        toast('🔄 Usuários atualizados');
+      }
+    }, e => console.error('onSnapshot usuarios:', e));
+
+    window._unsubListeners = [unsubEstoque, unsubMovs, unsubUsuarios];
 
   } else {
     window._usuarioUid = null;
@@ -3360,6 +3517,7 @@ window.fazerLogin = async function() {
 
 window.fazerLogout = async function() {
   if (!confirm('Sair da conta Google?')) return;
+  if (window._unsubListeners) { window._unsubListeners.forEach(u => u()); window._unsubListeners = []; }
   await signOut(auth);
 };
 </script>
