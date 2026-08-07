@@ -822,6 +822,111 @@ PASSOS PARA RODAR NO GITHUB PAGES:
       font-weight: 700;
     }
 
+    /* ERROS DE CARREGAMENTO */
+    .erro-card {
+      background: var(--branco);
+      border-radius: var(--radius);
+      padding: 14px 16px;
+      margin-bottom: 10px;
+      box-shadow: 0 1px 6px rgba(0,0,0,0.08);
+      border-left: 4px solid #e74c3c;
+    }
+    .erro-card.resolvido {
+      border-left-color: #5a9e5a;
+      opacity: 0.75;
+    }
+    .erro-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 6px;
+    }
+    .erro-numero {
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--verde-escuro);
+      background: var(--bege);
+      padding: 3px 10px;
+      border-radius: 20px;
+    }
+    .erro-status {
+      font-size: 12px;
+      font-weight: 700;
+      padding: 4px 10px;
+      border-radius: 20px;
+      cursor: pointer;
+      border: none;
+    }
+    .erro-status.pendente {
+      background: #fde8e8;
+      color: #c0392b;
+    }
+    .erro-status.resolvido {
+      background: #d5f5dd;
+      color: #1a6b32;
+    }
+    .erro-descricao {
+      font-size: 14px;
+      color: var(--texto);
+      font-weight: 600;
+      margin-bottom: 4px;
+    }
+    .erro-detalhe {
+      font-size: 12px;
+      color: var(--texto-suave);
+    }
+    .erro-acoes {
+      display: flex;
+      gap: 8px;
+      margin-top: 10px;
+    }
+    .erro-btn-excluir {
+      background: #fde8e8;
+      color: #c0392b;
+      border: none;
+      border-radius: 6px;
+      padding: 5px 12px;
+      font-size: 12px;
+      font-weight: 700;
+      cursor: pointer;
+    }
+    .erro-filtros {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 14px;
+      flex-wrap: wrap;
+    }
+    .erro-filtro-btn {
+      padding: 7px 14px;
+      border-radius: 20px;
+      border: 1.5px solid #d0c9bb;
+      background: #fff;
+      font-size: 12px;
+      font-weight: 700;
+      cursor: pointer;
+      color: #555;
+    }
+    .erro-filtro-btn.ativo {
+      background: var(--verde-escuro);
+      color: #fff;
+      border-color: var(--verde-escuro);
+    }
+    .erro-resumo {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 14px;
+    }
+    .erro-resumo-card {
+      flex: 1;
+      background: #fff;
+      border-radius: 10px;
+      padding: 10px;
+      text-align: center;
+      box-shadow: 0 1px 6px rgba(0,0,0,0.08);
+    }
+    .erro-resumo-num { font-size: 22px; font-weight: 800; }
+    .erro-resumo-label { font-size: 11px; color: var(--texto-suave); }
+
     /* GALERIA */
     .galeria-busca {
       padding: 14px 16px 0;
@@ -1025,6 +1130,9 @@ PASSOS PARA RODAR NO GITHUB PAGES:
     </div>
     <div class="tab" onclick="irPara('config')">
       <span class="tab-icon">⚙️</span>Config
+    </div>
+    <div class="tab" onclick="irPara('erros')">
+      <span class="tab-icon">⚠️</span>Erros
     </div>
   </div>
 </div>
@@ -1274,6 +1382,55 @@ PASSOS PARA RODAR NO GITHUB PAGES:
       <div id="config-conta" style="font-size:13px;color:var(--texto-suave)">Carregando...</div>
     </div>
 
+  </div>
+</div>
+
+<!-- ===================== PÁGINA: ERROS DE CARREGAMENTO ===================== -->
+<div class="pagina" id="pag-erros">
+  <div style="padding:16px">
+
+    <!-- Resumo -->
+    <div class="erro-resumo" id="erro-resumo"></div>
+
+    <!-- Filtros -->
+    <div class="erro-filtros">
+      <button class="erro-filtro-btn ativo" onclick="setFiltroErro('todos', this)">Todos</button>
+      <button class="erro-filtro-btn" onclick="setFiltroErro('pendente', this)">⚠️ Pendentes</button>
+      <button class="erro-filtro-btn" onclick="setFiltroErro('resolvido', this)">✅ Resolvidos</button>
+    </div>
+
+    <!-- Formulário novo erro -->
+    <div class="card" style="margin-bottom:14px">
+      <div class="card-titulo">➕ Registrar Erro</div>
+
+      <div class="campo-grupo" style="margin-bottom:10px">
+        <label>🔢 Número da Carga</label>
+        <input type="text" id="erro-numero-input" placeholder="Ex: 1042, NF-2345..." autocomplete="off" />
+      </div>
+
+      <div class="campo-grupo" style="margin-bottom:10px">
+        <label>📋 Descrição do Erro / Carga Faltando</label>
+        <textarea id="erro-descricao-input" placeholder="Ex: Faltando 5 caixas de Porcelanato 82x82 Lote 058..." rows="3" style="width:100%;box-sizing:border-box;padding:11px 14px;font-size:14px;border-radius:8px;border:1.5px solid #d0c9bb;font-family:inherit;resize:vertical"></textarea>
+      </div>
+
+      <div class="linha-2" style="margin-bottom:0">
+        <div class="campo-grupo">
+          <label>👤 Responsável</label>
+          <select id="erro-responsavel" style="width:100%;padding:11px 14px;font-size:14px;border-radius:8px;border:1.5px solid #d0c9bb;background:#fff">
+            <option value="">— Selecionar —</option>
+          </select>
+        </div>
+        <div class="campo-grupo">
+          <label>📅 Data</label>
+          <input type="date" id="erro-data" style="width:100%;box-sizing:border-box;padding:11px 14px;font-size:14px;border-radius:8px;border:1.5px solid #d0c9bb" />
+        </div>
+      </div>
+
+      <button onclick="adicionarErro()" class="btn" style="background:var(--verde-escuro);color:#fff;width:100%;margin-top:14px">⚠️ Registrar Erro</button>
+    </div>
+
+    <!-- Lista de erros -->
+    <div id="lista-erros"></div>
   </div>
 </div>
 
@@ -1631,13 +1788,14 @@ function irPara(pag) {
   document.querySelectorAll('.tab').forEach(t => t.classList.remove('ativo'));
   document.getElementById('pag-' + pag).classList.add('ativa');
   const tabs = document.querySelectorAll('.tab');
-  const idx = { cadastrar: 0, estoque: 1, relatorio: 2, movimentacoes: 3, galeria: 4, config: 5 };
+  const idx = { cadastrar: 0, estoque: 1, relatorio: 2, movimentacoes: 3, galeria: 4, config: 5, erros: 6 };
   tabs[idx[pag]].classList.add('ativo');
   if (pag === 'estoque') renderLista();
   if (pag === 'relatorio') { renderRelatorio(); renderSeletorColunas(); renderBotoesRua(); }
   if (pag === 'movimentacoes') renderMovimentacoes();
   if (pag === 'galeria') renderGaleria();
   if (pag === 'config') renderConfig();
+  if (pag === 'erros') renderErros();
 }
 
 // ===================== FORMULÁRIO =====================
@@ -2973,6 +3131,151 @@ function registrarMovimentacao({ pisoId, pisoNome, lote, bitola, tonalidade, ori
 }
 
 // ===================== GALERIA =====================
+// ===================== ERROS DE CARREGAMENTO =====================
+const CHAVE_ERROS = 'estoque_erros_v1';
+let filtroErroAtual = 'todos';
+
+function carregarErros() {
+  try { return JSON.parse(localStorage.getItem(CHAVE_ERROS)) || []; }
+  catch(e) { return []; }
+}
+
+function salvarErros(lista) {
+  localStorage.setItem(CHAVE_ERROS, JSON.stringify(lista));
+  if (window._usuarioUid) sincronizarErrosFirestore(window._usuarioUid);
+}
+
+function adicionarErro() {
+  const numero = document.getElementById('erro-numero-input')?.value.trim();
+  const descricao = document.getElementById('erro-descricao-input')?.value.trim();
+  const responsavel = document.getElementById('erro-responsavel')?.value || '';
+  const data = document.getElementById('erro-data')?.value || new Date().toLocaleDateString('pt-BR');
+
+  if (!numero) { toast('⚠️ Informe o número da carga.', true); return; }
+  if (!descricao) { toast('⚠️ Descreva o erro.', true); return; }
+
+  const lista = carregarErros();
+  lista.unshift({
+    id: `${Date.now()}_${Math.random().toString(36).slice(2,7)}`,
+    numero,
+    descricao,
+    responsavel,
+    data: data || new Date().toLocaleDateString('pt-BR'),
+    status: 'pendente',
+    criadoEm: new Date().toLocaleString('pt-BR')
+  });
+  salvarErros(lista);
+
+  document.getElementById('erro-numero-input').value = '';
+  document.getElementById('erro-descricao-input').value = '';
+  document.getElementById('erro-responsavel').value = '';
+
+  renderErros();
+  toast('⚠️ Erro registrado!');
+}
+
+function toggleStatusErro(id) {
+  const lista = carregarErros();
+  const idx = lista.findIndex(e => e.id === id);
+  if (idx < 0) return;
+  lista[idx].status = lista[idx].status === 'pendente' ? 'resolvido' : 'pendente';
+  if (lista[idx].status === 'resolvido') {
+    lista[idx].resolvidoEm = new Date().toLocaleString('pt-BR');
+  } else {
+    delete lista[idx].resolvidoEm;
+  }
+  salvarErros(lista);
+  renderErros();
+  toast(lista[idx].status === 'resolvido' ? '✅ Marcado como resolvido!' : '⚠️ Reaberto!');
+}
+
+function excluirErro(id) {
+  if (!confirm('Excluir este registro de erro?')) return;
+  const lista = carregarErros().filter(e => e.id !== id);
+  salvarErros(lista);
+  renderErros();
+  toast('🗑️ Erro excluído.');
+}
+
+function setFiltroErro(filtro, btn) {
+  filtroErroAtual = filtro;
+  document.querySelectorAll('.erro-filtro-btn').forEach(b => b.classList.remove('ativo'));
+  if (btn) btn.classList.add('ativo');
+  renderErros();
+}
+
+function renderErros() {
+  // Atualiza select de responsável
+  const sel = document.getElementById('erro-responsavel');
+  if (sel) {
+    const usuarios = carregarUsuarios();
+    const atual = sel.value;
+    sel.innerHTML = `<option value="">— Selecionar —</option>` +
+      usuarios.map(u => `<option value="${u}" ${atual===u?'selected':''}>${u}</option>`).join('');
+  }
+
+  // Data padrão hoje
+  const dataInput = document.getElementById('erro-data');
+  if (dataInput && !dataInput.value) {
+    const hoje = new Date();
+    dataInput.value = `${hoje.getFullYear()}-${String(hoje.getMonth()+1).padStart(2,'0')}-${String(hoje.getDate()).padStart(2,'0')}`;
+  }
+
+  let lista = carregarErros();
+  const total = lista.length;
+  const pendentes = lista.filter(e => e.status === 'pendente').length;
+  const resolvidos = lista.filter(e => e.status === 'resolvido').length;
+
+  // Resumo
+  const resumoEl = document.getElementById('erro-resumo');
+  if (resumoEl) {
+    resumoEl.innerHTML = `
+      <div class="erro-resumo-card">
+        <div class="erro-resumo-num" style="color:#e74c3c">${pendentes}</div>
+        <div class="erro-resumo-label">Pendentes</div>
+      </div>
+      <div class="erro-resumo-card">
+        <div class="erro-resumo-num" style="color:#5a9e5a">${resolvidos}</div>
+        <div class="erro-resumo-label">Resolvidos</div>
+      </div>
+      <div class="erro-resumo-card">
+        <div class="erro-resumo-num" style="color:var(--verde-escuro)">${total}</div>
+        <div class="erro-resumo-label">Total</div>
+      </div>
+    `;
+  }
+
+  // Filtro
+  if (filtroErroAtual !== 'todos') lista = lista.filter(e => e.status === filtroErroAtual);
+
+  const el = document.getElementById('lista-erros');
+  if (!el) return;
+
+  if (lista.length === 0) {
+    el.innerHTML = `<div class="lista-vazia"><div class="emoji">${filtroErroAtual === 'resolvido' ? '✅' : '⚠️'}</div><p>${filtroErroAtual === 'todos' ? 'Nenhum erro registrado.' : filtroErroAtual === 'pendente' ? 'Nenhum erro pendente!' : 'Nenhum erro resolvido.'}</p></div>`;
+    return;
+  }
+
+  el.innerHTML = lista.map(e => `
+    <div class="erro-card ${e.status}">
+      <div class="erro-header">
+        <span class="erro-numero">📦 Carga: ${e.numero}</span>
+        <button class="erro-status ${e.status}" onclick="toggleStatusErro('${e.id}')">
+          ${e.status === 'pendente' ? '⚠️ Pendente' : '✅ Resolvido'}
+        </button>
+      </div>
+      <div class="erro-descricao">${e.descricao}</div>
+      <div class="erro-detalhe">
+        ${e.responsavel ? `👤 ${e.responsavel} · ` : ''}📅 ${e.data} · 🕐 ${e.criadoEm}
+        ${e.resolvidoEm ? `<br>✅ Resolvido em: ${e.resolvidoEm}` : ''}
+      </div>
+      <div class="erro-acoes">
+        <button class="erro-btn-excluir" onclick="excluirErro('${e.id}')">🗑️ Excluir</button>
+      </div>
+    </div>
+  `).join('');
+}
+
 // ===================== CONFIGURAÇÕES / USUÁRIOS =====================
 const CHAVE_USUARIOS = 'estoque_usuarios_v1';
 
@@ -3226,6 +3529,7 @@ function refEstoque(uid) { return doc(db, 'usuarios', uid, 'dados', 'estoque'); 
 function refMovimentacoes(uid) { return doc(db, 'usuarios', uid, 'dados', 'movimentacoes'); }
 function refFotos(uid) { return doc(db, 'usuarios', uid, 'dados', 'fotos'); }
 function refUsuarios(uid) { return doc(db, 'usuarios', uid, 'dados', 'usuarios'); }
+function refErros(uid) { return doc(db, 'usuarios', uid, 'dados', 'erros'); }
 
 // Sincroniza lista de usuários com Firestore
 window.sincronizarUsuariosFirestore = async function(uid) {
@@ -3233,6 +3537,14 @@ window.sincronizarUsuariosFirestore = async function(uid) {
     const lista = carregarUsuarios();
     await setDoc(refUsuarios(uid), { lista, atualizadoEm: serverTimestamp() });
   } catch(e) { console.error('Erro ao sincronizar usuários:', e); }
+};
+
+// Sincroniza erros de carregamento com Firestore
+window.sincronizarErrosFirestore = async function(uid) {
+  try {
+    const lista = carregarErros();
+    await setDoc(refErros(uid), { lista, atualizadoEm: serverTimestamp() });
+  } catch(e) { console.error('Erro ao sincronizar erros:', e); }
 };
 
 // Sincroniza URLs das fotos com o Firestore
@@ -3278,11 +3590,12 @@ async function carregarDoFirestore(uid) {
   try {
     toast('☁️ Carregando dados da nuvem...');
 
-    const [snapEstoque, snapMovs, snapFotos, snapUsuarios] = await Promise.all([
+    const [snapEstoque, snapMovs, snapFotos, snapUsuarios, snapErros] = await Promise.all([
       getDoc(refEstoque(uid)),
       getDoc(refMovimentacoes(uid)),
       getDoc(refFotos(uid)),
-      getDoc(refUsuarios(uid))
+      getDoc(refUsuarios(uid)),
+      getDoc(refErros(uid))
     ]);
 
     let foiAtualizado = false;
@@ -3358,7 +3671,6 @@ async function carregarDoFirestore(uid) {
     if (snapUsuarios.exists()) {
       const listaRemota = snapUsuarios.data().lista || [];
       const listaLocal = carregarUsuarios();
-      // Mescla: une as duas listas sem duplicar
       const merged = [...new Set([...listaLocal, ...listaRemota])];
       if (merged.length !== listaLocal.length) {
         localStorage.setItem(CHAVE_USUARIOS, JSON.stringify(merged));
@@ -3367,11 +3679,24 @@ async function carregarDoFirestore(uid) {
       }
     }
 
+    // Carrega erros do Firestore
+    if (snapErros.exists()) {
+      const errosNuvem = snapErros.data().lista || [];
+      const errosLocais = carregarErros();
+      // Mescla por ID sem duplicar
+      const mapaErros = {};
+      errosLocais.forEach(e => { mapaErros[e.id] = e; });
+      errosNuvem.forEach(e => { if (!mapaErros[e.id]) { mapaErros[e.id] = e; foiAtualizado = true; } });
+      const mergedErros = Object.values(mapaErros).sort((a,b) => b.id.localeCompare(a.id));
+      localStorage.setItem(CHAVE_ERROS, JSON.stringify(mergedErros));
+    }
+
     // Sincroniza dados locais para a nuvem após carregar
     sincronizarEstoqueFirestore(uid);
     sincronizarMovimentacoesFirestore(uid);
     sincronizarFotosFirestore(uid);
     sincronizarUsuariosFirestore(uid);
+    sincronizarErrosFirestore(uid);
 
   } catch(e) {
     console.error('Erro ao carregar do Firestore:', e);
@@ -3493,7 +3818,29 @@ onAuthStateChanged(auth, async user => {
       }
     }, e => console.error('onSnapshot usuarios:', e));
 
-    window._unsubListeners = [unsubEstoque, unsubMovs, unsubUsuarios];
+    // Listener em tempo real — Erros de Carregamento
+    let _primeiraVezErros = true;
+    const unsubErros = onSnapshot(refErros(user.uid), snap => {
+      if (_primeiraVezErros) { _primeiraVezErros = false; return; }
+      if (!snap.exists()) return;
+      const errosNuvem = snap.data().lista || [];
+      const errosLocais = carregarErros();
+      const mapaErros = {};
+      errosLocais.forEach(e => { mapaErros[e.id] = e; });
+      let mudou = false;
+      errosNuvem.forEach(e => {
+        const local = mapaErros[e.id];
+        if (!local || local.status !== e.status) { mapaErros[e.id] = e; mudou = true; }
+      });
+      if (mudou) {
+        const merged = Object.values(mapaErros).sort((a,b) => b.id.localeCompare(a.id));
+        localStorage.setItem(CHAVE_ERROS, JSON.stringify(merged));
+        renderErros();
+        toast('🔄 Erros atualizados em tempo real');
+      }
+    }, e => console.error('onSnapshot erros:', e));
+
+    window._unsubListeners = [unsubEstoque, unsubMovs, unsubUsuarios, unsubErros];
 
   } else {
     window._usuarioUid = null;
