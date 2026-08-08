@@ -1,0 +1,3954 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <meta name="theme-color" content="#1a2e1a" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="Estoque Pisos" />
+  <meta name="description" content="Gerenciador de estoque de pisos e revestimentos" />
+  <title>🏗️ Estoque de Pisos</title>
+
+  <!-- Ícone SVG embutido para PWA -->
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='20' fill='%231a2e1a'/><text y='68' x='50' text-anchor='middle' font-size='55'>🏗️</text></svg>" />
+  <link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='20' fill='%231a2e1a'/><text y='68' x='50' text-anchor='middle' font-size='55'>🏗️</text></svg>" />
+
+  <!-- Manifest PWA embutido -->
+  <link rel="manifest" href="data:application/manifest+json,{
+    &quot;name&quot;: &quot;Estoque de Pisos&quot;,
+    &quot;short_name&quot;: &quot;Estoque&quot;,
+    &quot;description&quot;: &quot;Gerenciador de estoque de pisos e revestimentos&quot;,
+    &quot;start_url&quot;: &quot;.&quot;,
+    &quot;display&quot;: &quot;standalone&quot;,
+    &quot;background_color&quot;: &quot;%23f5f2ec&quot;,
+    &quot;theme_color&quot;: &quot;%231a2e1a&quot;,
+    &quot;orientation&quot;: &quot;portrait&quot;,
+    &quot;icons&quot;: [{
+      &quot;src&quot;: &quot;data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='20' fill='%231a2e1a'/><text y='68' x='50' text-anchor='middle' font-size='55'>🏗️</text></svg>&quot;,
+      &quot;sizes&quot;: &quot;any&quot;,
+      &quot;type&quot;: &quot;image/svg+xml&quot;,
+      &quot;purpose&quot;: &quot;any maskable&quot;
+    }]
+  }" />
+  <link rel="apple-touch-icon" href="icon-192.png" />
+  <title>Estoque de Pisos</title>
+
+<!--
+PASSOS PARA RODAR NO GITHUB PAGES:
+
+1. Criar conta no GitHub
+2. Criar repositório
+3. Enviar este arquivo como index.html
+4. Ativar GitHub Pages
+5. Criar projeto no Firebase
+6. Substituir firebaseConfig pelos dados reais
+
+-->
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+
+    :root {
+      --verde-escuro: #1a2e1a;
+      --verde-medio: #2d4f2d;
+      --verde-claro: #3d6b3d;
+      --verde-acento: #5a9e5a;
+      --verde-suave: #c8e6c8;
+      --bege: #f5f0e8;
+      --bege-escuro: #e8e0d0;
+      --texto: #1a1a1a;
+      --texto-suave: #555;
+      --branco: #ffffff;
+      --vermelho: #c0392b;
+      --laranja: #e67e22;
+      --radius: 12px;
+      --sombra: 0 2px 12px rgba(0,0,0,0.12);
+    }
+
+    body {
+      font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+      background: var(--bege);
+      color: var(--texto);
+      min-height: 100vh;
+      max-width: 480px;
+      margin: 0 auto;
+    }
+
+    /* HEADER */
+    .header {
+      background: var(--verde-escuro);
+      color: var(--branco);
+      padding: 16px 20px 12px;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+    }
+    .header-top {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .header h1 {
+      font-size: 18px;
+      font-weight: 600;
+      letter-spacing: 0.3px;
+    }
+    .header p {
+      font-size: 11px;
+      opacity: 0.7;
+      margin-top: 2px;
+    }
+    .header-icon {
+      font-size: 28px;
+    }
+
+    /* NAV TABS */
+    .tabs {
+      display: flex;
+      background: var(--verde-medio);
+      overflow-x: auto;
+      overflow-y: hidden;
+      scrollbar-width: none; /* Firefox */
+      -ms-overflow-style: none;
+      scroll-snap-type: x proximity;
+    }
+    .tabs::-webkit-scrollbar { display: none; }
+    .tab {
+      flex: 0 0 auto;
+      min-width: 72px;
+      padding: 10px 12px;
+      text-align: center;
+      color: rgba(255,255,255,0.6);
+      font-size: 11px;
+      font-weight: 500;
+      cursor: pointer;
+      border-bottom: 3px solid transparent;
+      transition: all 0.2s;
+      user-select: none;
+      white-space: nowrap;
+      scroll-snap-align: start;
+    }
+    .tab.ativo {
+      color: var(--branco);
+      border-bottom-color: var(--verde-suave);
+      background: rgba(255,255,255,0.08);
+    }
+    .tab-icon { font-size: 16px; display: block; margin-bottom: 2px; }
+
+    /* CONTEÚDO */
+    .pagina { display: none; padding: 16px; }
+    .pagina.ativa { display: block; }
+
+    /* RESPONSIVO PC */
+    @media (min-width: 768px) {
+      body { background: #e8e4dc; }
+      #app-root {
+        max-width: 900px;
+        margin: 0 auto;
+        box-shadow: 0 0 40px rgba(0,0,0,0.18);
+        min-height: 100dvh;
+        background: var(--fundo);
+      }
+      .tab { min-width: 90px; font-size: 12px; padding: 12px 16px; }
+      .tab-icon { font-size: 18px; }
+      .galeria-grid { grid-template-columns: 1fr 1fr 1fr; }
+      .linha-4 { grid-template-columns: 1fr 1fr 1fr 1fr; }
+      .modal { max-width: 560px; }
+      #tela-login { background: #e8e4dc; }
+      #tela-login .login-card { box-shadow: 0 8px 40px rgba(0,0,0,0.2); }
+    }
+    @media (min-width: 1024px) {
+      #app-root { max-width: 1000px; }
+      .galeria-grid { grid-template-columns: 1fr 1fr 1fr 1fr; }
+    }
+
+    /* FORMULÁRIO */
+    .card {
+      background: var(--branco);
+      border-radius: var(--radius);
+      padding: 20px;
+      box-shadow: var(--sombra);
+      margin-bottom: 16px;
+    }
+    .card-titulo {
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--verde-escuro);
+      margin-bottom: 16px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .card-titulo::before {
+      content: '';
+      display: inline-block;
+      width: 4px;
+      height: 16px;
+      background: var(--verde-acento);
+      border-radius: 2px;
+    }
+
+    .campo-grupo {
+      margin-bottom: 14px;
+    }
+    label {
+      display: block;
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--texto-suave);
+      margin-bottom: 5px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    input, select {
+      width: 100%;
+      padding: 12px 14px;
+      border: 1.5px solid #ddd;
+      border-radius: 8px;
+      font-size: 15px;
+      color: var(--texto);
+      background: #fafafa;
+      transition: border-color 0.2s, background 0.2s;
+      -webkit-appearance: none;
+      appearance: none;
+    }
+    input:focus, select:focus {
+      outline: none;
+      border-color: var(--verde-acento);
+      background: var(--branco);
+    }
+    input[type=number] { -moz-appearance: textfield; }
+    input[type=number]::-webkit-inner-spin-button,
+    input[type=number]::-webkit-outer-spin-button { -webkit-appearance: none; }
+
+    .linha-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    .linha-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; }
+    .linha-4 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+
+    .btn {
+      width: 100%;
+      padding: 14px;
+      border: none;
+      border-radius: var(--radius);
+      font-size: 15px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: opacity 0.2s, transform 0.1s;
+      letter-spacing: 0.3px;
+    }
+    .btn:active { transform: scale(0.98); opacity: 0.85; }
+    .btn-salvar {
+      background: var(--verde-escuro);
+      color: var(--branco);
+    }
+    .btn-limpar {
+      background: var(--bege-escuro);
+      color: var(--texto-suave);
+      margin-top: 8px;
+    }
+    .btn-perigoso {
+      background: #fde8e8;
+      color: var(--vermelho);
+      font-size: 13px;
+      padding: 10px;
+    }
+
+    /* FEEDBACK */
+    .toast {
+      position: fixed;
+      bottom: 80px;
+      left: 50%;
+      transform: translateX(-50%) translateY(20px);
+      background: var(--verde-escuro);
+      color: var(--branco);
+      padding: 12px 24px;
+      border-radius: 50px;
+      font-size: 14px;
+      font-weight: 500;
+      opacity: 0;
+      pointer-events: none;
+      transition: all 0.3s;
+      white-space: nowrap;
+      z-index: 999;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+    }
+    .toast.visivel {
+      opacity: 1;
+      transform: translateX(-50%) translateY(0);
+    }
+
+    /* ESTOQUE - LISTA */
+    .filtro-barra {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 14px;
+    }
+    .filtro-barra input {
+      flex: 1;
+      padding: 10px 14px;
+      font-size: 14px;
+    }
+    .filtro-barra select {
+      width: auto;
+      min-width: 120px;
+      padding: 10px 12px;
+      font-size: 13px;
+    }
+
+    .lista-vazia {
+      text-align: center;
+      padding: 48px 20px;
+      color: var(--texto-suave);
+    }
+    .lista-vazia .emoji { font-size: 48px; margin-bottom: 12px; }
+    .lista-vazia p { font-size: 14px; line-height: 1.6; }
+
+    .item-piso {
+      background: var(--branco);
+      border-radius: var(--radius);
+      padding: 14px 16px;
+      margin-bottom: 10px;
+      box-shadow: 0 1px 6px rgba(0,0,0,0.08);
+      border-left: 4px solid var(--verde-acento);
+      cursor: pointer;
+      transition: box-shadow 0.2s;
+    }
+    .item-piso:active { box-shadow: 0 0 0 2px var(--verde-acento); }
+    .item-nome {
+      font-size: 15px;
+      font-weight: 600;
+      color: var(--verde-escuro);
+      margin-bottom: 4px;
+    }
+    .item-lote {
+      font-size: 12px;
+      color: var(--texto-suave);
+      margin-bottom: 8px;
+    }
+    .item-tags {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+    }
+    .tag {
+      background: var(--verde-suave);
+      color: var(--verde-escuro);
+      font-size: 11px;
+      font-weight: 600;
+      padding: 3px 8px;
+      border-radius: 20px;
+    }
+    .tag.laranja { background: #fdebd0; color: #7d4e0f; }
+    .tag.azul { background: #d6eaf8; color: #1a5276; }
+    .tag.roxo { background: #e8daef; color: #4a235a; }
+    .tag.verde { background: #d5f5dd; color: #1a6b32; font-weight: 700; }
+
+    /* DETALHE */
+    .modal-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.5);
+      z-index: 200;
+      display: flex;
+      align-items: flex-end;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.25s;
+    }
+    .modal-overlay.aberto {
+      opacity: 1;
+      pointer-events: all;
+    }
+    .modal {
+      background: var(--branco);
+      border-radius: 20px 20px 0 0;
+      width: 100%;
+      max-width: 480px;
+      margin: 0 auto;
+      transform: translateY(40px);
+      transition: transform 0.3s;
+      max-height: 92dvh;
+      display: flex;
+      flex-direction: column;
+    }
+    .modal-overlay.aberto .modal {
+      transform: translateY(0);
+    }
+    .modal-handle {
+      width: 40px;
+      height: 4px;
+      background: #ddd;
+      border-radius: 2px;
+      margin: 16px auto 0;
+      flex-shrink: 0;
+    }
+    #modal-body {
+      padding: 12px 20px 32px;
+      overflow-y: auto;
+      -webkit-overflow-scrolling: touch;
+      flex: 1;
+    }
+    .modal-nome {
+      font-size: 20px;
+      font-weight: 700;
+      color: var(--verde-escuro);
+      margin-bottom: 4px;
+    }
+    .modal-lote {
+      font-size: 13px;
+      color: var(--texto-suave);
+      margin-bottom: 20px;
+    }
+    .modal-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 10px;
+      margin-bottom: 20px;
+    }
+    .modal-stat {
+      background: var(--bege);
+      border-radius: 8px;
+      padding: 12px 8px;
+      text-align: center;
+    }
+    .modal-stat-valor {
+      font-size: 22px;
+      font-weight: 700;
+      color: var(--verde-escuro);
+    }
+    .modal-stat-label {
+      font-size: 10px;
+      text-transform: uppercase;
+      color: var(--texto-suave);
+      font-weight: 600;
+      margin-top: 2px;
+    }
+    .modal-info-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+      margin-bottom: 20px;
+    }
+    .modal-info-item {
+      background: var(--bege);
+      border-radius: 8px;
+      padding: 10px 12px;
+    }
+    .modal-info-label {
+      font-size: 10px;
+      text-transform: uppercase;
+      color: var(--texto-suave);
+      font-weight: 600;
+    }
+    .modal-info-valor {
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--texto);
+      margin-top: 2px;
+    }
+    .modal-acoes {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+    }
+
+    /* RELATÓRIO */
+    .resumo-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+      margin-bottom: 16px;
+    }
+    .resumo-card {
+      background: var(--branco);
+      border-radius: var(--radius);
+      padding: 16px;
+      box-shadow: var(--sombra);
+      text-align: center;
+    }
+    .resumo-valor {
+      font-size: 28px;
+      font-weight: 700;
+      color: var(--verde-escuro);
+    }
+    .resumo-label {
+      font-size: 11px;
+      color: var(--texto-suave);
+      text-transform: uppercase;
+      font-weight: 600;
+      margin-top: 4px;
+    }
+
+    .tabela-relatorio {
+      background: var(--branco);
+      border-radius: var(--radius);
+      overflow: hidden;
+      box-shadow: var(--sombra);
+    }
+    .tabela-relatorio table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 13px;
+    }
+    .tabela-relatorio th {
+      background: var(--verde-escuro);
+      color: var(--branco);
+      padding: 10px 12px;
+      text-align: left;
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    .tabela-relatorio td {
+      padding: 10px 12px;
+      border-bottom: 1px solid #f0f0f0;
+      vertical-align: middle;
+    }
+    .tabela-relatorio tr:last-child td { border-bottom: none; }
+    .tabela-relatorio tr:nth-child(even) td { background: #fafafa; }
+
+    .exportar-btn {
+      background: var(--verde-acento);
+      color: var(--branco);
+      margin-top: 12px;
+    }
+
+    /* EDIÇÃO MODAL */
+    .btn-editar {
+      background: var(--bege);
+      color: var(--verde-escuro);
+      border: 1.5px solid var(--verde-suave);
+    }
+    .btn-excluir {
+      background: #fde8e8;
+      color: var(--vermelho);
+      border: none;
+    }
+
+    /* NÃO CONFERIDO */
+    .item-piso.nao-conferido {
+      border-left-color: #e67e22;
+      background: #fffaf4;
+    }
+    .item-piso.nao-conferido .item-nome {
+      color: #7d4e0f;
+    }
+    .tag.alerta {
+      background: #fdebd0;
+      color: #7d4e0f;
+      font-weight: 700;
+      animation: pisca 1.8s ease-in-out infinite;
+    }
+    @keyframes pisca {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.5; }
+    }
+    .btn-conferir {
+      background: #fdebd0;
+      color: #7d4e0f;
+      border: 1.5px solid #e67e22;
+    }
+    .btn-conferido-ok {
+      background: #e8f5e9;
+      color: #1a5e20;
+      border: 1.5px solid #5a9e5a;
+    }
+    .banner-nao-conferido {
+      background: #fff3e0;
+      border: 1.5px solid #e67e22;
+      border-radius: 10px;
+      padding: 10px 14px;
+      font-size: 13px;
+      color: #7d4e0f;
+      font-weight: 600;
+      margin-bottom: 14px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    /* NÃO ADICIONADO AO SISTEMA */
+    .item-piso.nao-sistema {
+      border-left-color: #8e44ad;
+      background: #fdf6ff;
+    }
+    .item-piso.nao-sistema .item-nome {
+      color: #5b2c6f;
+    }
+    .tag.roxo-alerta {
+      background: #e8daef;
+      color: #5b2c6f;
+      font-weight: 700;
+      animation: pisca 1.8s ease-in-out infinite;
+    }
+    .btn-sistema {
+      background: #e8daef;
+      color: #5b2c6f;
+      border: 1.5px solid #8e44ad;
+    }
+    .btn-sistema-ok {
+      background: #e8f5e9;
+      color: #1a5e20;
+      border: 1.5px solid #5a9e5a;
+    }
+    .banner-nao-sistema {
+      background: #f5eef8;
+      border: 1.5px solid #8e44ad;
+      border-radius: 10px;
+      padding: 10px 14px;
+      font-size: 13px;
+      color: #5b2c6f;
+      font-weight: 600;
+      margin-bottom: 10px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    /* NÃO LOCALIZADO */
+    .item-piso.nao-localizado {
+      border-left-color: #e67e22;
+      background: #fff8f0;
+    }
+    .item-piso.nao-localizado .item-nome {
+      color: #935116;
+    }
+    .tag.laranja-alerta {
+      background: #fde8d0;
+      color: #935116;
+      font-weight: 700;
+      animation: pisca 1.8s ease-in-out infinite;
+    }
+    .btn-localizado {
+      background: #fde8d0;
+      color: #935116;
+      border: 1.5px solid #e67e22;
+    }
+    .btn-localizado-ok {
+      background: #e8f5e9;
+      color: #1a5e20;
+      border: 1.5px solid #5a9e5a;
+    }
+    .banner-nao-localizado {
+      background: #fff3e0;
+      border: 1.5px solid #e67e22;
+      border-radius: 10px;
+      padding: 10px 14px;
+      font-size: 13px;
+      color: #7d4e0f;
+      font-weight: 600;
+      margin-bottom: 10px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    /* CÓDIGO DUPLICADO */
+    .item-piso.codigo-duplicado {
+      border-left-color: #c0392b;
+      background: #fff5f5;
+    }
+    .item-piso.codigo-duplicado .item-nome {
+      color: #c0392b;
+    }
+    .tag.vermelho {
+      background: #fde8e8;
+      color: #c0392b;
+      font-weight: 700;
+      animation: pisca 1.8s ease-in-out infinite;
+    }
+    .banner-codigo-duplicado {
+      background: #fde8e8;
+      border: 1.5px solid #c0392b;
+      border-radius: 10px;
+      padding: 10px 14px;
+      font-size: 13px;
+      color: #922b21;
+      font-weight: 600;
+      margin-bottom: 10px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .modal-metragem-destaque {
+      background: #d5f5dd;
+      color: #1a6b32;
+      border-radius: 10px;
+      padding: 10px 14px;
+      font-size: 14px;
+      font-weight: 600;
+      text-align: center;
+      margin-bottom: 14px;
+    }
+
+    /* FOTO DO PISO */
+    .foto-card {
+      background: var(--bege);
+      border: 2px dashed #c5b99a;
+      border-radius: var(--radius);
+      padding: 16px;
+      text-align: center;
+      cursor: pointer;
+      transition: border-color 0.2s;
+    }
+    .foto-card:active { border-color: var(--verde-acento); }
+    .foto-preview {
+      width: 100%;
+      max-height: 220px;
+      object-fit: cover;
+      border-radius: 10px;
+      margin-bottom: 10px;
+      display: block;
+    }
+    .foto-placeholder {
+      color: var(--texto-suave);
+      font-size: 13px;
+      padding: 20px 0;
+    }
+    .foto-placeholder .emoji { font-size: 36px; margin-bottom: 6px; }
+    .foto-acoes { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; }
+    .btn-foto {
+      background: var(--verde-escuro);
+      color: #fff;
+      font-size: 13px;
+      padding: 8px 16px;
+      border: none;
+      border-radius: 8px;
+      font-weight: 600;
+      cursor: pointer;
+    }
+    .btn-foto-remover {
+      background: #fde8e8;
+      color: #c0392b;
+      font-size: 13px;
+      padding: 8px 16px;
+      border: none;
+      border-radius: 8px;
+      font-weight: 600;
+      cursor: pointer;
+    }
+    .modal-foto {
+      width: 100%;
+      max-height: 260px;
+      object-fit: cover;
+      border-radius: 12px;
+      margin-bottom: 14px;
+      display: block;
+    }
+
+    /* MODAL HISTÓRICO */
+    .modal-historico {
+      background: var(--bege);
+      border-radius: 10px;
+      padding: 12px 14px;
+      margin-bottom: 14px;
+      max-height: 160px;
+      overflow-y: auto;
+    }
+    .modal-historico-titulo {
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--verde-escuro);
+      margin-bottom: 8px;
+    }
+    .modal-historico-item {
+      font-size: 12px;
+      color: var(--texto-suave);
+      padding: 4px 0;
+      border-bottom: 1px solid rgba(0,0,0,0.06);
+    }
+    .modal-historico-item:last-child { border-bottom: none; }
+    .modal-historico-num {
+      font-weight: 700;
+      color: var(--verde-acento);
+      margin-right: 4px;
+    }
+
+    /* MOVIMENTAÇÕES */
+    .mov-item {
+      background: var(--branco);
+      border-radius: var(--radius);
+      padding: 14px 16px;
+      margin-bottom: 10px;
+      box-shadow: 0 1px 6px rgba(0,0,0,0.08);
+      border-left: 4px solid var(--verde-acento);
+    }
+    .mov-piso {
+      font-size: 14px;
+      font-weight: 700;
+      color: var(--verde-escuro);
+      margin-bottom: 6px;
+    }
+    .mov-rota {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+      margin-bottom: 6px;
+    }
+    .mov-local {
+      background: var(--bege);
+      border-radius: 8px;
+      padding: 6px 10px;
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--texto);
+      line-height: 1.5;
+    }
+    .mov-local.origem { border: 1.5px solid #e0c8a0; }
+    .mov-local.destino { border: 1.5px solid var(--verde-acento); background: #f0faf0; }
+    .mov-seta {
+      font-size: 18px;
+      color: var(--verde-acento);
+      flex-shrink: 0;
+    }
+    .mov-data {
+      font-size: 11px;
+      color: var(--texto-suave);
+    }
+    .mov-filtro-barra {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 14px;
+    }
+    .mov-filtro-barra input {
+      flex: 1;
+      padding: 10px 14px;
+      font-size: 14px;
+    }
+    .btn-limpar-mov {
+      background: #fde8e8;
+      color: var(--vermelho);
+      font-size: 13px;
+      padding: 10px 14px;
+      border: none;
+      border-radius: 8px;
+      font-weight: 600;
+      cursor: pointer;
+      white-space: nowrap;
+    }
+
+    /* CONFIG - USUÁRIOS */
+    .usuario-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 10px 12px;
+      background: var(--bege);
+      border-radius: 8px;
+      margin-bottom: 8px;
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--verde-escuro);
+    }
+    .usuario-item button {
+      background: #fde8e8;
+      color: #c0392b;
+      border: none;
+      border-radius: 6px;
+      padding: 4px 10px;
+      font-size: 12px;
+      cursor: pointer;
+      font-weight: 700;
+    }
+
+    /* ERROS DE CARREGAMENTO */
+    .erro-card {
+      background: var(--branco);
+      border-radius: var(--radius);
+      padding: 14px 16px;
+      margin-bottom: 10px;
+      box-shadow: 0 1px 6px rgba(0,0,0,0.08);
+      border-left: 4px solid #e74c3c;
+    }
+    .erro-card.resolvido {
+      border-left-color: #5a9e5a;
+      opacity: 0.75;
+    }
+    .erro-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 6px;
+    }
+    .erro-numero {
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--verde-escuro);
+      background: var(--bege);
+      padding: 3px 10px;
+      border-radius: 20px;
+    }
+    .erro-status {
+      font-size: 12px;
+      font-weight: 700;
+      padding: 4px 10px;
+      border-radius: 20px;
+      cursor: pointer;
+      border: none;
+    }
+    .erro-status.pendente {
+      background: #fde8e8;
+      color: #c0392b;
+    }
+    .erro-status.resolvido {
+      background: #d5f5dd;
+      color: #1a6b32;
+    }
+    .erro-descricao {
+      font-size: 14px;
+      color: var(--texto);
+      font-weight: 600;
+      margin-bottom: 4px;
+    }
+    .erro-detalhe {
+      font-size: 12px;
+      color: var(--texto-suave);
+    }
+    .erro-acoes {
+      display: flex;
+      gap: 8px;
+      margin-top: 10px;
+    }
+    .erro-btn-excluir {
+      background: #fde8e8;
+      color: #c0392b;
+      border: none;
+      border-radius: 6px;
+      padding: 5px 12px;
+      font-size: 12px;
+      font-weight: 700;
+      cursor: pointer;
+    }
+    .erro-filtros {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 14px;
+      flex-wrap: wrap;
+    }
+    .erro-filtro-btn {
+      padding: 7px 14px;
+      border-radius: 20px;
+      border: 1.5px solid #d0c9bb;
+      background: #fff;
+      font-size: 12px;
+      font-weight: 700;
+      cursor: pointer;
+      color: #555;
+    }
+    .erro-filtro-btn.ativo {
+      background: var(--verde-escuro);
+      color: #fff;
+      border-color: var(--verde-escuro);
+    }
+    .erro-resumo {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 14px;
+    }
+    .erro-resumo-card {
+      flex: 1;
+      background: #fff;
+      border-radius: 10px;
+      padding: 10px;
+      text-align: center;
+      box-shadow: 0 1px 6px rgba(0,0,0,0.08);
+    }
+    .erro-resumo-num { font-size: 22px; font-weight: 800; }
+    .erro-resumo-label { font-size: 11px; color: var(--texto-suave); }
+
+    /* GALERIA */
+    .galeria-busca {
+      padding: 14px 16px 0;
+    }
+    .galeria-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+      padding: 14px 16px 32px;
+    }
+    .galeria-card {
+      background: var(--branco);
+      border-radius: 12px;
+      overflow: hidden;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.09);
+      cursor: pointer;
+      transition: transform 0.15s;
+    }
+    .galeria-card:active { transform: scale(0.97); }
+    .galeria-img {
+      width: 100%;
+      aspect-ratio: 1/1;
+      object-fit: cover;
+      display: block;
+      background: #f0ede6;
+    }
+    .galeria-sem-foto {
+      width: 100%;
+      aspect-ratio: 1/1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      background: #f5f2ec;
+      color: #bbb;
+      font-size: 30px;
+      gap: 4px;
+    }
+    .galeria-sem-foto span {
+      font-size: 11px;
+      color: #ccc;
+    }
+    .galeria-nome {
+      font-size: 12px;
+      font-weight: 700;
+      color: var(--verde-escuro);
+      padding: 8px 10px 4px;
+      line-height: 1.3;
+      word-break: break-word;
+    }
+    .galeria-lote {
+      font-size: 11px;
+      color: var(--texto-suave);
+      padding: 0 10px 10px;
+    }
+    .galeria-vazia {
+      text-align: center;
+      padding: 60px 20px;
+      color: var(--texto-suave);
+    }
+    .galeria-vazia .emoji { font-size: 48px; margin-bottom: 12px; }
+
+    /* TELA DE LOGIN */
+    #tela-login {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: var(--verde-escuro);
+      z-index: 999999;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 32px 24px;
+    }
+    .login-logo {
+      font-size: 64px;
+      margin-bottom: 12px;
+    }
+    .login-titulo {
+      font-size: 26px;
+      font-weight: 800;
+      color: #fff;
+      margin-bottom: 4px;
+      text-align: center;
+    }
+    .login-sub {
+      font-size: 14px;
+      color: #a8d5a8;
+      margin-bottom: 48px;
+      text-align: center;
+    }
+    .login-card {
+      background: #fff;
+      border-radius: 20px;
+      padding: 28px 24px;
+      width: 100%;
+      max-width: 360px;
+      box-shadow: 0 8px 32px rgba(0,0,0,0.25);
+    }
+    .login-card-titulo {
+      font-size: 16px;
+      font-weight: 700;
+      color: var(--verde-escuro);
+      margin-bottom: 20px;
+      text-align: center;
+    }
+    #btn-login-google {
+      width: 100%;
+      padding: 14px;
+      background: #fff;
+      border: 2px solid #4285f4;
+      border-radius: 12px;
+      font-size: 15px;
+      font-weight: 700;
+      color: #4285f4;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      transition: background 0.2s;
+      margin-bottom: 16px;
+    }
+    #btn-login-google:hover { background: #f0f4ff; }
+    #btn-login-google:disabled { opacity: 0.6; cursor: not-allowed; }
+    .login-manter {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 13px;
+      color: #555;
+      cursor: pointer;
+      justify-content: center;
+    }
+    .login-manter input { width: 18px; height: 18px; cursor: pointer; accent-color: var(--verde-acento); }
+    #header-user {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      margin-left: auto;
+    }
+
+    /* SCROLLBAR */
+    ::-webkit-scrollbar { width: 4px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: #ccc; border-radius: 2px; }
+
+    @media (max-width: 360px) {
+      .linha-3 { grid-template-columns: 1fr 1fr; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- TELA DE LOGIN -->
+<div id="tela-login">
+  <div class="login-logo">🏗️</div>
+  <div class="login-titulo">Estoque de Pisos</div>
+  <div class="login-sub">Gerenciamento de inventário de pisos</div>
+
+  <div class="login-card">
+    <div class="login-card-titulo">Entrar na sua conta</div>
+    <button id="btn-login-google" onclick="window.fazerLogin()">
+      <svg width="20" height="20" viewBox="0 0 48 48"><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/></svg>
+      Entrar com Google
+    </button>
+    <label class="login-manter">
+      <input type="checkbox" id="manter-conectado" checked />
+      Manter conectado
+    </label>
+  </div>
+</div>
+
+<!-- APP PRINCIPAL -->
+<div id="app-root" style="display:none;flex-direction:column;min-height:100dvh">
+
+<!-- HEADER -->
+<div class="header">
+  <div class="header-top">
+    <div>
+      <h1>🏗️ Estoque de Pisos</h1>
+      <p id="subtitulo-header">Gerenciamento de inventário</p>
+    </div>
+    <div id="header-user"></div>
+  </div>
+  <div class="tabs">
+    <div class="tab ativo" onclick="irPara('cadastrar')">
+      <span class="tab-icon">➕</span>Cadastrar
+    </div>
+    <div class="tab" onclick="irPara('estoque')">
+      <span class="tab-icon">📦</span>Estoque
+    </div>
+    <div class="tab" onclick="irPara('relatorio')">
+      <span class="tab-icon">📊</span>Relatório
+    </div>
+    <div class="tab" onclick="irPara('movimentacoes')">
+      <span class="tab-icon">🔄</span>Movim.
+    </div>
+    <div class="tab" onclick="irPara('galeria')">
+      <span class="tab-icon">🖼️</span>Galeria
+    </div>
+    <div class="tab" onclick="irPara('config')">
+      <span class="tab-icon">⚙️</span>Config
+    </div>
+    <div class="tab" onclick="irPara('erros')">
+      <span class="tab-icon">⚠️</span>Erros
+    </div>
+  </div>
+</div>
+
+<!-- ===================== PÁGINA: CADASTRAR ===================== -->
+<div class="pagina ativa" id="pag-cadastrar">
+
+  <div class="card" style="margin-top: 16px;">
+    <div class="card-titulo">Informações do Piso</div>
+
+    <div class="campo-grupo">
+      <label>Nome do Piso *</label>
+      <input type="text" id="nome" placeholder="Ex: Porcelanato Mármore Carrara 60x60" autocomplete="off" />
+    </div>
+
+    <div class="campo-grupo">
+      <label>Lote / Referência *</label>
+      <input type="text" id="lote" placeholder="Ex: LOT-2024-001" autocomplete="off" />
+    </div>
+
+    <div class="linha-3">
+      <div class="campo-grupo">
+        <label>Marca do Piso</label>
+        <input type="text" id="marca" placeholder="Ex: Eliane" autocomplete="off" />
+      </div>
+
+      <div class="campo-grupo">
+        <label>Código do Piso</label>
+        <input type="text" id="codigo" placeholder="Ex: PISO-9080" autocomplete="off" />
+      </div>
+
+      <div class="campo-grupo">
+        <label>Tamanho</label>
+        <input type="text" id="tamanho" placeholder="Ex: 90x90" autocomplete="off" oninput="atualizarPreviewMetragem()" />
+      </div>
+    </div>
+
+    <div class="linha-2">
+      <div class="campo-grupo">
+        <label>Bitola</label>
+        <input type="text" id="bitola" placeholder="Ex: A, B, C" autocomplete="off" />
+      </div>
+
+      <div class="campo-grupo">
+        <label>Tonalidade</label>
+        <input type="text" id="tonalidade" placeholder="Ex: T1, T2, Claro" autocomplete="off" />
+      </div>
+    </div>
+
+    <div class="campo-grupo" style="margin-top:10px">
+      <label>👤 Responsável pela alteração</label>
+      <select id="responsavel" style="width:100%;padding:11px 14px;font-size:14px;border-radius:8px;border:1.5px solid #d0c9bb;background:#fff;color:var(--texto)">
+        <option value="">— Selecionar usuário —</option>
+      </select>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-titulo">Localização no Estoque</div>
+
+    <div class="linha-4">
+      <div class="campo-grupo">
+        <label>Pátio</label>
+        <input type="text" id="patio" placeholder="Ex: A" autocomplete="off" />
+      </div>
+      <div class="campo-grupo">
+        <label>Rua</label>
+        <input type="text" id="rua" placeholder="Ex: 3" autocomplete="off" />
+      </div>
+      <div class="campo-grupo">
+        <label>Apartamento</label>
+        <input type="text" id="apartamento" placeholder="Ex: 12" autocomplete="off" />
+      </div>
+      <div class="campo-grupo">
+        <label>Nível</label>
+        <input type="number" id="nivel" placeholder="Ex: 0" min="0" inputmode="numeric" />
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-titulo">Quantidade</div>
+
+    <div class="linha-4">
+      <div class="campo-grupo">
+        <label>🪵 Pallets</label>
+        <input type="number" id="qtdPallets" placeholder="0" min="0" inputmode="numeric" oninput="atualizarCaixasPorPallet()" />
+      </div>
+      <div class="campo-grupo">
+        <label>🪵 Caixas/Pallet</label>
+        <input type="number" id="caixasPorPallet" placeholder="Ex: 40" min="0" inputmode="numeric" oninput="atualizarCaixasPorPallet()" />
+      </div>
+      <div class="campo-grupo">
+        <label>📦 Caixas Avulsas <span style="font-weight:400;color:var(--texto-suave)">(fora de pallet)</span></label>
+        <input type="number" id="caixasAvulsasFora" placeholder="0" min="0" inputmode="numeric" oninput="atualizarCaixasPorPallet()" />
+      </div>
+      <div class="campo-grupo">
+        <label>📦 Caixas Totais <span style="font-weight:400;color:var(--texto-suave)">(auto)</span></label>
+        <input type="text" id="caixas" placeholder="0" readonly style="background:#f0f0ec;color:var(--texto-suave);font-weight:700" />
+      </div>
+    </div>
+
+    <div class="linha-4">
+      <div class="campo-grupo">
+        <label>🔲 Peças Avulsas</label>
+        <input type="number" id="pecas" placeholder="0" min="0" inputmode="numeric" oninput="atualizarPreviewMetragem()" />
+      </div>
+      <div class="campo-grupo">
+        <label>📐 m²/Caixa</label>
+        <input type="number" id="m2PorCaixa" placeholder="Ex: 2.20" min="0" step="0.01" inputmode="decimal" oninput="atualizarPreviewMetragem()" />
+      </div>
+      <div class="campo-grupo">
+        <label>🔢 Peças/Caixa <span style="font-weight:400;color:var(--texto-suave)">(auto)</span></label>
+        <input type="text" id="pecasPorCaixa" placeholder="Calculado" readonly style="background:#f0f0ec;color:var(--texto-suave)" />
+      </div>
+    </div>
+    <div id="preview-metragem" style="font-size:13px;color:var(--verde-acento);font-weight:700;margin-top:6px"></div>
+  </div>
+
+  <div class="card">
+    <div class="card-titulo">📷 Fotos do Piso</div>
+    <div style="display:flex;gap:8px;margin-top:10px;margin-bottom:10px">
+      <button class="btn-foto" style="flex:1" onclick="document.getElementById('foto-camera').click()">📷 Câmera</button>
+      <button class="btn-foto" style="flex:1;background:#3a5a3a" onclick="document.getElementById('foto-galeria').click()">🖼️ Galeria</button>
+    </div>
+    <input type="file" id="foto-camera"  accept="image/*" capture="environment" style="display:none" onchange="carregarFotos(event)" />
+    <input type="file" id="foto-galeria" accept="image/*" multiple style="display:none" onchange="carregarFotos(event)" />
+    <div id="fotos-grid" style="display:grid;grid-template-columns:1fr 1fr;gap:8px"></div>
+    <div id="foto-placeholder-msg" style="text-align:center;color:var(--texto-suave);padding:20px 0;font-size:13px">
+      <div style="font-size:32px;margin-bottom:6px">📷</div>
+      Tire uma foto ou escolha da galeria
+    </div>
+  </div>
+
+  <button class="btn btn-salvar" onclick="salvar()">✅ Salvar no Estoque</button>
+  <button class="btn btn-limpar" onclick="limparForm()">🗑️ Limpar Campos</button>
+  <div style="height: 20px;"></div>
+</div>
+
+<!-- ===================== PÁGINA: ESTOQUE ===================== -->
+<div class="pagina" id="pag-estoque">
+  <div style="margin-top: 16px;">
+    <div class="filtro-barra">
+      <input type="search" id="busca" placeholder="🔍 Buscar piso..." oninput="renderLista()" />
+      <select onchange="renderLista()" id="ordem">
+        <option value="nome">A-Z</option>
+        <option value="recente">Recente</option>
+        <option value="caixas">Caixas</option>
+        <option value="nao_conferido">⚠️ Pendentes</option>
+        <option value="nao_sistema">🟣 Não no sistema</option>
+        <option value="nao_localizado">📍 Não está no local</option>
+        <option value="cod_duplicado">🔴 Cód. duplicado</option>
+        <option value="apartamento">Ap. Ímp→Par</option>
+      </select>
+    </div>
+    <div id="banner-pendentes"></div>
+    <div id="banner-sistema"></div>
+    <div id="banner-localizado"></div>
+    <div id="banner-duplicados"></div>
+
+    <div id="lista-estoque"></div>
+  </div>
+</div>
+
+<!-- ===================== PÁGINA: RELATÓRIO ===================== -->
+<div class="pagina" id="pag-relatorio">
+  <div style="margin-top: 16px;">
+    <div class="resumo-grid" id="resumo-cards"></div>
+    <button class="btn" style="margin-bottom:12px;background:#5a9e5a;color:#fff" onclick="recalcularTodasMetragens()">🔄 Recalcular Peças/Caixa e Metragem de todos os pisos</button>
+    <div class="tabela-relatorio" id="tabela-wrap"></div>
+    <div style="margin-top:12px;background:#fff;border-radius:12px;padding:16px;box-shadow:0 2px 12px rgba(0,0,0,0.08)">
+      <div class="card-titulo" style="margin-bottom:12px">📤 Exportar CSV</div>
+
+      <!-- Seleção de colunas -->
+      <div style="font-size:12px;font-weight:700;color:var(--texto-suave);margin-bottom:8px;text-transform:uppercase;letter-spacing:.5px">Colunas a exportar</div>
+      <div id="col-select-wrap" style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:14px"></div>
+      <div style="display:flex;gap:8px;margin-bottom:14px">
+        <button onclick="toggleTodasColunas(true)"  style="flex:1;padding:7px;font-size:12px;font-weight:700;border-radius:8px;border:1.5px solid #5a9e5a;background:#f0faf0;color:#1a6b32;cursor:pointer">✅ Todas</button>
+        <button onclick="toggleTodasColunas(false)" style="flex:1;padding:7px;font-size:12px;font-weight:700;border-radius:8px;border:1.5px solid #e0c8a0;background:#fdf8f0;color:#7d4e0f;cursor:pointer">☐ Nenhuma</button>
+      </div>
+
+      <!-- Filtro por rua -->
+      <div style="font-size:12px;font-weight:700;color:var(--texto-suave);margin-bottom:8px;text-transform:uppercase;letter-spacing:.5px">Filtrar por rua <span style="font-weight:400">(opcional)</span></div>
+      <div id="export-rua-lista" style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px"></div>
+      <input type="text" id="export-rua-input" placeholder="Ou digite a rua ex: 11" style="width:100%;box-sizing:border-box;padding:10px 14px;font-size:14px;border-radius:8px;border:1.5px solid #d0c9bb;margin-bottom:14px" inputmode="numeric" oninput="renderBotoesRua()" />
+
+      <button class="btn" style="background:#1a2e1a;color:#fff;width:100%;margin-bottom:8px" onclick="exportarCSVPersonalizado()">📤 Exportar</button>
+      <p style="font-size:11px;color:#888;text-align:center">Pisos com <b>📍 Não está no local</b> são sempre excluídos quando filtrando por rua</p>
+    </div>
+
+    <button class="btn" style="margin-top:10px;background:#fde8e8;color:#c0392b;font-weight:700" onclick="apagarTodosOsPisos()">🗑️ Apagar todos os pisos</button>
+
+    <div style="margin-top: 12px; background: #fff; border-radius: 12px; padding: 16px; box-shadow: 0 2px 12px rgba(0,0,0,0.12);">
+      <div class="card-titulo" style="margin-bottom: 14px;">📲 Transferir para outro celular</div>
+      <button class="btn btn-salvar" onclick="exportarJSON()" style="margin-bottom: 8px;">⬇️ Exportar dados (backup)</button>
+      <button class="btn btn-salvar" onclick="exportarParaDrive()" style="margin-bottom: 8px;background:#1a73e8">☁️ Salvar backup no Google Drive</button>
+      <label for="importar-input" class="btn" style="display:block; width:100%; padding:14px; background:#e8f5e9; color:#1a2e1a; font-size:15px; font-weight:600; border-radius:12px; text-align:center; cursor:pointer; border: 1.5px dashed #5a9e5a;">
+        ⬆️ Importar dados (restaurar)
+      </label>
+      <input type="file" id="importar-input" accept=".json" style="display:none" onchange="importarJSON(event)" />
+      <p style="font-size:11px; color:#888; margin-top:10px; text-align:center; line-height:1.6;">
+        1. Exporte no celular antigo → compartilhe o arquivo via WhatsApp/Drive<br>
+        2. Abra o arquivo no celular novo → importe aqui
+      </p>
+    </div>
+
+    <div style="height: 20px;"></div>
+  </div>
+</div>
+
+<!-- ===================== PÁGINA: MOVIMENTAÇÕES ===================== -->
+<div class="pagina" id="pag-movimentacoes">
+  <div style="margin-top: 16px;">
+    <div class="mov-filtro-barra">
+      <input type="search" id="busca-mov" placeholder="🔍 Buscar piso ou local..." oninput="renderMovimentacoes()" />
+      <button class="btn-limpar-mov" onclick="limparMovimentacoes()">🗑️ Limpar</button>
+    </div>
+    <button class="btn exportar-btn" style="margin-bottom:14px" onclick="exportarMovimentacoesXLS()">📤 Exportar CSV (.csv)</button>
+    <div id="lista-movimentacoes"></div>
+  </div>
+</div>
+
+<!-- ===================== PÁGINA: GALERIA ===================== -->
+<div class="pagina" id="pag-galeria">
+  <div class="galeria-busca">
+    <input type="search" id="busca-galeria" placeholder="🔍 Buscar piso..." oninput="renderGaleria()" style="width:100%;box-sizing:border-box;padding:11px 14px;font-size:14px;border-radius:10px;border:1.5px solid #d0c9bb;background:#fff" />
+  </div>
+  <div class="galeria-grid" id="galeria-grid"></div>
+</div>
+
+<!-- ===================== PÁGINA: CONFIG ===================== -->
+<div class="pagina" id="pag-config">
+  <div style="padding:16px">
+
+    <div class="card">
+      <div class="card-titulo">👥 Usuários do Sistema</div>
+      <p style="font-size:13px;color:var(--texto-suave);margin-bottom:14px">Adicione os nomes das pessoas que trabalham com o estoque. Ao editar ou adicionar um piso, você poderá indicar quem fez a alteração.</p>
+      <div style="display:flex;gap:8px;margin-bottom:12px">
+        <input type="text" id="input-novo-usuario" placeholder="Nome do usuário ex: Lorran" style="flex:1;padding:10px 14px;font-size:14px;border-radius:8px;border:1.5px solid #d0c9bb" maxlength="30" onkeydown="if(event.key==='Enter')adicionarUsuario()" />
+        <button onclick="adicionarUsuario()" style="background:var(--verde-escuro);color:#fff;border:none;border-radius:8px;padding:10px 16px;font-weight:700;font-size:14px;cursor:pointer">+ Add</button>
+      </div>
+      <div id="lista-usuarios"></div>
+    </div>
+
+    <div class="card" style="margin-top:12px">
+      <div class="card-titulo">ℹ️ Conta conectada</div>
+      <div id="config-conta" style="font-size:13px;color:var(--texto-suave)">Carregando...</div>
+    </div>
+
+  </div>
+</div>
+
+<!-- ===================== PÁGINA: ERROS DE CARREGAMENTO ===================== -->
+<div class="pagina" id="pag-erros">
+  <div style="padding:16px">
+
+    <!-- Resumo -->
+    <div class="erro-resumo" id="erro-resumo"></div>
+
+    <!-- Filtros -->
+    <div class="erro-filtros">
+      <button class="erro-filtro-btn ativo" onclick="setFiltroErro('todos', this)">Todos</button>
+      <button class="erro-filtro-btn" onclick="setFiltroErro('pendente', this)">⚠️ Pendentes</button>
+      <button class="erro-filtro-btn" onclick="setFiltroErro('resolvido', this)">✅ Resolvidos</button>
+    </div>
+
+    <!-- Formulário novo erro -->
+    <div class="card" style="margin-bottom:14px">
+      <div class="card-titulo">➕ Registrar Erro</div>
+
+      <div class="campo-grupo" style="margin-bottom:10px">
+        <label>🔢 Número da Carga</label>
+        <input type="text" id="erro-numero-input" placeholder="Ex: 1042, NF-2345..." autocomplete="off" />
+      </div>
+
+      <div class="campo-grupo" style="margin-bottom:10px">
+        <label>📋 Descrição do Erro / Carga Faltando</label>
+        <textarea id="erro-descricao-input" placeholder="Ex: Faltando 5 caixas de Porcelanato 82x82 Lote 058..." rows="3" style="width:100%;box-sizing:border-box;padding:11px 14px;font-size:14px;border-radius:8px;border:1.5px solid #d0c9bb;font-family:inherit;resize:vertical"></textarea>
+      </div>
+
+      <div class="linha-2" style="margin-bottom:0">
+        <div class="campo-grupo">
+          <label>👤 Responsável</label>
+          <select id="erro-responsavel" style="width:100%;padding:11px 14px;font-size:14px;border-radius:8px;border:1.5px solid #d0c9bb;background:#fff">
+            <option value="">— Selecionar —</option>
+          </select>
+        </div>
+        <div class="campo-grupo">
+          <label>📅 Data</label>
+          <input type="date" id="erro-data" style="width:100%;box-sizing:border-box;padding:11px 14px;font-size:14px;border-radius:8px;border:1.5px solid #d0c9bb" />
+        </div>
+      </div>
+
+      <button onclick="adicionarErro()" class="btn" style="background:var(--verde-escuro);color:#fff;width:100%;margin-top:14px">⚠️ Registrar Erro</button>
+    </div>
+
+    <!-- Lista de erros -->
+    <div id="lista-erros"></div>
+  </div>
+</div>
+
+<!-- ===================== MODAL DETALHE ===================== -->
+<div class="modal-overlay" id="modal-overlay" onclick="fecharModal(event)">
+  <div class="modal" id="modal-conteudo">
+    <div class="modal-handle"></div>
+    <div id="modal-body"></div>
+  </div>
+</div>
+
+<!-- LIGHTBOX FOTOS -->
+<div id="lightbox" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.95);z-index:99999;flex-direction:column;align-items:center;justify-content:center" onclick="if(event.target===this)fecharLightbox()">
+  <button onclick="fecharLightbox()" style="position:absolute;top:16px;right:16px;background:transparent;border:none;color:#fff;font-size:28px;cursor:pointer;z-index:2">✕</button>
+  <button id="lb-prev" onclick="event.stopPropagation();lightboxNav(-1)" style="position:absolute;left:12px;top:50%;transform:translateY(-50%);background:rgba(255,255,255,0.15);border:none;color:#fff;font-size:28px;border-radius:50%;width:44px;height:44px;cursor:pointer;display:none">‹</button>
+  <img id="lightbox-img" style="max-width:100%;max-height:90dvh;object-fit:contain;border-radius:8px;user-select:none;touch-action:none;transition:transform 0.1s" />
+  <div id="lightbox-counter" style="color:#fff;font-size:13px;margin-top:10px;opacity:0.7"></div>
+  <button id="lb-next" onclick="event.stopPropagation();lightboxNav(1)" style="position:absolute;right:12px;top:50%;transform:translateY(-50%);background:rgba(255,255,255,0.15);border:none;color:#fff;font-size:28px;border-radius:50%;width:44px;height:44px;cursor:pointer;display:none">›</button>
+</div>
+
+<!-- TOAST -->
+<div class="toast" id="toast"></div>
+
+<!-- PWA INSTALL BANNER -->
+<div id="pwa-install-banner" style="display:none;position:fixed;bottom:80px;left:16px;right:16px;background:#1a2e1a;color:#fff;border-radius:14px;padding:14px 16px;align-items:center;gap:12px;box-shadow:0 4px 20px rgba(0,0,0,0.3);z-index:9999">
+  <span style="font-size:24px">📲</span>
+  <div style="flex:1">
+    <div style="font-weight:700;font-size:14px">Instalar como App</div>
+    <div style="font-size:12px;opacity:0.8">Acesse mais rápido na tela inicial</div>
+  </div>
+  <button onclick="instalarApp()" style="background:#5a9e5a;color:#fff;border:none;border-radius:8px;padding:8px 14px;font-weight:700;font-size:13px;cursor:pointer">Instalar</button>
+  <button onclick="document.getElementById('pwa-install-banner').style.display='none'" style="background:transparent;color:#fff;border:none;font-size:20px;cursor:pointer;padding:0 4px">✕</button>
+</div>
+
+<!-- SERVICE WORKER REGISTER -->
+<script>
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('sw.js').catch(() => {});
+}
+
+// ===================== DADOS =====================
+const CHAVE = 'estoque_pisos_v2';
+
+// ===================== INDEXEDDB PARA FOTOS =====================
+// Fotos ficam no IndexedDB (suporta centenas de MB) separadas dos dados
+// Os dados do estoque ficam no localStorage (leve, sem fotos)
+const DB_NAME = 'estoque_pisos_fotos';
+const DB_VERSION = 1;
+let db = null;
+
+function abrirDB() {
+  return new Promise((resolve, reject) => {
+    if (db) { resolve(db); return; }
+    const req = indexedDB.open(DB_NAME, DB_VERSION);
+    req.onupgradeneeded = e => {
+      const d = e.target.result;
+      if (!d.objectStoreNames.contains('fotos')) {
+        d.createObjectStore('fotos', { keyPath: 'pisoId' });
+      }
+    };
+    req.onsuccess = e => { db = e.target.result; resolve(db); };
+    req.onerror = () => reject(req.error);
+  });
+}
+
+async function salvarFotosDB(pisoId, fotos) {
+  try {
+    const d = await abrirDB();
+    return new Promise((resolve, reject) => {
+      const tx = d.transaction('fotos', 'readwrite');
+      const store = tx.objectStore('fotos');
+      if (fotos && fotos.length > 0) {
+        store.put({ pisoId: String(pisoId), fotos });
+      } else {
+        store.delete(String(pisoId));
+      }
+      tx.oncomplete = resolve;
+      tx.onerror = reject;
+    });
+  } catch(e) { console.error('Erro ao salvar fotos no IndexedDB:', e); }
+}
+
+async function carregarFotosDB(pisoId) {
+  try {
+    const d = await abrirDB();
+    return new Promise((resolve) => {
+      const tx = d.transaction('fotos', 'readonly');
+      const req = tx.objectStore('fotos').get(String(pisoId));
+      req.onsuccess = () => resolve(req.result ? req.result.fotos : []);
+      req.onerror = () => resolve([]);
+    });
+  } catch(e) { return []; }
+}
+
+async function excluirFotosDB(pisoId) {
+  try {
+    const d = await abrirDB();
+    return new Promise((resolve) => {
+      const tx = d.transaction('fotos', 'readwrite');
+      tx.objectStore('fotos').delete(String(pisoId));
+      tx.oncomplete = resolve;
+      tx.onerror = resolve;
+    });
+  } catch(e) {}
+}
+
+async function carregarTodasFotosDB() {
+  try {
+    const d = await abrirDB();
+    return new Promise((resolve) => {
+      const tx = d.transaction('fotos', 'readonly');
+      const req = tx.objectStore('fotos').getAll();
+      req.onsuccess = () => {
+        const mapa = {};
+        (req.result || []).forEach(r => { mapa[r.pisoId] = r.fotos; });
+        resolve(mapa);
+      };
+      req.onerror = () => resolve({});
+    });
+  } catch(e) { return {}; }
+}
+
+// Migra fotos base64 existentes no IndexedDB para o Cloudinary (roda uma vez em background)
+async function migrarFotosParaCloudinary() {
+  const mapaFotos = await carregarTodasFotosDB();
+  const pisoIds = Object.keys(mapaFotos);
+  let migrados = 0;
+
+  for (const pisoId of pisoIds) {
+    const fotos = mapaFotos[pisoId];
+    const temBase64 = fotos.some(f => f && f.startsWith('data:'));
+    if (!temBase64) continue; // já são URLs, pula
+
+    const urls = await uploadFotosPiso(pisoId, fotos);
+    if (urls.length > 0) {
+      await salvarFotosDB(pisoId, urls);
+      migrados++;
+    }
+  }
+  if (migrados > 0) {
+    toast(`☁️ ${migrados} piso(s) com fotos migradas para a nuvem!`);
+    if (window._usuarioUid) sincronizarFotosFirestore(window._usuarioUid);
+  }
+}
+
+// ===================== CLOUDINARY =====================
+const CLOUDINARY_CLOUD = 'jkbk1o5z';
+const CLOUDINARY_PRESET = 'pisosSM';
+
+// Faz upload de uma foto (base64) para o Cloudinary e retorna a URL
+async function uploadFotoCloudinary(base64, pisoId, idx) {
+  try {
+    toast(`📤 Enviando foto ${idx+1}...`);
+    const formData = new FormData();
+    formData.append('file', base64);
+    formData.append('upload_preset', CLOUDINARY_PRESET);
+    formData.append('folder', `estoque-pisos/${window._usuarioUid || 'local'}/${pisoId}`);
+    formData.append('public_id', `foto_${idx}_${Date.now()}`);
+
+    const res = await fetch(`https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD}/image/upload`, {
+      method: 'POST',
+      body: formData
+    });
+    const data = await res.json();
+    if (!res.ok) {
+      toast(`❌ Cloudinary erro: ${data.error?.message || res.status}`, true);
+      return null;
+    }
+    toast(`✅ Foto ${idx+1} enviada!`);
+    return data.secure_url;
+  } catch(e) {
+    toast(`❌ Falha na conexão: ${e.message}`, true);
+    return null;
+  }
+}
+
+// Faz upload de todas as fotos de um piso e retorna array de URLs
+async function uploadFotosPiso(pisoId, fotosBase64) {
+  if (!fotosBase64 || !fotosBase64.length) return [];
+
+  // Separa fotos que já são URLs (já estão no Cloudinary) das que ainda são base64
+  const uploads = fotosBase64.map(async (foto, i) => {
+    if (foto && foto.startsWith('http')) return foto; // já é URL, não faz upload novamente
+    return await uploadFotoCloudinary(foto, pisoId, i);
+  });
+
+  const urls = await Promise.all(uploads);
+  return urls.filter(Boolean);
+}
+
+// Deleta fotos do Cloudinary (best-effort, falha silenciosa)
+async function deletarFotosCloudinary(pisoId) {
+  // Cloudinary delete requer API secret (server-side), então apenas removemos do IndexedDB
+  await excluirFotosDB(pisoId);
+}
+
+
+
+// Migra fotos que ainda estão no localStorage para o IndexedDB
+async function migrarFotosParaDB() {
+  const dados = carregar();
+  let migrou = false;
+  for (const d of dados) {
+    const temFotos = (d.fotos && d.fotos.length > 0) || d.foto;
+    if (temFotos) {
+      const fotos = d.fotos && d.fotos.length ? d.fotos : (d.foto ? [d.foto] : []);
+      await salvarFotosDB(d.id, fotos);
+      migrou = true;
+    }
+  }
+  if (migrou) {
+    // Remove fotos do localStorage para liberar espaço
+    const semFotos = dados.map(d => { const c = {...d}; delete c.fotos; delete c.foto; return c; });
+    localStorage.setItem(CHAVE, JSON.stringify(semFotos));
+  }
+}
+
+
+
+// MODO GITHUB + FIREBASE
+// O sistema já está preparado para hospedagem no GitHub Pages.
+// Basta configurar o Firebase nas informações acima.
+
+function carregar() {
+  try { return JSON.parse(localStorage.getItem(CHAVE)) || []; }
+  catch(e) { return []; }
+}
+
+function salvarDados(dados) {
+  try {
+    localStorage.setItem(CHAVE, JSON.stringify(dados));
+    atualizarSubtitulo();
+  } catch(e) {
+    if (e.name === 'QuotaExceededError' || e.code === 22 || e.name === 'NS_ERROR_DOM_QUOTA_REACHED') {
+      // Tenta salvar sem fotos para não perder os dados do estoque
+      toast('⚠️ Armazenamento cheio! Fotos removidas para salvar os dados. Reduza o número de fotos por piso.', true);
+      const semFotos = dados.map(d => ({ ...d, fotos: [], foto: null }));
+      try {
+        localStorage.setItem(CHAVE, JSON.stringify(semFotos));
+        atualizarSubtitulo();
+      } catch(e2) {
+        toast('❌ Erro crítico: sem espaço. Vá em Configurações do Chrome → Dados do site → limpe outros sites.', true);
+      }
+    } else {
+      toast('❌ Erro ao salvar dados.', true);
+    }
+  }
+}
+
+function atualizarSubtitulo() {
+  const d = carregar();
+  const sub = document.getElementById('subtitulo-header');
+  if (sub) sub.textContent = d.length === 0 ? 'Nenhum item cadastrado' :
+    `${d.length} tipo${d.length > 1 ? 's' : ''} de piso cadastrado${d.length > 1 ? 's' : ''}`;
+}
+
+// ===================== CÁLCULO DE METRAGEM =====================
+// Extrai a área de uma peça a partir do texto de tamanho (ex: "82x82", "90 x 90 cm", "60x120")
+function areaPorPeca(tamanho) {
+  if (!tamanho) return 0;
+  const match = String(tamanho).replace(',', '.').match(/(\d+(?:\.\d+)?)\s*[xX×]\s*(\d+(?:\.\d+)?)/);
+  if (!match) return 0;
+  let a = parseFloat(match[1]);
+  let b = parseFloat(match[2]);
+  // Se os valores forem grandes (>10), assume-se que estão em centímetros e converte para metros
+  if (a > 10) a = a / 100;
+  if (b > 10) b = b / 100;
+  return a * b;
+}
+
+// Calcula a metragem total (m²) de um item.
+// Prioridade para as caixas: se "m² por caixa" foi informado, usa ele.
+// Caso contrário, se "peças por caixa" foi informado, calcula a partir da área da peça.
+// Peças avulsas sempre usam a área da peça (calculada do tamanho).
+function calcularMetragemTotal(item) {
+  const caixas = parseFloat(item.caixas) || 0;
+  const m2PorCaixa = parseFloat(item.m2PorCaixa) || 0;
+  const pecasPorCaixa = parseFloat(item.pecasPorCaixa) || 0;
+  const pecasAvulsas = parseFloat(item.pecas) || 0;
+  const areaPeca = areaPorPeca(item.tamanho);
+
+  let metragemCaixas = 0;
+  if (m2PorCaixa > 0) {
+    metragemCaixas = caixas * m2PorCaixa;
+  } else if (pecasPorCaixa > 0 && areaPeca > 0) {
+    metragemCaixas = caixas * pecasPorCaixa * areaPeca;
+  }
+
+  const metragemAvulsas = pecasAvulsas * areaPeca;
+
+  return metragemCaixas + metragemAvulsas;
+}
+
+function fmtM2(valor) {
+  return valor.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' m²';
+}
+
+// Calcula quantas peças cabem em uma caixa: m²/Caixa ÷ área de cada peça
+function calcularPecasPorCaixa(tamanho, m2PorCaixa) {
+  const areaPeca = areaPorPeca(tamanho);
+  const m2cx = parseFloat(String(m2PorCaixa).replace(',', '.')) || 0;
+  if (!areaPeca || !m2cx) return 0;
+  return Math.round(m2cx / areaPeca);
+}
+
+// Calcula o total de Caixas automaticamente: (Pallets × Caixas/Pallet) + Caixas Avulsas (fora de pallet)
+function atualizarCaixasPorPallet() {
+  const qtdPallets = parseFloat(document.getElementById('qtdPallets')?.value) || 0;
+  const caixasPorPallet = parseFloat(document.getElementById('caixasPorPallet')?.value) || 0;
+  const caixasAvulsasFora = parseFloat(document.getElementById('caixasAvulsasFora')?.value) || 0;
+
+  const totalCaixas = (qtdPallets * caixasPorPallet) + caixasAvulsasFora;
+  const caixasEl = document.getElementById('caixas');
+  if (caixasEl) caixasEl.value = totalCaixas > 0 ? totalCaixas : '';
+
+  atualizarPreviewMetragem();
+}
+
+function atualizarPreviewMetragem() {
+  const tamanho = document.getElementById('tamanho')?.value.trim();
+  const caixas = parseFloat(document.getElementById('caixas')?.value) || 0;
+  const pecasRaw = parseFloat(document.getElementById('pecas')?.value) || 0;
+  const m2PorCaixaInput = document.getElementById('m2PorCaixa')?.value;
+  const previewEl = document.getElementById('preview-metragem');
+  const pecasPorCaixaEl = document.getElementById('pecasPorCaixa');
+
+  // Calcula e exibe peças/caixa automaticamente (somente leitura)
+  const pecasPorCaixaCalc = calcularPecasPorCaixa(tamanho, m2PorCaixaInput);
+  if (pecasPorCaixaEl) pecasPorCaixaEl.value = pecasPorCaixaCalc > 0 ? pecasPorCaixaCalc : '';
+
+  // Converte peças avulsas que completam caixas
+  let caixasExtra = 0;
+  let pecasRestantes = pecasRaw;
+  if (pecasPorCaixaCalc > 0 && pecasRaw >= pecasPorCaixaCalc) {
+    caixasExtra = Math.floor(pecasRaw / pecasPorCaixaCalc);
+    pecasRestantes = pecasRaw % pecasPorCaixaCalc;
+  }
+
+  const totalCaixas = caixas + caixasExtra;
+
+  // Mostra aviso se alguma peça avulsa virou caixa
+  if (!previewEl) return;
+  const total = calcularMetragemTotal({ tamanho, caixas: totalCaixas, pecas: pecasRestantes, m2PorCaixa: m2PorCaixaInput, pecasPorCaixa: pecasPorCaixaCalc });
+
+  let msg = total > 0 ? `📐 Total estimado: ${fmtM2(total)}` : '';
+  if (caixasExtra > 0) {
+    msg += ` · ${caixasExtra} cx + ${pecasRestantes} pç avulsas`;
+  }
+  previewEl.textContent = msg;
+}
+
+// ===================== NAVEGAÇÃO =====================
+function irPara(pag) {
+  document.querySelectorAll('.pagina').forEach(p => p.classList.remove('ativa'));
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('ativo'));
+  document.getElementById('pag-' + pag).classList.add('ativa');
+  const tabs = document.querySelectorAll('.tab');
+  const idx = { cadastrar: 0, estoque: 1, relatorio: 2, movimentacoes: 3, galeria: 4, config: 5, erros: 6 };
+  const activeTab = tabs[idx[pag]];
+  activeTab.classList.add('ativo');
+  // Rola a aba ativa para ficar visível
+  activeTab.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
+  if (pag === 'estoque') renderLista();
+  if (pag === 'relatorio') { renderRelatorio(); renderSeletorColunas(); renderBotoesRua(); }
+  if (pag === 'movimentacoes') renderMovimentacoes();
+  if (pag === 'galeria') renderGaleria();
+  if (pag === 'config') renderConfig();
+  if (pag === 'erros') renderErros();
+}
+
+// ===================== FORMULÁRIO =====================
+// ===================== FOTOS DO PISO (múltiplas) =====================
+let fotosAtuais = []; // array de base64
+let lbIndex = 0;      // índice atual no lightbox
+let lbFotos = [];     // fotos exibidas no lightbox
+
+function redimensionarImagem(file, callback) {
+  const reader = new FileReader();
+  reader.onload = e => {
+    const img = new Image();
+    img.onload = () => {
+      const MAX = 800;
+      let w = img.width, h = img.height;
+      if (w > MAX || h > MAX) {
+        if (w > h) { h = Math.round(h * MAX / w); w = MAX; }
+        else       { w = Math.round(w * MAX / h); h = MAX; }
+      }
+      const canvas = document.createElement('canvas');
+      canvas.width = w; canvas.height = h;
+      canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+      const base64 = canvas.toDataURL('image/jpeg', 0.80);
+      callback(base64);
+    };
+    img.src = e.target.result;
+  };
+  reader.readAsDataURL(file);
+}
+
+let fotoCarregando = false; // bloqueia salvar enquanto fotos processam
+
+function carregarFotos(event) {
+  const files = Array.from(event.target.files);
+  if (!files.length) return;
+
+  const MAX_FOTOS = 10;
+  const disponiveis = MAX_FOTOS - fotosAtuais.length;
+  if (disponiveis <= 0) {
+    toast(`⚠️ Limite de ${MAX_FOTOS} fotos por piso atingido.`, true);
+    event.target.value = '';
+    return;
+  }
+
+  const filesToProcess = files.slice(0, disponiveis);
+  if (files.length > disponiveis) {
+    toast(`⚠️ Apenas ${disponiveis} foto(s) adicionada(s). Limite: ${MAX_FOTOS} por piso.`, true);
+  }
+
+  fotoCarregando = true;
+  const btnSalvar = document.querySelector('.btn-salvar');
+  if (btnSalvar) { btnSalvar.disabled = true; btnSalvar.textContent = '⏳ Processando fotos...'; }
+
+  let processados = 0;
+  const total = filesToProcess.length;
+
+  filesToProcess.forEach(file => {
+    redimensionarImagem(file, base64 => {
+      fotosAtuais.push(base64);
+      processados++;
+      if (processados === total) {
+        fotoCarregando = false;
+        renderFotosGrid();
+        const btn = document.querySelector('.btn-salvar');
+        if (btn) {
+          btn.disabled = false;
+          btn.textContent = document.getElementById('nome')?.dataset.editId
+            ? '💾 Atualizar Registro'
+            : '✅ Salvar no Estoque';
+        }
+      }
+    });
+  });
+
+  event.target.value = '';
+}
+
+// Mantém compatibilidade com campo antigo (foto única)
+function carregarFoto(event) { carregarFotos(event); }
+
+function renderFotosGrid() {
+  const grid = document.getElementById('fotos-grid');
+  const placeholder = document.getElementById('foto-placeholder-msg');
+  if (!grid) return;
+
+  if (fotosAtuais.length === 0) {
+    grid.innerHTML = '';
+    if (placeholder) placeholder.style.display = 'block';
+    return;
+  }
+  if (placeholder) placeholder.style.display = 'none';
+
+  // Calcula tamanho estimado das fotos atuais
+  const totalKB = Math.round(fotosAtuais.reduce((s, f) => s + f.length, 0) / 1024);
+  const aviso = totalKB > 2000
+    ? `<div style="font-size:11px;color:#c0392b;text-align:center;margin-top:6px">⚠️ Fotos ocupando ${totalKB}KB — pode ultrapassar o limite</div>`
+    : `<div style="font-size:11px;color:#888;text-align:center;margin-top:6px">📦 ${totalKB}KB · ${fotosAtuais.length}/5 fotos</div>`;
+
+  grid.innerHTML = fotosAtuais.map((src, i) => `
+    <div style="position:relative;border-radius:10px;overflow:hidden;aspect-ratio:1/1">
+      <img src="${src}" style="width:100%;height:100%;object-fit:cover;display:block;cursor:pointer"
+           onclick="abrirLightbox(fotosAtuais, ${i})" />
+      <button onclick="removerFotoIndex(${i})" style="position:absolute;top:4px;right:4px;background:rgba(0,0,0,0.6);color:#fff;border:none;border-radius:50%;width:26px;height:26px;font-size:14px;cursor:pointer;display:flex;align-items:center;justify-content:center">✕</button>
+    </div>
+  `).join('') + aviso;
+}
+
+function removerFotoIndex(i) {
+  fotosAtuais.splice(i, 1);
+  renderFotosGrid();
+}
+
+function limparPreviewFoto() {
+  fotosAtuais = [];
+  renderFotosGrid();
+}
+
+function carregarPreviewFotoExistente(fotos) {
+  // Aceita array (novo) ou string única (compatibilidade com registros antigos)
+  if (!fotos) { fotosAtuais = []; }
+  else if (Array.isArray(fotos)) { fotosAtuais = [...fotos]; }
+  else { fotosAtuais = [fotos]; } // foto única legada
+  renderFotosGrid();
+}
+
+// Remover foto (legado single)
+function removerFoto() { limparPreviewFoto(); }
+function mostrarPreviewFoto() {}
+
+// ===================== LIGHTBOX =====================
+function abrirLightbox(fotos, idx) {
+  lbFotos = Array.isArray(fotos) ? fotos : [fotos];
+  lbIndex = idx || 0;
+  const lb = document.getElementById('lightbox');
+  lb.style.display = 'flex';
+  atualizarLightbox();
+}
+
+function fecharLightbox() {
+  document.getElementById('lightbox').style.display = 'none';
+}
+
+function lightboxNav(dir) {
+  lbIndex = (lbIndex + dir + lbFotos.length) % lbFotos.length;
+  atualizarLightbox();
+}
+
+function atualizarLightbox() {
+  document.getElementById('lightbox-img').src = lbFotos[lbIndex];
+  const counter = document.getElementById('lightbox-counter');
+  const prev = document.getElementById('lb-prev');
+  const next = document.getElementById('lb-next');
+  if (lbFotos.length > 1) {
+    counter.textContent = `${lbIndex + 1} / ${lbFotos.length}`;
+    prev.style.display = 'flex';
+    next.style.display = 'flex';
+  } else {
+    counter.textContent = '';
+    prev.style.display = 'none';
+    next.style.display = 'none';
+  }
+}
+
+// Swipe, pinch zoom e duplo toque no lightbox
+(function() {
+  let sx = 0, sy = 0;
+  let scale = 1, lastScale = 1;
+  let tx = 0, ty = 0, lastTx = 0, lastTy = 0;
+  let lastTap = 0;
+  let initialDist = 0;
+  let isPinching = false;
+
+  function getImg() { return document.getElementById('lightbox-img'); }
+  function isOpen() { return document.getElementById('lightbox').style.display === 'flex'; }
+
+  function aplicarTransform() {
+    const img = getImg();
+    if (img) img.style.transform = `translate(${tx}px, ${ty}px) scale(${scale})`;
+  }
+
+  function resetZoom() {
+    scale = 1; tx = 0; ty = 0; lastScale = 1; lastTx = 0; lastTy = 0;
+    const img = getImg();
+    if (img) img.style.transform = '';
+  }
+
+  // Ao trocar de foto, reseta zoom
+  const _orig = window.atualizarLightbox;
+  window.atualizarLightbox = function() {
+    resetZoom();
+    if (_orig) _orig();
+  };
+
+  document.addEventListener('touchstart', e => {
+    if (!isOpen()) return;
+    if (e.touches.length === 1) {
+      sx = e.touches[0].clientX;
+      sy = e.touches[0].clientY;
+      isPinching = false;
+
+      // Duplo toque — zoom in/out
+      const now = Date.now();
+      if (now - lastTap < 300) {
+        if (scale > 1) { resetZoom(); }
+        else { scale = 2.5; aplicarTransform(); }
+        lastTap = 0;
+        e.preventDefault();
+      } else {
+        lastTap = now;
+      }
+    } else if (e.touches.length === 2) {
+      isPinching = true;
+      initialDist = Math.hypot(
+        e.touches[0].clientX - e.touches[1].clientX,
+        e.touches[0].clientY - e.touches[1].clientY
+      );
+      lastScale = scale;
+      lastTx = tx; lastTy = ty;
+      e.preventDefault();
+    }
+  }, { passive: false });
+
+  document.addEventListener('touchmove', e => {
+    if (!isOpen()) return;
+    if (e.touches.length === 2 && isPinching) {
+      const dist = Math.hypot(
+        e.touches[0].clientX - e.touches[1].clientX,
+        e.touches[0].clientY - e.touches[1].clientY
+      );
+      scale = Math.min(5, Math.max(1, lastScale * (dist / initialDist)));
+      aplicarTransform();
+      e.preventDefault();
+    } else if (e.touches.length === 1 && scale > 1) {
+      // Pan quando com zoom
+      tx = lastTx + (e.touches[0].clientX - sx);
+      ty = lastTy + (e.touches[0].clientY - sy);
+      aplicarTransform();
+      e.preventDefault();
+    }
+  }, { passive: false });
+
+  document.addEventListener('touchend', e => {
+    if (!isOpen()) return;
+    if (isPinching) {
+      lastScale = scale;
+      lastTx = tx; lastTy = ty;
+      isPinching = false;
+      if (scale <= 1) resetZoom();
+      return;
+    }
+    if (scale > 1) {
+      // Com zoom ativo, não faz swipe
+      lastTx = tx; lastTy = ty;
+      return;
+    }
+    // Swipe para trocar foto (só sem zoom)
+    const dx = e.changedTouches[0].clientX - sx;
+    const dy = e.changedTouches[0].clientY - sy;
+    if (Math.abs(dx) > 50 && Math.abs(dx) > Math.abs(dy)) {
+      lightboxNav(dx < 0 ? 1 : -1);
+    }
+  });
+})();
+
+function salvar() {
+  if (fotoCarregando) {
+    toast('⏳ Aguarde as fotos terminarem de carregar.', true);
+    return;
+  }
+  const nome = document.getElementById('nome').value.trim();
+  const lote = document.getElementById('lote').value.trim();
+  const marca = document.getElementById('marca').value.trim();
+  const codigo = document.getElementById('codigo').value.trim();
+  const tamanho = document.getElementById('tamanho').value.trim();
+  const bitola = document.getElementById('bitola').value.trim();
+  const tonalidade = document.getElementById('tonalidade').value.trim();
+  const responsavel = document.getElementById('responsavel')?.value || '';
+  const patio = document.getElementById('patio').value.trim();
+  const rua = document.getElementById('rua').value.trim();
+  const apartamento = document.getElementById('apartamento').value.trim();
+  const nivel = document.getElementById('nivel').value.trim();
+  const caixasBruto = parseInt(document.getElementById('caixas').value) || 0;
+  const pecasBruto = parseInt(document.getElementById('pecas').value) || 0;
+  const pecasPorCaixaVal = parseInt(document.getElementById('pecasPorCaixa').value) || 0;
+
+  // Converte peças avulsas que completam caixas
+  let caixasExtra = 0;
+  let pecas = pecasBruto;
+  if (pecasPorCaixaVal > 0 && pecasBruto >= pecasPorCaixaVal) {
+    caixasExtra = Math.floor(pecasBruto / pecasPorCaixaVal);
+    pecas = pecasBruto % pecasPorCaixaVal;
+  }
+  const caixas = caixasBruto + caixasExtra;
+  const m2PorCaixa = parseFloat(document.getElementById('m2PorCaixa').value.replace(',', '.')) || 0;
+  const pecasPorCaixa = pecasPorCaixaVal;
+  const caixasPorPallet = parseInt(document.getElementById('caixasPorPallet').value) || 0;
+  const qtdPallets = parseInt(document.getElementById('qtdPallets').value) || 0;
+  const caixasAvulsasFora = parseInt(document.getElementById('caixasAvulsasFora').value) || 0;
+
+  if (!nome || !lote) {
+    toast('⚠️ Nome e Lote são obrigatórios!', true);
+    return;
+  }
+
+  const dados = carregar();
+  const editId = document.getElementById('nome').dataset.editId;
+
+  if (editId && editId.trim() !== '') {
+    const idx = dados.findIndex(d => String(d.id) === String(editId));
+    if (idx >= 0) {
+      const anterior = dados[idx];
+
+      // Detecta mudança de localização e registra movimentação
+      const locFields = ['patio','rua','apartamento','nivel'];
+      const localAntes = { patio: anterior.patio, rua: anterior.rua, apartamento: anterior.apartamento, nivel: anterior.nivel };
+      const localDepois = { patio, rua, apartamento, nivel };
+      const mudouLocal = locFields.some(f => (localAntes[f] || '') !== (localDepois[f] || ''));
+
+      const temLocalAntes = localAntes.patio || localAntes.rua || localAntes.apartamento || (localAntes.nivel !== '' && localAntes.nivel !== undefined);
+
+      if (mudouLocal && temLocalAntes) {
+        registrarMovimentacao({
+          pisoId: editId,
+          pisoNome: anterior.nome,
+          lote: anterior.lote,
+          bitola: anterior.bitola,
+          tonalidade: anterior.tonalidade,
+          origem: localAntes,
+          destino: localDepois
+        });
+      }
+
+      const agora = new Date().toLocaleString('pt-BR');
+      const historicoAnterior = anterior.historico || [];
+      const novoHistorico = [...historicoAnterior, { dataHora: agora, tipo: mudouLocal && temLocalAntes ? 'localizacao' : 'edicao', responsavel: responsavel || '' }];
+
+      dados[idx] = { ...dados[idx], nome, lote, marca, codigo, tamanho, bitola, tonalidade, patio, rua, apartamento, nivel, caixas, pecas, m2PorCaixa, pecasPorCaixa, caixasPorPallet, qtdPallets, caixasAvulsasFora, responsavel, dataAlteracao: agora, historico: novoHistorico };
+      salvarDados(dados);
+
+      // Captura cópia das fotos ANTES de limparForm() zerar fotosAtuais
+      const fotosParaSalvar = [...fotosAtuais];
+      const idParaSalvar = editId;
+      toast(`📸 ${fotosParaSalvar.length} foto(s) capturada(s) para salvar`);
+
+      toast('✏️ Registro atualizado!');
+      limparForm();
+      fecharModalDireto();
+
+      // Salva imediatamente no IndexedDB e faz upload para Cloudinary em background
+      const temNovasBase64 = fotosParaSalvar.some(f => f && f.startsWith('data:'));
+      if (fotosParaSalvar.length > 0) {
+        salvarFotosDB(idParaSalvar, fotosParaSalvar);
+        if (temNovasBase64) {
+          toast(`☁️ Enviando foto(s) para a nuvem...`);
+          uploadFotosPiso(idParaSalvar, fotosParaSalvar).then(urls => {
+            if (urls.length > 0) {
+              salvarFotosDB(idParaSalvar, urls);
+              if (window._usuarioUid) sincronizarFotosFirestore(window._usuarioUid);
+              toast(`✅ ${urls.length} foto(s) salva(s) na nuvem!`);
+            } else {
+              toast('❌ Erro ao enviar fotos. Salvas localmente.', true);
+            }
+          });
+        }
+      } else {
+        salvarFotosDB(idParaSalvar, []);
+      }
+      return;
+    }
+  }
+
+  const item = {
+    id: Date.now().toString(),
+    nome, lote, marca, codigo, tamanho, bitola, tonalidade, patio, rua, apartamento, nivel, caixas, pecas, m2PorCaixa, pecasPorCaixa, caixasPorPallet, qtdPallets, caixasAvulsasFora, responsavel,
+    data: new Date().toLocaleDateString('pt-BR')
+  };
+
+  dados.push(item);
+  salvarDados(dados);
+
+  // Captura cópia das fotos ANTES de limparForm() zerar fotosAtuais
+  const fotosParaSalvar = [...fotosAtuais];
+  const idParaSalvar = item.id;
+
+  toast('✅ Piso salvo com sucesso!');
+  limparForm();
+
+  // Salva no IndexedDB e faz upload para Cloudinary em background
+  if (fotosParaSalvar.length > 0) {
+    salvarFotosDB(idParaSalvar, fotosParaSalvar);
+    toast(`☁️ Enviando ${fotosParaSalvar.length} foto(s) para a nuvem...`);
+    uploadFotosPiso(idParaSalvar, fotosParaSalvar).then(urls => {
+      if (urls.length > 0) {
+        salvarFotosDB(idParaSalvar, urls);
+        if (window._usuarioUid) sincronizarFotosFirestore(window._usuarioUid);
+        toast(`✅ ${urls.length} foto(s) salva(s) na nuvem!`);
+      } else {
+        toast('❌ Erro ao enviar fotos. Salvas localmente.', true);
+      }
+    });
+  }
+}
+
+function limparForm() {
+  ['nome','lote','marca','codigo','tamanho','bitola','tonalidade','patio','rua','apartamento','nivel','caixas','pecas','m2PorCaixa','pecasPorCaixa','caixasPorPallet','qtdPallets','caixasAvulsasFora'].forEach(id => {
+    const el = document.getElementById(id);
+    el.value = '';
+    delete el.dataset.editId;
+  });
+  const selResp = document.getElementById('responsavel');
+  if (selResp) selResp.value = '';
+  document.getElementById('nome').dataset.editId = '';
+  const btn = document.querySelector('.btn-salvar');
+  btn.textContent = '✅ Salvar no Estoque';
+  limparPreviewFoto();
+  fotoCarregando = false;
+  atualizarPreviewMetragem();
+}
+
+// ===================== LISTA =====================
+function sortImparesPares(dados) {
+  // Agrupa por rua, dentro de cada rua ordena: ímpares crescente, depois pares crescente
+  return dados.sort((a, b) => {
+    const ruaA = parseInt(a.rua) || 0;
+    const ruaB = parseInt(b.rua) || 0;
+    if (ruaA !== ruaB) return ruaA - ruaB;
+
+    const apA = parseInt(a.apartamento) || 0;
+    const apB = parseInt(b.apartamento) || 0;
+    const imparA = apA % 2 !== 0 ? 0 : 1;
+    const imparB = apB % 2 !== 0 ? 0 : 1;
+    if (imparA !== imparB) return imparA - imparB;
+    return apA - apB;
+  });
+}
+
+function renderLista() {
+  const busca = (document.getElementById('busca').value || '').toLowerCase().trim();
+  const ordem = document.getElementById('ordem').value;
+  let dados = carregar();
+
+  // Banner de pendentes
+  const todosOsDados = dados; // usa os dados já carregados
+  const totalPendentes = todosOsDados.filter(d => d.naoConferido).length;
+  const totalSistema = todosOsDados.filter(d => d.naoSistema).length;
+  const totalLocalizado = todosOsDados.filter(d => d.naoLocalizado).length;
+
+  // Detecta códigos duplicados (ignora vazios)
+  const contagemCodigos = {};
+  todosOsDados.forEach(d => {
+    const cod = (d.codigo || '').trim().toLowerCase();
+    if (cod) contagemCodigos[cod] = (contagemCodigos[cod] || 0) + 1;
+  });
+  const codigosDuplicados = new Set(Object.keys(contagemCodigos).filter(c => contagemCodigos[c] > 1));
+  const totalDuplicados = todosOsDados.filter(d => codigosDuplicados.has((d.codigo || '').trim().toLowerCase())).length;
+
+  // Detecta se a busca é "rua XX" para aplicar ordenação especial
+  const buscaRua = busca.match(/^rua\s+(\d+)$/);
+
+  if (busca) dados = dados.filter(d =>
+    d.nome.toLowerCase().includes(busca) ||
+    d.lote.toLowerCase().includes(busca) ||
+    (d.marca || '').toLowerCase().includes(busca) ||
+    (d.codigo || '').toLowerCase().includes(busca) ||
+    (d.tamanho || '').toLowerCase().includes(busca) ||
+    (d.nivel || '').toString().toLowerCase().includes(busca) ||
+    (d.patio || '').toLowerCase().includes(busca) ||
+    (`rua ${d.rua || ''}`).toLowerCase().includes(busca)
+  );
+
+  if (buscaRua) {
+    // Quando busca for "rua XX": ordenar ímpares → pares por apartamento
+    dados = sortImparesPares(dados);
+  } else if (ordem === 'nome') dados.sort((a, b) => a.nome.localeCompare(b.nome));
+  else if (ordem === 'recente') dados.sort((a, b) => parseInt(b.id) - parseInt(a.id));
+  else if (ordem === 'caixas') dados.sort((a, b) => b.caixas - a.caixas);
+  else if (ordem === 'nao_conferido') dados = dados.filter(d => d.naoConferido);
+  else if (ordem === 'nao_sistema') dados = dados.filter(d => d.naoSistema);
+  else if (ordem === 'nao_localizado') dados = dados.filter(d => d.naoLocalizado);
+  else if (ordem === 'cod_duplicado') dados = dados.filter(d => codigosDuplicados.has((d.codigo || '').trim().toLowerCase()));
+  else if (ordem === 'apartamento') dados = sortImparesPares(dados);
+
+  const bannerEl = document.getElementById('banner-pendentes');
+  if (bannerEl) {
+    bannerEl.innerHTML = totalPendentes > 0
+      ? `<div class="banner-nao-conferido">⚠️ ${totalPendentes} item${totalPendentes > 1 ? 's' : ''} marcado${totalPendentes > 1 ? 's' : ''} como não conferido${totalPendentes > 1 ? 's' : ''}</div>`
+      : '';
+  }
+  const bannerSistEl = document.getElementById('banner-sistema');
+  if (bannerSistEl) {
+    bannerSistEl.innerHTML = totalSistema > 0
+      ? `<div class="banner-nao-sistema">🟣 ${totalSistema} item${totalSistema > 1 ? 's' : ''} não adicionado${totalSistema > 1 ? 's' : ''} ao sistema</div>`
+      : '';
+  }
+  const bannerLocEl = document.getElementById('banner-localizado');
+  if (bannerLocEl) {
+    bannerLocEl.innerHTML = totalLocalizado > 0
+      ? `<div class="banner-nao-localizado">📍 ${totalLocalizado} piso${totalLocalizado > 1 ? 's' : ''} não encontrado${totalLocalizado > 1 ? 's' : ''} no local marcado</div>`
+      : '';
+  }
+  const bannerDupEl = document.getElementById('banner-duplicados');
+  if (bannerDupEl) {
+    bannerDupEl.innerHTML = totalDuplicados > 0
+      ? `<div class="banner-codigo-duplicado">🔴 ${totalDuplicados} piso${totalDuplicados > 1 ? 's' : ''} com código duplicado</div>`
+      : '';
+  }
+
+  const el = document.getElementById('lista-estoque');
+
+  if (dados.length === 0) {
+    el.innerHTML = `
+      <div class="lista-vazia">
+        <div class="emoji">${busca ? '🔍' : '📦'}</div>
+        <p>${busca ? 'Nenhum piso encontrado para essa busca.' : 'Nenhum piso cadastrado ainda.<br>Vá em <b>Cadastrar</b> para adicionar.'}</p>
+      </div>`;
+    return;
+  }
+
+  el.innerHTML = dados.map(d => {
+    const isDuplicado = codigosDuplicados.has((d.codigo || '').trim().toLowerCase());
+    const metragem = calcularMetragemTotal(d);
+    return `
+    <div class="item-piso${d.naoConferido ? ' nao-conferido' : ''}${d.naoSistema ? ' nao-sistema' : ''}${d.naoLocalizado ? ' nao-localizado' : ''}${isDuplicado ? ' codigo-duplicado' : ''}" onclick="abrirDetalhe('${d.id}')">
+      <div class="item-nome">${d.nome}</div>
+      <div class="item-lote">Lote: ${d.lote} • ${d.data || ''}${d.dataAlteracao ? ` <span style="color:#1a7a3a">✏️ Alterado: ${d.dataAlteracao}</span>` : ''}</div>
+      <div class="item-tags">
+        ${d.naoConferido ? '<span class="tag alerta">⚠️ NÃO CONFERIDO</span>' : ''}
+        ${d.naoSistema ? '<span class="tag roxo-alerta">🟣 NÃO NO SISTEMA</span>' : ''}
+        ${d.naoLocalizado ? '<span class="tag laranja-alerta">📍 NÃO ESTÁ NO LOCAL</span>' : ''}
+        ${isDuplicado ? '<span class="tag vermelho">🔴 CÓDIGO DUPLICADO</span>' : ''}
+        ${d.patio ? `<span class="tag">Pátio ${d.patio}</span>` : ''}
+        ${d.rua ? `<span class="tag azul">Rua ${d.rua}</span>` : ''}
+        ${d.apartamento ? `<span class="tag roxo">Ap ${d.apartamento}</span>` : ''}
+        ${d.marca ? `<span class="tag azul">🏷️ ${d.marca}</span>` : ''}
+        ${d.codigo ? `<span class="tag">🔢 ${d.codigo}</span>` : ''}
+        ${d.tamanho ? `<span class="tag roxo">📐 ${d.tamanho}</span>` : ''}
+        ${d.bitola ? `<span class="tag">📏 Bitola ${d.bitola}</span>` : ''}
+        ${d.tonalidade ? `<span class="tag laranja">🎨 Tom ${d.tonalidade}</span>` : ''}
+        ${d.nivel !== undefined && d.nivel !== '' ? `<span class="tag azul">🏢 Nível ${d.nivel}</span>` : ''}
+        <span class="tag laranja">📦 ${d.caixas} cx</span>
+        ${d.pecas > 0 ? `<span class="tag">🔲 ${d.pecas} pç</span>` : ''}
+        ${metragem > 0 ? `<span class="tag verde">📐 ${fmtM2(metragem)}</span>` : ''}
+      </div>
+    </div>
+  `}).join('');
+}
+
+// ===================== DETALHE =====================
+function abrirDetalhe(id) {
+  const dados = carregar();
+  const d = dados.find(x => String(x.id) === String(id));
+  if (!d) return;
+
+  // Abre o modal primeiro sem foto, depois carrega do IndexedDB
+  renderModalDetalhe(d, []);
+  document.getElementById('modal-overlay').classList.add('aberto');
+
+  carregarFotosDB(id).then(fotos => {
+    // Compatibilidade com fotos ainda no localStorage
+    const fotosLegado = d.fotos && d.fotos.length ? d.fotos : (d.foto ? [d.foto] : []);
+    const fotosFinais = fotos.length ? fotos : fotosLegado;
+    renderModalDetalhe(d, fotosFinais);
+  });
+}
+
+function renderModalDetalhe(d, fotos) {
+  document.getElementById('modal-body').innerHTML = `
+    <div class="modal-nome">${d.nome}</div>
+    <div class="modal-lote">Lote: ${d.lote} • Cadastrado em: ${d.data || '-'}${d.dataAlteracao ? `<br>✏️ Última alteração: ${d.dataAlteracao}` : ''}</div>
+
+    ${(() => {
+      if (!fotos || !fotos.length) return '';
+      window._lbFotos = fotos;
+      if (fotos.length === 1) return `<img src="${fotos[0]}" class="modal-foto" style="cursor:pointer" onclick="abrirLightbox(window._lbFotos, 0)" alt="Foto do piso" />`;
+      return `<div style="display:grid;grid-template-columns:repeat(${Math.min(fotos.length,3)},1fr);gap:6px;margin-bottom:14px">
+        ${fotos.map((f,i) => `<img src="${f}" style="width:100%;aspect-ratio:1/1;object-fit:cover;border-radius:8px;cursor:pointer" onclick="abrirLightbox(window._lbFotos,${i})" />`).join('')}
+      </div>`;
+    })()}
+
+    <div class="modal-grid">
+      <div class="modal-stat">
+        <div class="modal-stat-valor">${d.caixas}</div>
+        <div class="modal-stat-label">Caixas</div>
+      </div>
+      <div class="modal-stat">
+        <div class="modal-stat-valor">${d.pecas}</div>
+        <div class="modal-stat-label">Peças</div>
+      </div>
+      <div class="modal-stat">
+        <div class="modal-stat-valor" style="font-size:16px">${d.patio || '-'}</div>
+        <div class="modal-stat-label">Pátio</div>
+      </div>
+    </div>
+
+    ${calcularMetragemTotal(d) > 0 ? `
+    <div class="modal-metragem-destaque">📐 Metragem total: <strong>${fmtM2(calcularMetragemTotal(d))}</strong></div>
+    ` : ''}
+
+    <div class="modal-info-grid">
+      <div class="modal-info-item">
+        <div class="modal-info-label">Marca</div>
+        <div class="modal-info-valor">${d.marca || '—'}</div>
+      </div>
+      <div class="modal-info-item">
+        <div class="modal-info-label">Código</div>
+        <div class="modal-info-valor">${d.codigo || '—'}</div>
+      </div>
+      <div class="modal-info-item">
+        <div class="modal-info-label">Tamanho</div>
+        <div class="modal-info-valor">${d.tamanho || '—'}</div>
+      </div>
+      <div class="modal-info-item">
+        <div class="modal-info-label">Bitola</div>
+        <div class="modal-info-valor">${d.bitola || '—'}</div>
+      </div>
+      <div class="modal-info-item">
+        <div class="modal-info-label">Tonalidade</div>
+        <div class="modal-info-valor">${d.tonalidade || '—'}</div>
+      </div>
+      <div class="modal-info-item">
+        <div class="modal-info-label">m²/Caixa</div>
+        <div class="modal-info-valor">${d.m2PorCaixa ? d.m2PorCaixa.toString().replace('.', ',') + ' m²' : '—'}</div>
+      </div>
+      <div class="modal-info-item">
+        <div class="modal-info-label">Peças/Caixa</div>
+        <div class="modal-info-valor">${d.pecasPorCaixa || '—'}</div>
+      </div>
+      <div class="modal-info-item">
+        <div class="modal-info-label">Caixas/Pallet</div>
+        <div class="modal-info-valor">${d.caixasPorPallet || '—'}</div>
+      </div>
+      <div class="modal-info-item">
+        <div class="modal-info-label">Pallets</div>
+        <div class="modal-info-valor">${d.qtdPallets || '—'}</div>
+      </div>
+      <div class="modal-info-item">
+        <div class="modal-info-label">Cx. Avulsas (fora)</div>
+        <div class="modal-info-valor">${d.caixasAvulsasFora || '—'}</div>
+      </div>
+      <div class="modal-info-item">
+        <div class="modal-info-label">Rua</div>
+        <div class="modal-info-valor">${d.rua || '—'}</div>
+      </div>
+      <div class="modal-info-item">
+        <div class="modal-info-label">Apartamento</div>
+        <div class="modal-info-valor">${d.apartamento || '—'}</div>
+      </div>
+      <div class="modal-info-item">
+        <div class="modal-info-label">Nível</div>
+        <div class="modal-info-valor">${d.nivel || '—'}</div>
+      </div>
+    </div>
+
+    ${(d.historico && d.historico.length > 0) ? `
+    <div class="modal-historico">
+      <div class="modal-historico-titulo">🕐 Histórico de alterações</div>
+      ${d.historico.slice().reverse().map((h, i) => `
+        <div class="modal-historico-item">
+          <span class="modal-historico-num">${d.historico.length - i}.</span>
+          ${h.tipo === 'localizacao' ? '📍 Localização alterada' : '✏️ Dados alterados'}
+          ${h.responsavel ? `<b>por ${h.responsavel}</b>` : ''} — ${h.dataHora}
+        </div>
+      `).join('')}
+    </div>
+    ` : ''}
+
+    <div style="margin-bottom:8px">
+      <button class="btn ${d.naoConferido ? 'btn-conferido-ok' : 'btn-conferir'}" onclick="toggleConferido('${d.id}')">
+        ${d.naoConferido ? '✅ Marcar como Conferido' : '⚠️ Marcar como Não Conferido'}
+      </button>
+    </div>
+    <div style="margin-bottom:8px">
+      <button class="btn ${d.naoSistema ? 'btn-sistema-ok' : 'btn-sistema'}" onclick="toggleSistema('${d.id}')">
+        ${d.naoSistema ? '✅ Marcar como Adicionado ao Sistema' : '🟣 Marcar como Não Adicionado ao Sistema'}
+      </button>
+    </div>
+    <div style="margin-bottom:10px">
+      <button class="btn ${d.naoLocalizado ? 'btn-localizado-ok' : 'btn-localizado'}" onclick="toggleLocalizado('${d.id}')">
+        ${d.naoLocalizado ? '✅ Piso Encontrado no Local' : '📍 Piso Não Está no Local Marcado'}
+      </button>
+    </div>
+    <div class="modal-acoes">
+      <button class="btn btn-editar" onclick="editarItem('${d.id}')">✏️ Editar</button>
+      <button class="btn" style="background:#e8f5e9;color:#1a5e20;border:1.5px solid #5a9e5a;font-weight:600" onclick="duplicarItem('${d.id}')">📋 Duplicar</button>
+      <button class="btn btn-excluir" onclick="excluirItem('${d.id}')">🗑️ Excluir</button>
+    </div>
+  `;
+
+  document.getElementById('modal-overlay').classList.add('aberto');
+}
+
+function fecharModal(event) {
+  if (event.target === document.getElementById('modal-overlay')) fecharModalDireto();
+}
+function fecharModalDireto() {
+  document.getElementById('modal-overlay').classList.remove('aberto');
+}
+
+function toggleConferido(id) {
+  let dados = carregar();
+  const idx = dados.findIndex(x => String(x.id) === String(id));
+  if (idx < 0) return;
+  dados[idx].naoConferido = !dados[idx].naoConferido;
+  salvarDados(dados);
+  const isNaoConferido = dados[idx].naoConferido;
+  toast(isNaoConferido ? '⚠️ Marcado como NÃO CONFERIDO' : '✅ Marcado como Conferido');
+  // Reopen detail with updated state
+  fecharModalDireto();
+  setTimeout(() => abrirDetalhe(id), 100);
+  renderLista();
+}
+
+function toggleSistema(id) {
+  let dados = carregar();
+  const idx = dados.findIndex(x => String(x.id) === String(id));
+  if (idx < 0) return;
+  dados[idx].naoSistema = !dados[idx].naoSistema;
+  salvarDados(dados);
+  const isNaoSistema = dados[idx].naoSistema;
+  toast(isNaoSistema ? '🟣 Marcado como NÃO ADICIONADO AO SISTEMA' : '✅ Marcado como Adicionado ao Sistema');
+  fecharModalDireto();
+  setTimeout(() => abrirDetalhe(id), 100);
+  renderLista();
+}
+
+function toggleLocalizado(id) {
+  let dados = carregar();
+  const idx = dados.findIndex(x => String(x.id) === String(id));
+  if (idx < 0) return;
+  dados[idx].naoLocalizado = !dados[idx].naoLocalizado;
+  salvarDados(dados);
+  const isNaoLocalizado = dados[idx].naoLocalizado;
+  toast(isNaoLocalizado ? '📍 Marcado como NÃO ESTÁ NO LOCAL' : '✅ Piso encontrado no local');
+  fecharModalDireto();
+  setTimeout(() => abrirDetalhe(id), 100);
+  renderLista();
+}
+
+function editarItem(id) {
+  const dados = carregar();
+  const d = dados.find(x => String(x.id) === String(id));
+  if (!d) return;
+
+  fecharModalDireto();
+  irPara('cadastrar');
+
+  setTimeout(() => {
+    document.getElementById('nome').value = d.nome;
+    document.getElementById('nome').dataset.editId = String(d.id);
+    document.getElementById('lote').value = d.lote;
+    document.getElementById('marca').value = d.marca || '';
+    document.getElementById('codigo').value = d.codigo || '';
+    document.getElementById('tamanho').value = d.tamanho || '';
+    document.getElementById('bitola').value = d.bitola || '';
+    document.getElementById('tonalidade').value = d.tonalidade || '';
+    const selResp = document.getElementById('responsavel');
+    if (selResp) selResp.value = d.responsavel || '';
+    document.getElementById('patio').value = d.patio || '';
+    document.getElementById('rua').value = d.rua || '';
+    document.getElementById('apartamento').value = d.apartamento || '';
+    document.getElementById('nivel').value = d.nivel || '';
+    document.getElementById('caixas').value = d.caixas;
+    document.getElementById('pecas').value = d.pecas;
+    document.getElementById('m2PorCaixa').value = d.m2PorCaixa || '';
+    document.getElementById('caixasPorPallet').value = d.caixasPorPallet || '';
+    document.getElementById('qtdPallets').value = d.qtdPallets || '';
+    // Itens antigos não têm "caixasAvulsasFora" separado — preserva o total de
+    // caixas já cadastrado como avulsas, para não perder a quantidade ao editar
+    document.getElementById('caixasAvulsasFora').value =
+      (d.qtdPallets || d.caixasAvulsasFora) ? (d.caixasAvulsasFora || 0) : (d.caixas || '');
+    document.querySelector('.btn-salvar').textContent = '💾 Atualizar Registro';
+    // Carrega fotos do IndexedDB (com fallback para localStorage legado)
+    carregarFotosDB(d.id).then(fotos => {
+      const fotosLegado = d.fotos && d.fotos.length ? d.fotos : (d.foto ? [d.foto] : []);
+      carregarPreviewFotoExistente(fotos.length ? fotos : fotosLegado);
+    });
+    atualizarCaixasPorPallet();
+    window.scrollTo(0, 0);
+  }, 200);
+}
+
+function excluirItem(id) {
+  if (!confirm('Excluir este registro do estoque?')) return;
+  let dados = carregar();
+  const antes = dados.length;
+  dados = dados.filter(x => String(x.id) !== String(id));
+  if (dados.length === antes) {
+    toast('⚠️ Registro não encontrado.', true);
+    return;
+  }
+  salvarDados(dados);
+  excluirFotosDB(id); // remove fotos do IndexedDB também
+  fecharModalDireto();
+  renderLista();
+  toast('🗑️ Registro excluído.');
+}
+
+function duplicarItem(id) {
+  const dados = carregar();
+  const original = dados.find(d => String(d.id) === String(id));
+  if (!original) return;
+
+  // Gera ID garantidamente único: timestamp + random para evitar colisão
+  const novoId = `${Date.now()}_${Math.random().toString(36).slice(2, 9)}`;
+
+  const copia = {
+    ...original,
+    id: novoId,
+    lote: '',
+    foto: null,
+    fotos: [],
+    data: new Date().toLocaleDateString('pt-BR'),
+    dataAlteracao: undefined,
+    historico: [],
+    naoConferido: false,
+    naoSistema: false,
+    naoLocalizado: false
+  };
+
+  // Garante que o id original não foi alterado
+  if (dados.some(d => d.id === novoId)) {
+    toast('❌ Erro ao gerar ID único. Tente novamente.', true);
+    return;
+  }
+
+  dados.push(copia);
+  salvarDados(dados);
+  fecharModalDireto();
+  renderLista();
+  toast('📋 Piso duplicado! Preencha o Lote no formulário.');
+  setTimeout(() => editarItem(novoId), 300);
+}
+
+// Garante que todos os IDs no storage são strings (compatibilidade com registros antigos)
+function normalizarIds() {
+  const dados = carregar();
+  let precisou = false;
+  const normalizados = dados.map(d => {
+    if (typeof d.id !== 'string') { precisou = true; return { ...d, id: String(d.id) }; }
+    return d;
+  });
+  if (precisou) salvarDados(normalizados);
+}
+
+// ===================== RELATÓRIO =====================
+// Recalcula "Peças/Caixa" para TODOS os pisos já cadastrados, com base no
+// Tamanho e no m²/Caixa de cada um — sem precisar abrir e salvar cada item.
+// Apaga TODOS os pisos cadastrados no estoque (ação irreversível)
+function apagarTodosOsPisos() {
+  const dados = carregar();
+  if (dados.length === 0) { toast('ℹ️ Não há pisos cadastrados.', true); return; }
+
+  if (!confirm(`⚠️ Isso vai apagar TODOS os ${dados.length} pisos cadastrados no estoque. Esta ação não pode ser desfeita. Continuar?`)) return;
+  if (!confirm('Tem certeza mesmo? Todos os dados de estoque serão perdidos permanentemente.')) return;
+
+  salvarDados([]);
+  renderRelatorio();
+  renderLista();
+  toast('🗑️ Todos os pisos foram apagados.');
+}
+
+function recalcularTodasMetragens() {
+  const dados = carregar();
+  if (dados.length === 0) { toast('⚠️ Nenhum piso cadastrado ainda.', true); return; }
+
+  let atualizados = 0;
+  const novosDados = dados.map(d => {
+    const pecasCalc = calcularPecasPorCaixa(d.tamanho, d.m2PorCaixa);
+    if (pecasCalc > 0 && pecasCalc !== d.pecasPorCaixa) {
+      atualizados++;
+      return { ...d, pecasPorCaixa: pecasCalc };
+    }
+    return d;
+  });
+
+  salvarDados(novosDados);
+  renderRelatorio();
+  toast(atualizados > 0
+    ? `🔄 ${atualizados} piso${atualizados > 1 ? 's' : ''} recalculado${atualizados > 1 ? 's' : ''} com sucesso!`
+    : '✅ Todos os pisos já estavam atualizados.');
+}
+
+function renderRelatorio() {
+  const dados = carregar();
+  const totalPisos = dados.length;
+  const totalCaixas = dados.reduce((s, d) => s + d.caixas, 0);
+  const totalPecas = dados.reduce((s, d) => s + d.pecas, 0);
+  const lotes = new Set(dados.map(d => d.lote)).size;
+  const totalMetragem = dados.reduce((s, d) => s + calcularMetragemTotal(d), 0);
+
+  document.getElementById('resumo-cards').innerHTML = `
+    <div class="resumo-card">
+      <div class="resumo-valor">${totalPisos}</div>
+      <div class="resumo-label">Tipos de Piso</div>
+    </div>
+    <div class="resumo-card">
+      <div class="resumo-valor">${totalCaixas}</div>
+      <div class="resumo-label">Total Caixas</div>
+    </div>
+    <div class="resumo-card">
+      <div class="resumo-valor">${totalPecas}</div>
+      <div class="resumo-label">Peças Avulsas</div>
+    </div>
+    <div class="resumo-card">
+      <div class="resumo-valor">${lotes}</div>
+      <div class="resumo-label">Lotes</div>
+    </div>
+    <div class="resumo-card">
+      <div class="resumo-valor" style="font-size:18px">${fmtM2(totalMetragem)}</div>
+      <div class="resumo-label">Metragem Total</div>
+    </div>
+  `;
+
+  if (dados.length === 0) {
+    document.getElementById('tabela-wrap').innerHTML = `<div class="lista-vazia" style="padding:32px"><div class="emoji">📊</div><p>Nenhum dado ainda.</p></div>`;
+    return;
+  }
+
+  const pendentes = dados.filter(d => d.naoConferido).length;
+  const naoNoSistema = dados.filter(d => d.naoSistema).length;
+  const linhas = [...dados].sort((a, b) => a.nome.localeCompare(b.nome)).map(d => `
+    <tr style="${d.naoConferido ? 'background:#fff8f0;' : ''}">
+      <td>
+        <b>${d.nome}</b>${d.naoConferido ? ' <span style="color:#e67e22;font-size:11px;font-weight:700;">⚠️ NÃO CONF.</span>' : ''}${d.naoSistema ? ' <span style="color:#8e44ad;font-size:11px;font-weight:700;">🟣 N.SIST.</span>' : ''}${d.naoLocalizado ? ' <span style="color:#e67e22;font-size:11px;font-weight:700;">📍 N.LOCAL</span>' : ''}<br>
+        <small style="color:#888">${d.lote}</small><br>
+        <small>${d.marca || '-'} • ${d.codigo || '-'} • ${d.tamanho || '-'} • Bit: ${d.bitola || '-'} • Tom: ${d.tonalidade || '-'}</small>
+      </td>
+      <td style="text-align:center">${d.patio || '-'}/${d.rua || '-'}/${d.apartamento || '-'}<br><small>Nível ${d.nivel || '-'}</small></td>
+      <td style="text-align:center">${d.caixas}</td>
+      <td style="text-align:center">${d.pecas}</td>
+      <td style="text-align:center">${calcularMetragemTotal(d) > 0 ? fmtM2(calcularMetragemTotal(d)) : '-'}</td>
+    </tr>
+  `).join('');
+  const aviso = (pendentes > 0 ? `<div style="background:#fff3e0;border:1.5px solid #e67e22;border-radius:10px;padding:10px 14px;font-size:13px;color:#7d4e0f;font-weight:600;margin-bottom:8px;">⚠️ ${pendentes} item${pendentes > 1 ? 's' : ''} não conferido${pendentes > 1 ? 's' : ''} no estoque</div>` : '') + (naoNoSistema > 0 ? `<div style="background:#f5eef8;border:1.5px solid #8e44ad;border-radius:10px;padding:10px 14px;font-size:13px;color:#5b2c6f;font-weight:600;margin-bottom:12px;">🟣 ${naoNoSistema} item${naoNoSistema > 1 ? 's' : ''} não adicionado${naoNoSistema > 1 ? 's' : ''} ao sistema</div>` : '');
+
+  document.getElementById('tabela-wrap').innerHTML = aviso + `
+    <table>
+      <thead>
+        <tr>
+          <th>Piso / Lote</th>
+          <th>Localização</th>
+          <th>Caixas</th>
+          <th>Peças</th>
+          <th>Metragem</th>
+        </tr>
+      </thead>
+      <tbody>${linhas}</tbody>
+    </table>
+  `;
+}
+
+// ===================== EXPORTAR CSV =====================
+// ===================== EXPORTAR CSV PERSONALIZADO =====================
+let ruaSelecionada = null;
+
+// Definição de todas as colunas disponíveis
+const COLUNAS_EXPORT = [
+  { id: 'nome',             label: 'Nome',                 fn: d => d.nome },
+  { id: 'lote',             label: 'Lote',                 fn: d => d.lote },
+  { id: 'marca',            label: 'Marca',                fn: d => d.marca||'' },
+  { id: 'codigo',           label: 'Código',               fn: d => d.codigo||'' },
+  { id: 'tamanho',          label: 'Tamanho',              fn: d => d.tamanho||'' },
+  { id: 'bitola',           label: 'Bitola',               fn: d => d.bitola||'' },
+  { id: 'tonalidade',       label: 'Tonalidade',           fn: d => d.tonalidade||'' },
+  { id: 'patio',            label: 'Pátio',                fn: d => d.patio||'' },
+  { id: 'rua',              label: 'Rua',                  fn: d => d.rua||'' },
+  { id: 'apartamento',      label: 'Apt',                  fn: d => d.apartamento||'' },
+  { id: 'nivel',            label: 'Nível',                fn: d => d.nivel||'' },
+  { id: 'caixas',           label: 'Caixas',               fn: d => d.caixas||0 },
+  { id: 'qtdPallets',       label: 'Pallets',              fn: d => d.qtdPallets||'' },
+  { id: 'caixasPorPallet',  label: 'Caixas/Pallet',        fn: d => d.caixasPorPallet||'' },
+  { id: 'caixasAvulsas',    label: 'Cx. Avulsas',          fn: d => d.caixasAvulsasFora||'' },
+  { id: 'pecas',            label: 'Peças Avulsas',        fn: d => d.pecas||0 },
+  { id: 'm2PorCaixa',       label: 'm²/Caixa',             fn: d => d.m2PorCaixa ? d.m2PorCaixa.toString().replace('.',',') : '' },
+  { id: 'pecasPorCaixa',    label: 'Peças/Caixa',          fn: d => d.pecasPorCaixa||'' },
+  { id: 'metragem',         label: 'Metragem (m²)',        fn: d => calcularMetragemTotal(d) > 0 ? calcularMetragemTotal(d).toFixed(2).replace('.',',') : '' },
+  { id: 'data',             label: 'Data Cadastro',        fn: d => d.data||'' },
+  { id: 'dataAlteracao',    label: 'Última Alteração',     fn: d => d.dataAlteracao||'' },
+];
+
+// Guarda estado das colunas selecionadas (começa com todas ativas)
+const colunasAtivas = new Set(COLUNAS_EXPORT.map(c => c.id));
+
+function renderSeletorColunas() {
+  const wrap = document.getElementById('col-select-wrap');
+  if (!wrap) return;
+  wrap.innerHTML = COLUNAS_EXPORT.map(col => {
+    const ativo = colunasAtivas.has(col.id);
+    return `<button onclick="toggleColuna('${col.id}')" style="
+      padding:6px 12px;border-radius:20px;font-size:12px;font-weight:600;cursor:pointer;
+      border:1.5px solid ${ativo ? '#1a2e1a' : '#d0c9bb'};
+      background:${ativo ? '#1a2e1a' : '#fff'};
+      color:${ativo ? '#fff' : '#666'}">
+      ${col.label}
+    </button>`;
+  }).join('');
+}
+
+function toggleColuna(id) {
+  if (colunasAtivas.has(id)) colunasAtivas.delete(id);
+  else colunasAtivas.add(id);
+  renderSeletorColunas();
+}
+
+function toggleTodasColunas(ligar) {
+  COLUNAS_EXPORT.forEach(c => ligar ? colunasAtivas.add(c.id) : colunasAtivas.delete(c.id));
+  renderSeletorColunas();
+}
+
+function renderBotoesRua() {
+  const dados = carregar();
+  const ruas = [...new Set(
+    dados.filter(d => d.rua && !d.naoLocalizado).map(d => String(d.rua).trim())
+  )].sort((a, b) => {
+    const na = parseFloat(a), nb = parseFloat(b);
+    return isNaN(na) || isNaN(nb) ? a.localeCompare(b) : na - nb;
+  });
+
+  const input = (document.getElementById('export-rua-input')?.value || '').trim().toLowerCase();
+  const el = document.getElementById('export-rua-lista');
+  if (!el) return;
+
+  const ruasFiltradas = input ? ruas.filter(r => r.toLowerCase().includes(input)) : ruas;
+
+  el.innerHTML = ruasFiltradas.map(r => `
+    <button onclick="selecionarRua('${r}')" style="
+      padding:6px 14px;border-radius:20px;border:1.5px solid ${ruaSelecionada === r ? '#1a2e1a' : '#d0c9bb'};
+      background:${ruaSelecionada === r ? '#1a2e1a' : '#fff'};
+      color:${ruaSelecionada === r ? '#fff' : '#333'};
+      font-size:13px;font-weight:600;cursor:pointer">
+      Rua ${r}
+    </button>
+  `).join('');
+}
+
+function selecionarRua(rua) {
+  ruaSelecionada = ruaSelecionada === rua ? null : rua;
+  renderBotoesRua();
+}
+
+function exportarCSVPersonalizado() {
+  if (colunasAtivas.size === 0) { toast('⚠️ Selecione ao menos uma coluna.', true); return; }
+
+  const inputRua = (document.getElementById('export-rua-input')?.value || '').trim();
+  const rua = ruaSelecionada || inputRua || null;
+
+  let todos = carregar();
+
+  // Filtra por rua se selecionada (exclui também os não localizados)
+  if (rua) {
+    todos = todos.filter(d =>
+      String(d.rua || '').trim().toLowerCase() === rua.toLowerCase() &&
+      !d.naoLocalizado
+    );
+    if (todos.length === 0) {
+      toast(`⚠️ Nenhum piso encontrado na Rua ${rua}.`, true);
+      return;
+    }
+  }
+
+  if (todos.length === 0) { toast('⚠️ Nenhum dado para exportar.', true); return; }
+
+  // Ordena por pátio → apartamento
+  todos.sort((a, b) => {
+    const pa = parseFloat(a.patio)||0, pb = parseFloat(b.patio)||0;
+    if (pa !== pb) return pa - pb;
+    return (parseFloat(a.apartamento)||0) - (parseFloat(b.apartamento)||0);
+  });
+
+  const colunas = COLUNAS_EXPORT.filter(c => colunasAtivas.has(c.id));
+  const sep = ';';
+  const header = colunas.map(c => c.label).join(sep);
+  const linhas = todos.map(d =>
+    colunas.map(c => `"${String(c.fn(d)).replace(/"/g, '""')}"`).join(sep)
+  );
+
+  const csv = '\uFEFF' + [header, ...linhas].join('\r\n');
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  const sufixo = rua ? `_rua${rua}` : '_todos';
+  a.download = `estoque${sufixo}_${new Date().toLocaleDateString('pt-BR').replace(/\//g,'-')}.csv`;
+  a.click();
+  toast(`📤 Exportado — ${todos.length} piso${todos.length > 1 ? 's' : ''}${rua ? ` da Rua ${rua}` : ''}`);
+}
+
+// Mantém compatibilidade com botão legado
+function exportarCSV() { exportarCSVPersonalizado(); }
+function exportarPorRua() { exportarCSVPersonalizado(); }
+
+// ===================== EXPORTAR / IMPORTAR JSON =====================
+function exportarJSON() {
+  const dados = carregar();
+  const movs = carregarMovimentacoes();
+  if (dados.length === 0 && movs.length === 0) { toast('⚠️ Nenhum dado para exportar.', true); return; }
+
+  toast('⏳ Preparando backup com fotos...');
+  carregarTodasFotosDB().then(mapaFotos => {
+    const dadosComFotos = dados.map(d => ({
+      ...d,
+      fotos: mapaFotos[String(d.id)] || [],
+      foto: (mapaFotos[String(d.id)] || [])[0] || null
+    }));
+    const backup = { tipo: 'estoque_pisos_backup', versao: 3, estoque: dadosComFotos, movimentacoes: movs };
+    const json = JSON.stringify(backup, null, 2);
+    const blob = new Blob([json], { type: 'application/json;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `estoque_pisos_backup_${new Date().toLocaleDateString('pt-BR').replace(/\//g, '-')}.json`;
+    a.click();
+    toast('✅ Backup exportado com fotos!');
+  });
+}
+
+function exportarParaDrive() {
+  const dados = carregar();
+  const movs = carregarMovimentacoes();
+  if (dados.length === 0 && movs.length === 0) { toast('⚠️ Nenhum dado para exportar.', true); return; }
+
+  // 1. Baixa o arquivo
+  const backup = { tipo: 'estoque_pisos_backup', versao: 2, estoque: dados, movimentacoes: movs };
+  const json = JSON.stringify(backup, null, 2);
+  const blob = new Blob([json], { type: 'application/json;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  const nomeArquivo = `estoque_pisos_backup_${new Date().toLocaleDateString('pt-BR').replace(/\//g, '-')}.json`;
+  a.download = nomeArquivo;
+  a.click();
+
+  // 2. Mostra modal de instrução
+  setTimeout(() => {
+    const overlay = document.createElement('div');
+    overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:99998;display:flex;align-items:flex-end';
+    overlay.innerHTML = `
+      <div style="background:#fff;border-radius:20px 20px 0 0;padding:24px 20px 40px;width:100%;box-sizing:border-box">
+        <div style="width:40px;height:4px;background:#ddd;border-radius:2px;margin:0 auto 20px"></div>
+        <div style="font-size:18px;font-weight:700;color:#1a2e1a;margin-bottom:6px">☁️ Salvar no Google Drive</div>
+        <div style="font-size:13px;color:#666;margin-bottom:20px">O arquivo <b>${nomeArquivo}</b> foi baixado. Agora siga os passos:</div>
+        <div style="display:flex;flex-direction:column;gap:12px;margin-bottom:24px">
+          <div style="display:flex;align-items:center;gap:12px;background:#f5f2ec;border-radius:10px;padding:12px">
+            <div style="font-size:24px">1️⃣</div>
+            <div style="font-size:13px">Abra o app <b>Google Drive</b> no seu celular</div>
+          </div>
+          <div style="display:flex;align-items:center;gap:12px;background:#f5f2ec;border-radius:10px;padding:12px">
+            <div style="font-size:24px">2️⃣</div>
+            <div style="font-size:13px">Toque no botão <b>"+"</b> e depois em <b>"Fazer upload"</b></div>
+          </div>
+          <div style="display:flex;align-items:center;gap:12px;background:#f5f2ec;border-radius:10px;padding:12px">
+            <div style="font-size:24px">3️⃣</div>
+            <div style="font-size:13px">Vá em <b>Downloads</b> e selecione o arquivo <b>${nomeArquivo}</b></div>
+          </div>
+        </div>
+        <div style="display:flex;gap:10px">
+          <button onclick="this.closest('div[style*=fixed]').remove()" style="flex:1;padding:14px;border-radius:10px;border:1.5px solid #d0c9bb;background:#fff;font-size:14px;font-weight:600;cursor:pointer">Fechar</button>
+          <button onclick="window.open('https://drive.google.com/drive/my-drive','_blank');this.closest('div[style*=fixed]').remove()" style="flex:2;padding:14px;border-radius:10px;border:none;background:#1a73e8;color:#fff;font-size:14px;font-weight:700;cursor:pointer">Abrir Google Drive</button>
+        </div>
+      </div>`;
+    document.body.appendChild(overlay);
+    overlay.addEventListener('click', e => { if (e.target === overlay) overlay.remove(); });
+  }, 800);
+}
+
+function importarJSON(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+
+  const reader = new FileReader();
+
+  reader.onload = function(e) {
+    try {
+      const conteudo = JSON.parse(e.target.result);
+
+      // Aceita dois formatos:
+      // - Antigo: um array puro só com o estoque
+      // - Novo: { estoque: [...], movimentacoes: [...] }
+      let dadosImportados;
+      let movsImportadas = [];
+      if (Array.isArray(conteudo)) {
+        dadosImportados = conteudo;
+      } else if (conteudo && Array.isArray(conteudo.estoque)) {
+        dadosImportados = conteudo.estoque;
+        movsImportadas = Array.isArray(conteudo.movimentacoes) ? conteudo.movimentacoes : [];
+      } else {
+        throw new Error('Formato inválido');
+      }
+
+      const existentes = carregar();
+
+      // Campos que identificam o piso como sendo o mesmo: NOME + LOTE
+      // (o código pode se repetir entre pisos diferentes — isso é só sinalizado
+      // visualmente em vermelho na lista, não impede a importação. Lotes iguais
+      // entre pisos com nomes diferentes também não são considerados duplicados.)
+      const mesmoPiso = (a, b) =>
+        (a.nome || '').trim().toLowerCase() === (b.nome || '').trim().toLowerCase() &&
+        (a.lote || '').trim().toLowerCase() === (b.lote || '').trim().toLowerCase();
+
+      // Campos que serão atualizados se mudaram
+      const camposAtualizaveis = ['marca', 'codigo', 'tamanho', 'bitola', 'tonalidade', 'patio', 'rua', 'apartamento', 'nivel', 'caixas', 'pecas', 'm2PorCaixa', 'pecasPorCaixa', 'caixasPorPallet', 'data'];
+
+      let novos = 0;
+      let atualizados = 0;
+
+      dadosImportados.forEach(itemImportado => {
+        const idxExistente = existentes.findIndex(item => mesmoPiso(item, itemImportado));
+
+        if (idxExistente >= 0) {
+          // Piso já existe — verifica se algum campo mudou e atualiza
+          let houveMudanca = false;
+          camposAtualizaveis.forEach(campo => {
+            const valAtual = (existentes[idxExistente][campo] ?? '').toString().trim();
+            const valNovo  = (itemImportado[campo] ?? '').toString().trim();
+            if (valAtual !== valNovo) {
+              existentes[idxExistente][campo] = itemImportado[campo];
+              houveMudanca = true;
+            }
+          });
+          if (houveMudanca) atualizados++;
+        } else {
+          // Piso novo — adiciona preservando o id original ou gerando um novo
+          existentes.push({
+            ...itemImportado,
+            id: itemImportado.id || (Date.now().toString() + Math.random().toString(16).slice(2))
+          });
+          novos++;
+        }
+      });
+
+      // Salva fotos no IndexedDB e remove do localStorage para economizar espaço
+      const promessasFotos = existentes.map(async d => {
+        const fotos = d.fotos && d.fotos.length ? d.fotos : (d.foto ? [d.foto] : []);
+        if (fotos.length) await salvarFotosDB(d.id, fotos);
+        return d;
+      });
+
+      Promise.all(promessasFotos).then(() => {
+        // Remove fotos do localStorage após salvar no IndexedDB
+        const semFotos = existentes.map(d => { const c = {...d}; delete c.fotos; delete c.foto; return c; });
+        salvarDados(semFotos);
+      });
+
+      salvarDados(existentes); // salva imediatamente (com fotos), IndexedDB migra em seguida
+
+      // Importa movimentações (se houver no arquivo), evitando duplicar
+      // pelas mesmas: piso + data/hora + origem + destino
+      let movsNovas = 0;
+      if (movsImportadas.length > 0) {
+        const movsExistentes = carregarMovimentacoes();
+        const mesmaMov = (a, b) =>
+          (a.pisoNome || '') === (b.pisoNome || '') &&
+          (a.dataHora || '') === (b.dataHora || '') &&
+          JSON.stringify(a.origem || {}) === JSON.stringify(b.origem || {}) &&
+          JSON.stringify(a.destino || {}) === JSON.stringify(b.destino || {});
+
+        movsImportadas.forEach(movImportada => {
+          const jaExiste = movsExistentes.some(m => mesmaMov(m, movImportada));
+          if (!jaExiste) {
+            movsExistentes.push({
+              ...movImportada,
+              id: movImportada.id || (Date.now().toString() + Math.random().toString(16).slice(2))
+            });
+            movsNovas++;
+          }
+        });
+
+        // Mantém ordem cronológica (mais recente primeiro)
+        movsExistentes.sort((a, b) => (b.id || '').localeCompare(a.id || ''));
+        salvarMovimentacoes(movsExistentes);
+      }
+
+      const partes = [];
+      if (novos > 0) partes.push(`✅ ${novos} novo(s) adicionado(s)`);
+      if (atualizados > 0) partes.push(`🔄 ${atualizados} atualizado(s)`);
+      if (movsNovas > 0) partes.push(`🔁 ${movsNovas} movimentação(ões) importada(s)`);
+      if (partes.length === 0) partes.push('ℹ️ Nenhuma alteração encontrada');
+
+      toast(partes.join(' | '));
+
+      renderRelatorio();
+      renderLista();
+
+    } catch(err) {
+      toast(
+        '❌ Arquivo inválido. Use um backup gerado por este app.',
+        true
+      );
+    }
+
+    event.target.value = '';
+  };
+
+  reader.readAsText(file);
+}
+
+
+// ===================== MOVIMENTAÇÕES =====================
+const CHAVE_MOV = 'estoque_movimentacoes_v1';
+
+function carregarMovimentacoes() {
+  try { return JSON.parse(localStorage.getItem(CHAVE_MOV)) || []; }
+  catch(e) { return []; }
+}
+
+function salvarMovimentacoes(movs) {
+  localStorage.setItem(CHAVE_MOV, JSON.stringify(movs));
+}
+
+function fmtLocal(l) {
+  const partes = [];
+  if (l.patio) partes.push(`Pátio ${l.patio}`);
+  if (l.rua) partes.push(`Rua ${l.rua}`);
+  if (l.apartamento) partes.push(`Apt ${l.apartamento}`);
+  if (l.nivel !== '' && l.nivel !== undefined && l.nivel !== null) partes.push(`Nível ${l.nivel}`);
+  return partes.length ? partes.join(' • ') : '(sem local)';
+}
+
+function registrarMovimentacao({ pisoId, pisoNome, lote, bitola, tonalidade, origem, destino }) {
+  const movs = carregarMovimentacoes();
+  movs.unshift({
+    id: Date.now().toString(),
+    pisoId,
+    pisoNome,
+    lote: lote || '',
+    bitola: bitola || '',
+    tonalidade: tonalidade || '',
+    origem,
+    destino,
+    dataHora: new Date().toLocaleString('pt-BR')
+  });
+  salvarMovimentacoes(movs);
+}
+
+// ===================== GALERIA =====================
+// ===================== ERROS DE CARREGAMENTO =====================
+const CHAVE_ERROS = 'estoque_erros_v1';
+let filtroErroAtual = 'todos';
+
+function carregarErros() {
+  try { return JSON.parse(localStorage.getItem(CHAVE_ERROS)) || []; }
+  catch(e) { return []; }
+}
+
+function salvarErros(lista) {
+  localStorage.setItem(CHAVE_ERROS, JSON.stringify(lista));
+  if (window._usuarioUid) sincronizarErrosFirestore(window._usuarioUid);
+}
+
+function adicionarErro() {
+  const numero = document.getElementById('erro-numero-input')?.value.trim();
+  const descricao = document.getElementById('erro-descricao-input')?.value.trim();
+  const responsavel = document.getElementById('erro-responsavel')?.value || '';
+  const data = document.getElementById('erro-data')?.value || new Date().toLocaleDateString('pt-BR');
+
+  if (!numero) { toast('⚠️ Informe o número da carga.', true); return; }
+  if (!descricao) { toast('⚠️ Descreva o erro.', true); return; }
+
+  const lista = carregarErros();
+  lista.unshift({
+    id: `${Date.now()}_${Math.random().toString(36).slice(2,7)}`,
+    numero,
+    descricao,
+    responsavel,
+    data: data || new Date().toLocaleDateString('pt-BR'),
+    status: 'pendente',
+    criadoEm: new Date().toLocaleString('pt-BR')
+  });
+  salvarErros(lista);
+
+  document.getElementById('erro-numero-input').value = '';
+  document.getElementById('erro-descricao-input').value = '';
+  document.getElementById('erro-responsavel').value = '';
+
+  renderErros();
+  toast('⚠️ Erro registrado!');
+}
+
+function toggleStatusErro(id) {
+  const lista = carregarErros();
+  const idx = lista.findIndex(e => e.id === id);
+  if (idx < 0) return;
+  lista[idx].status = lista[idx].status === 'pendente' ? 'resolvido' : 'pendente';
+  if (lista[idx].status === 'resolvido') {
+    lista[idx].resolvidoEm = new Date().toLocaleString('pt-BR');
+  } else {
+    delete lista[idx].resolvidoEm;
+  }
+  salvarErros(lista);
+  renderErros();
+  toast(lista[idx].status === 'resolvido' ? '✅ Marcado como resolvido!' : '⚠️ Reaberto!');
+}
+
+function excluirErro(id) {
+  if (!confirm('Excluir este registro de erro?')) return;
+  const lista = carregarErros().filter(e => e.id !== id);
+  salvarErros(lista);
+  renderErros();
+  toast('🗑️ Erro excluído.');
+}
+
+function setFiltroErro(filtro, btn) {
+  filtroErroAtual = filtro;
+  document.querySelectorAll('.erro-filtro-btn').forEach(b => b.classList.remove('ativo'));
+  if (btn) btn.classList.add('ativo');
+  renderErros();
+}
+
+function renderErros() {
+  // Atualiza select de responsável
+  const sel = document.getElementById('erro-responsavel');
+  if (sel) {
+    const usuarios = carregarUsuarios();
+    const atual = sel.value;
+    sel.innerHTML = `<option value="">— Selecionar —</option>` +
+      usuarios.map(u => `<option value="${u}" ${atual===u?'selected':''}>${u}</option>`).join('');
+  }
+
+  // Data padrão hoje
+  const dataInput = document.getElementById('erro-data');
+  if (dataInput && !dataInput.value) {
+    const hoje = new Date();
+    dataInput.value = `${hoje.getFullYear()}-${String(hoje.getMonth()+1).padStart(2,'0')}-${String(hoje.getDate()).padStart(2,'0')}`;
+  }
+
+  let lista = carregarErros();
+  const total = lista.length;
+  const pendentes = lista.filter(e => e.status === 'pendente').length;
+  const resolvidos = lista.filter(e => e.status === 'resolvido').length;
+
+  // Resumo
+  const resumoEl = document.getElementById('erro-resumo');
+  if (resumoEl) {
+    resumoEl.innerHTML = `
+      <div class="erro-resumo-card">
+        <div class="erro-resumo-num" style="color:#e74c3c">${pendentes}</div>
+        <div class="erro-resumo-label">Pendentes</div>
+      </div>
+      <div class="erro-resumo-card">
+        <div class="erro-resumo-num" style="color:#5a9e5a">${resolvidos}</div>
+        <div class="erro-resumo-label">Resolvidos</div>
+      </div>
+      <div class="erro-resumo-card">
+        <div class="erro-resumo-num" style="color:var(--verde-escuro)">${total}</div>
+        <div class="erro-resumo-label">Total</div>
+      </div>
+    `;
+  }
+
+  // Filtro
+  if (filtroErroAtual !== 'todos') lista = lista.filter(e => e.status === filtroErroAtual);
+
+  const el = document.getElementById('lista-erros');
+  if (!el) return;
+
+  if (lista.length === 0) {
+    el.innerHTML = `<div class="lista-vazia"><div class="emoji">${filtroErroAtual === 'resolvido' ? '✅' : '⚠️'}</div><p>${filtroErroAtual === 'todos' ? 'Nenhum erro registrado.' : filtroErroAtual === 'pendente' ? 'Nenhum erro pendente!' : 'Nenhum erro resolvido.'}</p></div>`;
+    return;
+  }
+
+  el.innerHTML = lista.map(e => `
+    <div class="erro-card ${e.status}">
+      <div class="erro-header">
+        <span class="erro-numero">📦 Carga: ${e.numero}</span>
+        <button class="erro-status ${e.status}" onclick="toggleStatusErro('${e.id}')">
+          ${e.status === 'pendente' ? '⚠️ Pendente' : '✅ Resolvido'}
+        </button>
+      </div>
+      <div class="erro-descricao">${e.descricao}</div>
+      <div class="erro-detalhe">
+        ${e.responsavel ? `👤 ${e.responsavel} · ` : ''}📅 ${e.data} · 🕐 ${e.criadoEm}
+        ${e.resolvidoEm ? `<br>✅ Resolvido em: ${e.resolvidoEm}` : ''}
+      </div>
+      <div class="erro-acoes">
+        <button class="erro-btn-excluir" onclick="excluirErro('${e.id}')">🗑️ Excluir</button>
+      </div>
+    </div>
+  `).join('');
+}
+
+// ===================== CONFIGURAÇÕES / USUÁRIOS =====================
+const CHAVE_USUARIOS = 'estoque_usuarios_v1';
+
+function carregarUsuarios() {
+  try { return JSON.parse(localStorage.getItem(CHAVE_USUARIOS)) || []; }
+  catch(e) { return []; }
+}
+
+function salvarUsuarios(lista) {
+  localStorage.setItem(CHAVE_USUARIOS, JSON.stringify(lista));
+  atualizarSelectResponsavel();
+  if (window._usuarioUid) sincronizarUsuariosFirestore(window._usuarioUid);
+}
+
+function adicionarUsuario() {
+  const input = document.getElementById('input-novo-usuario');
+  const nome = (input?.value || '').trim();
+  if (!nome) { toast('⚠️ Digite um nome.', true); return; }
+  const lista = carregarUsuarios();
+  if (lista.some(u => u.toLowerCase() === nome.toLowerCase())) {
+    toast('⚠️ Usuário já existe.', true); return;
+  }
+  lista.push(nome);
+  salvarUsuarios(lista);
+  if (input) input.value = '';
+  renderConfig();
+  toast(`✅ Usuário "${nome}" adicionado!`);
+}
+
+function removerUsuario(nome) {
+  if (!confirm(`Remover "${nome}" da lista?`)) return;
+  const lista = carregarUsuarios().filter(u => u !== nome);
+  salvarUsuarios(lista);
+  renderConfig();
+  toast(`🗑️ "${nome}" removido.`);
+}
+
+function atualizarSelectResponsavel() {
+  const sel = document.getElementById('responsavel');
+  if (!sel) return;
+  const atual = sel.value;
+  const lista = carregarUsuarios();
+  sel.innerHTML = `<option value="">— Selecionar usuário —</option>` +
+    lista.map(u => `<option value="${u}" ${atual === u ? 'selected' : ''}>${u}</option>`).join('');
+}
+
+function renderConfig() {
+  // Lista de usuários
+  const el = document.getElementById('lista-usuarios');
+  const lista = carregarUsuarios();
+  if (el) {
+    el.innerHTML = lista.length === 0
+      ? `<p style="font-size:13px;color:var(--texto-suave);text-align:center;padding:10px">Nenhum usuário cadastrado ainda.</p>`
+      : lista.map(u => `
+        <div class="usuario-item">
+          <span>👤 ${u}</span>
+          <button onclick="removerUsuario('${u}')">✕ Remover</button>
+        </div>`).join('');
+  }
+
+  // Info da conta
+  const contaEl = document.getElementById('config-conta');
+  if (contaEl) {
+    const email = window._usuarioEmail || 'Não logado';
+    const uid = window._usuarioUid || '';
+    contaEl.innerHTML = `
+      <div style="display:flex;align-items:center;gap:10px;padding:8px 0">
+        <span style="font-size:24px">👤</span>
+        <div>
+          <div style="font-weight:700;color:var(--texto)">${email}</div>
+          <div style="font-size:11px;opacity:0.6">${uid.slice(0,16)}...</div>
+        </div>
+      </div>
+      <button onclick="window.fazerLogout()" style="width:100%;padding:10px;background:#fde8e8;color:#c0392b;border:none;border-radius:8px;font-weight:700;font-size:13px;cursor:pointer;margin-top:8px">🚪 Sair da conta</button>
+    `;
+  }
+
+  // Atualiza select no formulário
+  atualizarSelectResponsavel();
+}
+
+function renderGaleria() {
+  const busca = (document.getElementById('busca-galeria')?.value || '').toLowerCase().trim();
+  let dados = carregar();
+
+  if (busca) dados = dados.filter(d =>
+    d.nome.toLowerCase().includes(busca) ||
+    (d.lote || '').toLowerCase().includes(busca) ||
+    (d.marca || '').toLowerCase().includes(busca)
+  );
+
+  dados.sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR'));
+
+  const el = document.getElementById('galeria-grid');
+  if (!el) return;
+
+  if (dados.length === 0) {
+    el.innerHTML = `<div class="galeria-vazia" style="grid-column:span 2">
+      <div class="emoji">🖼️</div>
+      <p>${busca ? 'Nenhum piso encontrado.' : 'Nenhum piso cadastrado ainda.'}</p>
+    </div>`;
+    return;
+  }
+
+  // Renderiza placeholder primeiro, depois carrega fotos do IndexedDB
+  el.innerHTML = dados.map(d => `
+    <div class="galeria-card" onclick="abrirDetalhe('${d.id}')">
+      <div class="galeria-sem-foto" id="gfoto-${d.id}">📷<span>Carregando...</span></div>
+      <div class="galeria-nome">${d.nome}</div>
+      <div class="galeria-lote">${d.tamanho || '—'}</div>
+    </div>
+  `).join('');
+
+  // Carrega fotos do IndexedDB para cada card
+  carregarTodasFotosDB().then(mapaFotos => {
+    dados.forEach(d => {
+      const container = document.getElementById(`gfoto-${d.id}`);
+      if (!container) return;
+      const fotos = mapaFotos[String(d.id)] ||
+        (d.fotos && d.fotos.length ? d.fotos : (d.foto ? [d.foto] : []));
+      if (fotos && fotos.length) {
+        container.outerHTML = `<img src="${fotos[0]}" class="galeria-img" alt="${d.nome}" loading="lazy" />`;
+      } else {
+        container.innerHTML = '📷<span>Sem foto</span>';
+      }
+    });
+  });
+}
+
+function renderMovimentacoes() {
+  const busca = (document.getElementById('busca-mov').value || '').toLowerCase().trim();
+  let movs = carregarMovimentacoes();
+
+  if (busca) {
+    movs = movs.filter(m =>
+      m.pisoNome.toLowerCase().includes(busca) ||
+      fmtLocal(m.origem).toLowerCase().includes(busca) ||
+      fmtLocal(m.destino).toLowerCase().includes(busca)
+    );
+  }
+
+  const el = document.getElementById('lista-movimentacoes');
+
+  if (movs.length === 0) {
+    el.innerHTML = `
+      <div class="lista-vazia">
+        <div class="emoji">🔄</div>
+        <p>${busca ? 'Nenhuma movimentação encontrada.' : 'Nenhuma movimentação registrada ainda.<br>Edite a localização de um piso para registrar.'}</p>
+      </div>`;
+    return;
+  }
+
+  el.innerHTML = movs.map(m => {
+    const infos = [];
+    if (m.lote) infos.push(`Lote: ${m.lote}`);
+    if (m.bitola) infos.push(`Bitola: ${m.bitola}`);
+    if (m.tonalidade) infos.push(`Tom: ${m.tonalidade}`);
+    return `
+    <div class="mov-item">
+      <div class="mov-piso">📦 ${m.pisoNome}</div>
+      ${infos.length ? `<div class="mov-data" style="margin-bottom:6px;color:#555">${infos.join(' • ')}</div>` : ''}
+      <div class="mov-rota">
+        <div class="mov-local origem">${fmtLocal(m.origem)}</div>
+        <div class="mov-seta">➜</div>
+        <div class="mov-local destino">${fmtLocal(m.destino)}</div>
+      </div>
+      <div class="mov-data">🕐 ${m.dataHora}</div>
+    </div>
+  `}).join('');
+}
+
+function limparMovimentacoes() {
+  if (!confirm('Apagar todo o histórico de movimentações?')) return;
+  salvarMovimentacoes([]);
+  renderMovimentacoes();
+  toast('🗑️ Histórico limpo.');
+}
+
+function exportarMovimentacoesXLS() {
+  const movs = carregarMovimentacoes();
+  if (movs.length === 0) { toast('⚠️ Nenhuma movimentação para exportar.', true); return; }
+  const sep = ';';
+  const header = ['Piso','Lote','Bitola','Tonalidade','Origem Pátio','Origem Rua','Origem Apt','Origem Nível','Destino Pátio','Destino Rua','Destino Apt','Destino Nível','Data/Hora'].join(sep);
+  const linhas = movs.map(m =>
+    [m.pisoNome, m.lote||'', m.bitola||'', m.tonalidade||'',
+     m.origem.patio||'', m.origem.rua||'', m.origem.apartamento||'', m.origem.nivel!==undefined?m.origem.nivel:'',
+     m.destino.patio||'', m.destino.rua||'', m.destino.apartamento||'', m.destino.nivel!==undefined?m.destino.nivel:'',
+     m.dataHora||'']
+    .map(v => `"${String(v).replace(/"/g, '""')}"`)
+    .join(sep)
+  );
+  const csv = '\uFEFF' + [header, ...linhas].join('\n');
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `movimentacoes_${new Date().toLocaleDateString('pt-BR').replace(/\//g, '-')}.csv`;
+  a.click();
+  toast('📤 CSV exportado com sucesso!');
+}
+
+function toast(msg, erro = false) {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.style.background = erro ? '#c0392b' : 'var(--verde-escuro)';
+  el.classList.add('visivel');
+  setTimeout(() => el.classList.remove('visivel'), 2600);
+}
+
+// INIT — inicialização básica (restante roda após login via onAuthStateChanged)
+// A tela de login fica visível até o Firebase confirmar o estado de auth
+atualizarSelectResponsavel(); // popula o select de responsável ao carregar
+</script>
+
+</div><!-- fim app-root -->
+
+<!-- FIREBASE AUTH + FIRESTORE -->
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/12.16.0/firebase-app.js";
+import { getAnalytics } from "https://www.gstatic.com/firebasejs/12.16.0/firebase-analytics.js";
+import {
+  getAuth, GoogleAuthProvider, signInWithPopup, signOut,
+  onAuthStateChanged, setPersistence,
+  browserLocalPersistence, browserSessionPersistence
+} from "https://www.gstatic.com/firebasejs/12.16.0/firebase-auth.js";
+import {
+  getFirestore, doc, getDoc, setDoc, collection,
+  onSnapshot, writeBatch, serverTimestamp
+} from "https://www.gstatic.com/firebasejs/12.16.0/firebase-firestore.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyCmd1WI-JLNFi4QkmktjlrPRrwaJR6JFVc",
+  authDomain: "estoque-pisos-sm.firebaseapp.com",
+  projectId: "estoque-pisos-sm",
+  storageBucket: "estoque-pisos-sm.firebasestorage.app",
+  messagingSenderId: "594463747135",
+  appId: "1:594463747135:web:aac6a472d53791fe815c8a",
+  measurementId: "G-LTQ5DT9744"
+};
+
+const app = initializeApp(firebaseConfig);
+const analytics = getAnalytics(app);
+const auth = getAuth(app);
+const db = getFirestore(app);
+const provider = new GoogleAuthProvider();
+
+// ===================== FIRESTORE SYNC =====================
+
+// Referências dos documentos do usuário
+function refEstoque(uid) { return doc(db, 'usuarios', uid, 'dados', 'estoque'); }
+function refMovimentacoes(uid) { return doc(db, 'usuarios', uid, 'dados', 'movimentacoes'); }
+function refFotos(uid) { return doc(db, 'usuarios', uid, 'dados', 'fotos'); }
+function refUsuarios(uid) { return doc(db, 'usuarios', uid, 'dados', 'usuarios'); }
+function refErros(uid) { return doc(db, 'usuarios', uid, 'dados', 'erros'); }
+
+// Sincroniza lista de usuários com Firestore
+window.sincronizarUsuariosFirestore = async function(uid) {
+  try {
+    const lista = carregarUsuarios();
+    await setDoc(refUsuarios(uid), { lista, atualizadoEm: serverTimestamp() });
+  } catch(e) { console.error('Erro ao sincronizar usuários:', e); }
+};
+
+// Sincroniza erros de carregamento com Firestore
+window.sincronizarErrosFirestore = async function(uid) {
+  try {
+    const lista = carregarErros();
+    await setDoc(refErros(uid), { lista, atualizadoEm: serverTimestamp() });
+  } catch(e) { console.error('Erro ao sincronizar erros:', e); }
+};
+
+// Sincroniza URLs das fotos com o Firestore
+window.sincronizarFotosFirestore = async function(uid) {
+  try {
+    const mapaFotos = await carregarTodasFotosDB();
+    // Filtra só URLs (não base64) para não estourar o Firestore
+    const mapaUrls = {};
+    Object.entries(mapaFotos).forEach(([pisoId, fotos]) => {
+      const urls = (fotos || []).filter(f => f && f.startsWith('http'));
+      if (urls.length) mapaUrls[pisoId] = urls;
+    });
+    await setDoc(refFotos(uid), { fotos: mapaUrls, atualizadoEm: serverTimestamp() });
+  } catch(e) { console.error('Erro ao sincronizar fotos:', e); }
+};
+
+// Salva estoque no Firestore
+window.sincronizarEstoqueFirestore = async function(uid) {
+  try {
+    const dados = carregar();
+    // Remove fotos base64 para não estourar o Firestore (1MB por doc)
+    const semFotos = dados.map(d => { const c = {...d}; delete c.fotos; delete c.foto; return c; });
+    await setDoc(refEstoque(uid), {
+      pisos: semFotos,
+      atualizadoEm: serverTimestamp()
+    });
+  } catch(e) { console.error('Erro ao sincronizar estoque:', e); }
+};
+
+// Salva movimentações no Firestore
+window.sincronizarMovimentacoesFirestore = async function(uid) {
+  try {
+    const movs = carregarMovimentacoes();
+    await setDoc(refMovimentacoes(uid), {
+      movimentacoes: movs,
+      atualizadoEm: serverTimestamp()
+    });
+  } catch(e) { console.error('Erro ao sincronizar movimentações:', e); }
+};
+
+// Carrega dados do Firestore (ao logar em novo aparelho)
+async function carregarDoFirestore(uid) {
+  try {
+    toast('☁️ Carregando dados da nuvem...');
+
+    const [snapEstoque, snapMovs, snapFotos, snapUsuarios, snapErros] = await Promise.all([
+      getDoc(refEstoque(uid)),
+      getDoc(refMovimentacoes(uid)),
+      getDoc(refFotos(uid)),
+      getDoc(refUsuarios(uid)),
+      getDoc(refErros(uid))
+    ]);
+
+    let foiAtualizado = false;
+
+    if (snapEstoque.exists()) {
+      const dadosNuvem = snapEstoque.data().pisos || [];
+      const dadosLocais = carregar();
+
+      // Mescla: mantém o mais recente por id (nuvem tem prioridade se mais recente)
+      const mapaLocal = {};
+      dadosLocais.forEach(d => { mapaLocal[String(d.id)] = d; });
+
+      dadosNuvem.forEach(dNuvem => {
+        const id = String(dNuvem.id);
+        const local = mapaLocal[id];
+        if (!local) {
+          mapaLocal[id] = dNuvem; // novo na nuvem
+          foiAtualizado = true;
+        } else {
+          // Usa o mais recente baseado em dataAlteracao ou data
+          const tsNuvem = dNuvem.dataAlteracao || dNuvem.data || '';
+          const tsLocal = local.dataAlteracao || local.data || '';
+          if (tsNuvem > tsLocal) {
+            mapaLocal[id] = { ...dNuvem, fotos: local.fotos, foto: local.foto }; // preserva fotos locais
+            foiAtualizado = true;
+          }
+        }
+      });
+
+      if (foiAtualizado || dadosNuvem.length !== dadosLocais.length) {
+        const merged = Object.values(mapaLocal);
+        localStorage.setItem(CHAVE, JSON.stringify(merged));
+      }
+    }
+
+    if (snapMovs.exists()) {
+      const movsNuvem = snapMovs.data().movimentacoes || [];
+      const movsLocais = carregarMovimentacoes();
+      if (movsNuvem.length > movsLocais.length) {
+        salvarMovimentacoes(movsNuvem);
+        foiAtualizado = true;
+      }
+    }
+
+    // Carrega URLs das fotos do Firestore para o IndexedDB local
+    if (snapFotos.exists()) {
+      const mapaFotosNuvem = snapFotos.data().fotos || {};
+      const mapaFotosLocal = await carregarTodasFotosDB();
+      let fotosAtualizadas = 0;
+      for (const [pisoId, urls] of Object.entries(mapaFotosNuvem)) {
+        const fotosLocais = mapaFotosLocal[pisoId] || [];
+        const jaTemUrls = fotosLocais.some(f => f && f.startsWith('http'));
+        if (!jaTemUrls && urls.length > 0) {
+          await salvarFotosDB(pisoId, urls);
+          fotosAtualizadas++;
+        }
+      }
+      if (fotosAtualizadas > 0) {
+        toast(`🖼️ ${fotosAtualizadas} piso(s) com fotos carregadas da nuvem!`);
+        foiAtualizado = true;
+      }
+    }
+
+    if (foiAtualizado) {
+      toast('✅ Dados sincronizados da nuvem!');
+      renderLista();
+      atualizarSubtitulo();
+    } else {
+      toast('✅ Dados já atualizados.');
+    }
+
+    // Carrega usuários do Firestore
+    if (snapUsuarios.exists()) {
+      const listaRemota = snapUsuarios.data().lista || [];
+      const listaLocal = carregarUsuarios();
+      const merged = [...new Set([...listaLocal, ...listaRemota])];
+      if (merged.length !== listaLocal.length) {
+        localStorage.setItem(CHAVE_USUARIOS, JSON.stringify(merged));
+        atualizarSelectResponsavel();
+        foiAtualizado = true;
+      }
+    }
+
+    // Carrega erros do Firestore
+    if (snapErros.exists()) {
+      const errosNuvem = snapErros.data().lista || [];
+      const errosLocais = carregarErros();
+      // Mescla por ID sem duplicar
+      const mapaErros = {};
+      errosLocais.forEach(e => { mapaErros[e.id] = e; });
+      errosNuvem.forEach(e => { if (!mapaErros[e.id]) { mapaErros[e.id] = e; foiAtualizado = true; } });
+      const mergedErros = Object.values(mapaErros).sort((a,b) => b.id.localeCompare(a.id));
+      localStorage.setItem(CHAVE_ERROS, JSON.stringify(mergedErros));
+    }
+
+    // Sincroniza dados locais para a nuvem após carregar
+    sincronizarEstoqueFirestore(uid);
+    sincronizarMovimentacoesFirestore(uid);
+    sincronizarFotosFirestore(uid);
+    sincronizarUsuariosFirestore(uid);
+    sincronizarErrosFirestore(uid);
+
+  } catch(e) {
+    console.error('Erro ao carregar do Firestore:', e);
+    toast('⚠️ Sem conexão, usando dados locais.', true);
+  }
+}
+
+// Intercepta salvarDados para sincronizar automaticamente com Firestore
+const _salvarDadosOriginal = salvarDados;
+window.salvarDados = function(dados) {
+  _salvarDadosOriginal(dados);
+  if (window._usuarioUid) {
+    sincronizarEstoqueFirestore(window._usuarioUid);
+  }
+};
+
+// Intercepta salvarMovimentacoes para sincronizar automaticamente
+const _salvarMovsOriginal = salvarMovimentacoes;
+window.salvarMovimentacoes = function(movs) {
+  _salvarMovsOriginal(movs);
+  if (window._usuarioUid) {
+    sincronizarMovimentacoesFirestore(window._usuarioUid);
+  }
+};
+
+// ===================== AUTH =====================
+onAuthStateChanged(auth, async user => {
+  if (user) {
+    window._usuarioUid = user.uid;
+    window._usuarioEmail = user.email;
+
+    document.getElementById('tela-login').style.display = 'none';
+    document.getElementById('app-root').style.display = 'flex';
+
+    const headerUser = document.getElementById('header-user');
+    if (headerUser) {
+      headerUser.innerHTML = `
+        <img src="${user.photoURL || ''}" style="width:28px;height:28px;border-radius:50%;object-fit:cover;border:2px solid #5a9e5a" onerror="this.style.display='none'" />
+        <span style="font-size:12px;color:#cde8cd;max-width:100px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${user.displayName?.split(' ')[0] || user.email}</span>
+        <button onclick="window.fazerLogout()" style="background:rgba(255,255,255,0.15);border:none;color:#fff;font-size:11px;padding:4px 8px;border-radius:6px;cursor:pointer">Sair</button>
+      `;
+    }
+
+    normalizarIds();
+    atualizarSubtitulo();
+
+    // Inicializa IndexedDB e migra fotos
+    await abrirDB().catch(() => {});
+    await migrarFotosParaDB().catch(() => {});
+    migrarFotosParaCloudinary().catch(() => {});
+
+    // Carrega dados iniciais do Firestore
+    await carregarDoFirestore(user.uid);
+
+    // ===================== SYNC EM TEMPO REAL =====================
+    // Cancela listeners anteriores se existirem
+    if (window._unsubListeners) window._unsubListeners.forEach(u => u());
+    window._unsubListeners = [];
+    let _primeiraVezEstoque = true;
+    let _primeiraVezMovs = true;
+    let _primeiraVezUsuarios = true;
+
+    // Listener em tempo real — Estoque
+    const unsubEstoque = onSnapshot(refEstoque(user.uid), snap => {
+      if (_primeiraVezEstoque) { _primeiraVezEstoque = false; return; } // ignora carga inicial
+      if (!snap.exists()) return;
+      const dadosNuvem = snap.data().pisos || [];
+      const dadosLocais = carregar();
+      // Só atualiza se vier de outro dispositivo (compara tamanho e conteúdo)
+      const mapaLocal = {};
+      dadosLocais.forEach(d => { mapaLocal[String(d.id)] = d; });
+      let mudou = false;
+      dadosNuvem.forEach(dN => {
+        const id = String(dN.id);
+        const local = mapaLocal[id];
+        if (!local) { mapaLocal[id] = dN; mudou = true; }
+        else {
+          const tsN = dN.dataAlteracao || dN.data || '';
+          const tsL = local.dataAlteracao || local.data || '';
+          if (tsN > tsL) { mapaLocal[id] = { ...dN, fotos: local.fotos, foto: local.foto }; mudou = true; }
+        }
+      });
+      // Detecta exclusões na nuvem
+      const idsNuvem = new Set(dadosNuvem.map(d => String(d.id)));
+      dadosLocais.forEach(d => {
+        if (!idsNuvem.has(String(d.id))) { delete mapaLocal[String(d.id)]; mudou = true; }
+      });
+      if (mudou) {
+        localStorage.setItem(CHAVE, JSON.stringify(Object.values(mapaLocal)));
+        renderLista();
+        atualizarSubtitulo();
+        toast('🔄 Estoque atualizado em tempo real');
+      }
+    }, e => console.error('onSnapshot estoque:', e));
+
+    // Listener em tempo real — Movimentações
+    const unsubMovs = onSnapshot(refMovimentacoes(user.uid), snap => {
+      if (_primeiraVezMovs) { _primeiraVezMovs = false; return; }
+      if (!snap.exists()) return;
+      const movsNuvem = snap.data().movimentacoes || [];
+      const movsLocais = carregarMovimentacoes();
+      if (movsNuvem.length !== movsLocais.length) {
+        salvarMovimentacoes(movsNuvem);
+        toast('🔄 Movimentações atualizadas');
+      }
+    }, e => console.error('onSnapshot movs:', e));
+
+    // Listener em tempo real — Usuários
+    const unsubUsuarios = onSnapshot(refUsuarios(user.uid), snap => {
+      if (_primeiraVezUsuarios) { _primeiraVezUsuarios = false; return; }
+      if (!snap.exists()) return;
+      const listaRemota = snap.data().lista || [];
+      const listaLocal = carregarUsuarios();
+      const merged = [...new Set([...listaLocal, ...listaRemota])];
+      if (merged.join() !== listaLocal.join()) {
+        localStorage.setItem(CHAVE_USUARIOS, JSON.stringify(merged));
+        atualizarSelectResponsavel();
+        toast('🔄 Usuários atualizados');
+      }
+    }, e => console.error('onSnapshot usuarios:', e));
+
+    // Listener em tempo real — Erros de Carregamento
+    let _primeiraVezErros = true;
+    const unsubErros = onSnapshot(refErros(user.uid), snap => {
+      if (_primeiraVezErros) { _primeiraVezErros = false; return; }
+      if (!snap.exists()) return;
+      const errosNuvem = snap.data().lista || [];
+      const errosLocais = carregarErros();
+      const mapaErros = {};
+      errosLocais.forEach(e => { mapaErros[e.id] = e; });
+      let mudou = false;
+      errosNuvem.forEach(e => {
+        const local = mapaErros[e.id];
+        if (!local || local.status !== e.status) { mapaErros[e.id] = e; mudou = true; }
+      });
+      if (mudou) {
+        const merged = Object.values(mapaErros).sort((a,b) => b.id.localeCompare(a.id));
+        localStorage.setItem(CHAVE_ERROS, JSON.stringify(merged));
+        renderErros();
+        toast('🔄 Erros atualizados em tempo real');
+      }
+    }, e => console.error('onSnapshot erros:', e));
+
+    window._unsubListeners = [unsubEstoque, unsubMovs, unsubUsuarios, unsubErros];
+
+  } else {
+    window._usuarioUid = null;
+    document.getElementById('tela-login').style.display = 'flex';
+    document.getElementById('app-root').style.display = 'none';
+  }
+});
+
+window.fazerLogin = async function() {
+  const manterConectado = document.getElementById('manter-conectado')?.checked;
+  const btnLogin = document.getElementById('btn-login-google');
+  try {
+    if (btnLogin) { btnLogin.disabled = true; btnLogin.textContent = '⏳ Entrando...'; }
+    await setPersistence(auth, manterConectado ? browserLocalPersistence : browserSessionPersistence);
+    await signInWithPopup(auth, provider);
+  } catch(e) {
+    if (btnLogin) { btnLogin.disabled = false; btnLogin.textContent = '🔵 Entrar com Google'; }
+    if (e.code !== 'auth/popup-closed-by-user') alert('Erro ao fazer login: ' + (e.message || e.code));
+  }
+};
+
+window.fazerLogout = async function() {
+  if (!confirm('Sair da conta Google?')) return;
+  if (window._unsubListeners) { window._unsubListeners.forEach(u => u()); window._unsubListeners = []; }
+  await signOut(auth);
+};
+</script>
+
+<!-- ===================== PWA: SERVICE WORKER EMBUTIDO ===================== -->
+<script>
+if ('serviceWorker' in navigator) {
+  // Service worker embutido como blob — funciona sem servidor
+  const swCode = `
+    const CACHE = 'estoque-pisos-v1';
+    self.addEventListener('install', e => {
+      self.skipWaiting();
+    });
+    self.addEventListener('activate', e => {
+      self.clients.claim();
+    });
+    self.addEventListener('fetch', e => {
+      e.respondWith(fetch(e.request).catch(() => caches.match(e.request)));
+    });
+  `;
+  const blob = new Blob([swCode], { type: 'application/javascript' });
+  const swUrl = URL.createObjectURL(blob);
+  navigator.serviceWorker.register(swUrl).catch(() => {});
+}
+
+// Banner de instalação PWA
+let deferredPrompt = null;
+window.addEventListener('beforeinstallprompt', e => {
+  e.preventDefault();
+  deferredPrompt = e;
+  // Mostra botão de instalar se ainda não instalado
+  const banner = document.getElementById('pwa-install-banner');
+  if (banner) banner.style.display = 'flex';
+});
+
+window.addEventListener('appinstalled', () => {
+  const banner = document.getElementById('pwa-install-banner');
+  if (banner) banner.style.display = 'none';
+  deferredPrompt = null;
+});
+
+function instalarApp() {
+  if (deferredPrompt) {
+    deferredPrompt.prompt();
+    deferredPrompt.userChoice.then(() => { deferredPrompt = null; });
+  }
+}
+</script>
+
+</body>
+</html>
