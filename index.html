@@ -855,6 +855,67 @@ PASSOS PARA RODAR NO GITHUB PAGES:
       font-weight: 700;
     }
 
+    /* CONFERÊNCIA DE CARGA */
+    .conf-tipo-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      margin-bottom: 16px;
+    }
+    .conf-tipo-btn {
+      background: #fff;
+      border: 2px solid #d0c9bb;
+      border-radius: 12px;
+      padding: 14px 10px;
+      text-align: center;
+      cursor: pointer;
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--texto);
+      transition: all 0.15s;
+    }
+    .conf-tipo-btn:active, .conf-tipo-btn.ativo {
+      border-color: var(--verde-acento);
+      background: #f0faf0;
+      color: var(--verde-escuro);
+    }
+    .conf-tipo-icon { font-size: 28px; display: block; margin-bottom: 6px; }
+    .conf-item {
+      background: var(--branco);
+      border-radius: var(--radius);
+      padding: 14px 16px;
+      margin-bottom: 10px;
+      box-shadow: 0 1px 6px rgba(0,0,0,0.08);
+      border-left: 4px solid var(--verde-acento);
+    }
+    .conf-item-nome {
+      font-size: 14px;
+      font-weight: 700;
+      color: var(--verde-escuro);
+      margin-bottom: 4px;
+    }
+    .conf-item-tags {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      margin-top: 8px;
+    }
+    .conf-resumo-box {
+      background: #d5f5dd;
+      color: #1a6b32;
+      border-radius: 10px;
+      padding: 10px 14px;
+      font-size: 13px;
+      font-weight: 700;
+      text-align: center;
+      margin-bottom: 12px;
+    }
+    .conf-lista-vazia {
+      text-align: center;
+      padding: 40px 20px;
+      color: var(--texto-suave);
+    }
+
     /* ERROS DE CARREGAMENTO */
     .erro-card {
       background: var(--branco);
@@ -1167,6 +1228,9 @@ PASSOS PARA RODAR NO GITHUB PAGES:
     <div class="tab" onclick="irPara('erros')">
       <span class="tab-icon">⚠️</span>Erros
     </div>
+    <div class="tab" onclick="irPara('conferencia')">
+      <span class="tab-icon">📋</span>Conferência
+    </div>
   </div>
 </div>
 
@@ -1413,6 +1477,68 @@ PASSOS PARA RODAR NO GITHUB PAGES:
     <div class="card" style="margin-top:12px">
       <div class="card-titulo">ℹ️ Conta conectada</div>
       <div id="config-conta" style="font-size:13px;color:var(--texto-suave)">Carregando...</div>
+    </div>
+
+  </div>
+</div>
+
+<!-- ===================== PÁGINA: CONFERÊNCIA DE CARGA ===================== -->
+<div class="pagina" id="pag-conferencia">
+  <div style="padding:16px">
+
+    <!-- Seleção do tipo de material -->
+    <div class="card">
+      <div class="card-titulo">🚛 Tipo de Material</div>
+      <div class="conf-tipo-grid" id="conf-tipo-grid">
+        <div class="conf-tipo-btn ativo" onclick="selecionarTipoConf('piso', this)">
+          <span class="conf-tipo-icon">🏗️</span>Piso
+        </div>
+        <div class="conf-tipo-btn" onclick="selecionarTipoConf('argamassa', this)">
+          <span class="conf-tipo-icon">🪣</span>Argamassa
+        </div>
+        <div class="conf-tipo-btn" onclick="selecionarTipoConf('telha', this)">
+          <span class="conf-tipo-icon">🏠</span>Telha
+        </div>
+        <div class="conf-tipo-btn" onclick="selecionarTipoConf('tijolo', this)">
+          <span class="conf-tipo-icon">🧱</span>Tijolo
+        </div>
+        <div class="conf-tipo-btn" onclick="selecionarTipoConf('miudezas', this)">
+          <span class="conf-tipo-icon">📦</span>Miudezas
+        </div>
+        <div class="conf-tipo-btn" onclick="selecionarTipoConf('outro', this)">
+          <span class="conf-tipo-icon">➕</span>Outro
+        </div>
+      </div>
+    </div>
+
+    <!-- Formulário dinâmico por tipo -->
+    <div class="card" id="conf-form-card">
+      <div class="card-titulo" id="conf-form-titulo">🏗️ Cadastrar Piso</div>
+      <div id="conf-form-campos"></div>
+
+      <!-- Foto -->
+      <div style="margin-top:12px">
+        <div class="card-titulo" style="font-size:13px;margin-bottom:8px">📷 Foto (opcional)</div>
+        <div style="display:flex;gap:8px">
+          <button class="btn-foto" style="flex:1" onclick="document.getElementById('conf-foto-camera').click()">📷 Câmera</button>
+          <button class="btn-foto" style="flex:1;background:#3a5a3a" onclick="document.getElementById('conf-foto-galeria').click()">🖼️ Galeria</button>
+        </div>
+        <input type="file" id="conf-foto-camera" accept="image/*" capture="environment" style="display:none" onchange="confCarregarFoto(event)" />
+        <input type="file" id="conf-foto-galeria" accept="image/*" style="display:none" onchange="confCarregarFoto(event)" />
+        <div id="conf-foto-preview" style="margin-top:8px"></div>
+      </div>
+
+      <button onclick="salvarItemConferencia()" class="btn" style="background:var(--verde-escuro);color:#fff;width:100%;margin-top:14px">✅ Adicionar à Lista</button>
+    </div>
+
+    <!-- Resumo e lista -->
+    <div id="conf-resumo"></div>
+    <div id="conf-lista"></div>
+
+    <!-- Botões de ação -->
+    <div style="display:flex;gap:8px;margin-top:8px">
+      <button onclick="exportarConferenciaCSV()" class="btn exportar-btn" style="flex:1">📤 Exportar CSV</button>
+      <button onclick="limparConferencia()" class="btn" style="flex:1;background:#fde8e8;color:#c0392b;font-weight:700">🗑️ Limpar Lista</button>
     </div>
 
   </div>
@@ -1821,10 +1947,9 @@ function irPara(pag) {
   document.querySelectorAll('.tab').forEach(t => t.classList.remove('ativo'));
   document.getElementById('pag-' + pag).classList.add('ativa');
   const tabs = document.querySelectorAll('.tab');
-  const idx = { cadastrar: 0, estoque: 1, relatorio: 2, movimentacoes: 3, galeria: 4, config: 5, erros: 6 };
+  const idx = { cadastrar: 0, estoque: 1, relatorio: 2, movimentacoes: 3, galeria: 4, config: 5, erros: 6, conferencia: 7 };
   const activeTab = tabs[idx[pag]];
   activeTab.classList.add('ativo');
-  // Rola a aba ativa para ficar visível
   activeTab.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
   if (pag === 'estoque') renderLista();
   if (pag === 'relatorio') { renderRelatorio(); renderSeletorColunas(); renderBotoesRua(); }
@@ -1832,6 +1957,7 @@ function irPara(pag) {
   if (pag === 'galeria') renderGaleria();
   if (pag === 'config') renderConfig();
   if (pag === 'erros') renderErros();
+  if (pag === 'conferencia') renderConferencia();
 }
 
 // ===================== FORMULÁRIO =====================
@@ -3167,6 +3293,359 @@ function registrarMovimentacao({ pisoId, pisoNome, lote, bitola, tonalidade, ori
 }
 
 // ===================== GALERIA =====================
+// ===================== CONFERÊNCIA DE CARGA =====================
+const CHAVE_CONF = 'estoque_conferencia_v1';
+let confTipoAtual = 'piso';
+let confFotoAtual = null;
+
+// Campos por tipo de material
+const CONF_CAMPOS = {
+  piso: [
+    { id: 'nome', label: 'Nome do Piso *', placeholder: 'Ex: Porcelanato Mármore', tipo: 'text' },
+    { id: 'marca', label: 'Marca', placeholder: 'Ex: Eliane, Portobello', tipo: 'text' },
+    { id: 'lote', label: 'Lote / Referência', placeholder: 'Ex: LOT-2024-001', tipo: 'text' },
+    { id: 'codigo', label: 'Código', placeholder: 'Ex: 8271', tipo: 'text' },
+    { id: 'tamanho', label: 'Tamanho', placeholder: 'Ex: 82x82', tipo: 'text' },
+    { id: 'bitola', label: 'Bitola', placeholder: 'Ex: A, B, C', tipo: 'text' },
+    { id: 'tonalidade', label: 'Tonalidade', placeholder: 'Ex: T1, T2', tipo: 'text' },
+    { id: 'pallets', label: '🪵 Pallets', placeholder: '0', tipo: 'number' },
+    { id: 'caixasPorPallet', label: 'Caixas/Pallet', placeholder: 'Ex: 40', tipo: 'number' },
+    { id: 'caixasAvulsas', label: 'Caixas Avulsas', placeholder: '0', tipo: 'number' },
+    { id: 'pecasAvulsas', label: 'Peças Avulsas', placeholder: '0', tipo: 'number' },
+    { id: 'm2PorCaixa', label: 'm² por Caixa', placeholder: 'Ex: 2.20', tipo: 'number' },
+  ],
+  argamassa: [
+    { id: 'nome', label: 'Nome da Argamassa *', placeholder: 'Ex: Argamassa AC-III', tipo: 'text' },
+    { id: 'marca', label: 'Marca', placeholder: 'Ex: Votoran, Quartzolit', tipo: 'text' },
+    { id: 'pallets', label: '🪵 Pallets', placeholder: '0', tipo: 'number' },
+    { id: 'sacasPorPallet', label: 'Sacos/Pallet', placeholder: 'Ex: 48', tipo: 'number' },
+    { id: 'sacasAvulsas', label: 'Sacos Avulsos', placeholder: '0', tipo: 'number' },
+    { id: 'pesoSaco', label: 'Peso por saco (kg)', placeholder: 'Ex: 20', tipo: 'number' },
+  ],
+  telha: [
+    { id: 'nome', label: 'Nome da Telha *', placeholder: 'Ex: Telha Colonial', tipo: 'text' },
+    { id: 'marca', label: 'Marca', placeholder: 'Ex: Eternit, Brasilit', tipo: 'text' },
+    { id: 'pallets', label: '🪵 Pallets', placeholder: '0', tipo: 'number' },
+    { id: 'pecasPorPallet', label: 'Peças/Pallet', placeholder: 'Ex: 240', tipo: 'number' },
+    { id: 'pecasAvulsas', label: 'Peças Avulsas', placeholder: '0', tipo: 'number' },
+    { id: 'comprimento', label: 'Comprimento (cm)', placeholder: 'Ex: 53', tipo: 'number' },
+  ],
+  tijolo: [
+    { id: 'nome', label: 'Nome do Tijolo *', placeholder: 'Ex: Tijolo 6 furos', tipo: 'text' },
+    { id: 'marca', label: 'Marca / Cerâmica', placeholder: 'Ex: Cerâmica João', tipo: 'text' },
+    { id: 'pallets', label: '🪵 Pallets', placeholder: '0', tipo: 'number' },
+    { id: 'pecasPorPallet', label: 'Peças/Pallet', placeholder: 'Ex: 500', tipo: 'number' },
+    { id: 'pecasAvulsas', label: 'Peças Avulsas', placeholder: '0', tipo: 'number' },
+    { id: 'dimensoes', label: 'Dimensões', placeholder: 'Ex: 9x14x19', tipo: 'text' },
+  ],
+  miudezas: [
+    { id: 'nome', label: 'Nome do Item *', placeholder: 'Ex: Rejunte, Cola, Perfil...', tipo: 'text' },
+    { id: 'marca', label: 'Marca', placeholder: 'Ex: Quartzolit', tipo: 'text' },
+    { id: 'quantidade', label: 'Quantidade', placeholder: '0', tipo: 'number' },
+    { id: 'unidade', label: 'Unidade', placeholder: 'Ex: un, kg, m, caixa', tipo: 'text' },
+    { id: 'obs', label: 'Observação', placeholder: 'Detalhes adicionais...', tipo: 'text' },
+  ],
+  outro: [
+    { id: 'nome', label: 'Nome do Material *', placeholder: 'Ex: Porcelanato, Granito...', tipo: 'text' },
+    { id: 'marca', label: 'Marca', placeholder: 'Marca do produto', tipo: 'text' },
+    { id: 'quantidade', label: 'Quantidade', placeholder: '0', tipo: 'number' },
+    { id: 'unidade', label: 'Unidade', placeholder: 'Ex: un, m², kg, pç', tipo: 'text' },
+    { id: 'obs', label: 'Observação', placeholder: 'Detalhes adicionais...', tipo: 'text' },
+  ],
+};
+
+const CONF_TITULOS = {
+  piso: '🏗️ Cadastrar Piso',
+  argamassa: '🪣 Cadastrar Argamassa',
+  telha: '🏠 Cadastrar Telha',
+  tijolo: '🧱 Cadastrar Tijolo',
+  miudezas: '📦 Cadastrar Miudeza',
+  outro: '➕ Cadastrar Material',
+};
+
+function selecionarTipoConf(tipo, btn) {
+  confTipoAtual = tipo;
+  document.querySelectorAll('.conf-tipo-btn').forEach(b => b.classList.remove('ativo'));
+  if (btn) btn.classList.add('ativo');
+  renderFormConferencia();
+}
+
+function renderFormConferencia() {
+  const campos = CONF_CAMPOS[confTipoAtual] || [];
+  document.getElementById('conf-form-titulo').textContent = CONF_TITULOS[confTipoAtual] || 'Cadastrar';
+
+  // Agrupa campos em pares para layout 2 colunas
+  let html = '';
+  let i = 0;
+  while (i < campos.length) {
+    const c = campos[i];
+    const next = campos[i+1];
+    // Campos de texto ocupam linha inteira; numéricos em pares
+    if (c.tipo === 'text') {
+      html += `<div class="campo-grupo" style="margin-bottom:10px">
+        <label>${c.label}</label>
+        <input type="text" id="conf_${c.id}" placeholder="${c.placeholder}" autocomplete="off" />
+      </div>`;
+      i++;
+    } else if (next && next.tipo === 'number') {
+      html += `<div class="linha-2" style="margin-bottom:10px">
+        <div class="campo-grupo">
+          <label>${c.label}</label>
+          <input type="number" id="conf_${c.id}" placeholder="${c.placeholder}" min="0" inputmode="numeric" oninput="calcularTotalConf()" />
+        </div>
+        <div class="campo-grupo">
+          <label>${next.label}</label>
+          <input type="number" id="conf_${next.id}" placeholder="${next.placeholder}" min="0" inputmode="numeric" oninput="calcularTotalConf()" />
+        </div>
+      </div>`;
+      i += 2;
+    } else {
+      html += `<div class="campo-grupo" style="margin-bottom:10px">
+        <label>${c.label}</label>
+        <input type="${c.tipo}" id="conf_${c.id}" placeholder="${c.placeholder}" ${c.tipo==='number'?'min="0" inputmode="numeric" oninput="calcularTotalConf()"':''} autocomplete="off" />
+      </div>`;
+      i++;
+    }
+  }
+
+  // Preview de total
+  html += `<div id="conf-total-preview" style="font-size:13px;color:var(--verde-acento);font-weight:700;margin-top:4px"></div>`;
+  document.getElementById('conf-form-campos').innerHTML = html;
+
+  // Reset foto
+  confFotoAtual = null;
+  document.getElementById('conf-foto-preview').innerHTML = '';
+}
+
+function calcularTotalConf() {
+  const tipo = confTipoAtual;
+  const el = document.getElementById('conf-total-preview');
+  if (!el) return;
+
+  const v = id => parseFloat(document.getElementById(`conf_${id}`)?.value) || 0;
+
+  if (tipo === 'piso') {
+    const totalCaixas = (v('pallets') * v('caixasPorPallet')) + v('caixasAvulsas');
+    const m2 = totalCaixas * v('m2PorCaixa');
+    const tamanho = document.getElementById('conf_tamanho')?.value?.trim();
+    let areaPeca = 0;
+    if (tamanho) {
+      const match = tamanho.replace(',','.').match(/(\d+(?:\.\d+)?)[xX×](\d+(?:\.\d+)?)/);
+      if (match) {
+        let a = parseFloat(match[1]), b = parseFloat(match[2]);
+        if (a > 10) a /= 100; if (b > 10) b /= 100;
+        areaPeca = a * b;
+      }
+    }
+    const m2Avulsas = v('pecasAvulsas') * areaPeca;
+    const total = m2 + m2Avulsas;
+    el.textContent = totalCaixas > 0 || v('pecasAvulsas') > 0
+      ? `📦 ${totalCaixas} cx · 🔲 ${v('pecasAvulsas')} pç avulsas${total > 0 ? ` · 📐 ${total.toFixed(2).replace('.',',')} m²` : ''}`
+      : '';
+  } else if (tipo === 'argamassa') {
+    const total = (v('pallets') * v('sacasPorPallet')) + v('sacasAvulsas');
+    const kg = total * v('pesoSaco');
+    el.textContent = total > 0 ? `🪣 ${total} sacos${kg > 0 ? ` · ${kg.toLocaleString('pt-BR')} kg` : ''}` : '';
+  } else if (tipo === 'telha' || tipo === 'tijolo') {
+    const total = (v('pallets') * v('pecasPorPallet')) + v('pecasAvulsas');
+    el.textContent = total > 0 ? `📦 ${total.toLocaleString('pt-BR')} peças` : '';
+  } else {
+    const qtd = v('quantidade');
+    const un = document.getElementById('conf_unidade')?.value || 'un';
+    el.textContent = qtd > 0 ? `📦 ${qtd} ${un}` : '';
+  }
+}
+
+function confCarregarFoto(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = e => {
+    const img = new Image();
+    img.onload = () => {
+      const MAX = 800;
+      let w = img.width, h = img.height;
+      if (w > MAX || h > MAX) {
+        if (w > h) { h = Math.round(h * MAX / w); w = MAX; }
+        else { w = Math.round(w * MAX / h); h = MAX; }
+      }
+      const canvas = document.createElement('canvas');
+      canvas.width = w; canvas.height = h;
+      canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+      confFotoAtual = canvas.toDataURL('image/jpeg', 0.80);
+      document.getElementById('conf-foto-preview').innerHTML =
+        `<div style="position:relative;margin-top:8px">
+          <img src="${confFotoAtual}" style="width:100%;max-height:180px;object-fit:cover;border-radius:10px" />
+          <button onclick="confFotoAtual=null;document.getElementById('conf-foto-preview').innerHTML=''" style="position:absolute;top:6px;right:6px;background:rgba(0,0,0,0.6);color:#fff;border:none;border-radius:50%;width:26px;height:26px;font-size:14px;cursor:pointer">✕</button>
+        </div>`;
+    };
+    img.src = e.target.result;
+  };
+  reader.readAsDataURL(file);
+  event.target.value = '';
+}
+
+function salvarItemConferencia() {
+  const campos = CONF_CAMPOS[confTipoAtual] || [];
+  const nomeField = document.getElementById('conf_nome');
+  if (!nomeField?.value.trim()) { toast('⚠️ Informe o nome do item.', true); return; }
+
+  const item = { id: `${Date.now()}_${Math.random().toString(36).slice(2,6)}`, tipo: confTipoAtual, foto: confFotoAtual };
+  campos.forEach(c => {
+    const el = document.getElementById(`conf_${c.id}`);
+    item[c.id] = el?.value.trim() || '';
+  });
+
+  // Calcula total
+  const v = k => parseFloat(item[k]) || 0;
+  if (confTipoAtual === 'piso') {
+    item.totalCaixas = (v('pallets') * v('caixasPorPallet')) + v('caixasAvulsas');
+    const match = item.tamanho?.replace(',','.').match(/(\d+(?:\.\d+)?)[xX×](\d+(?:\.\d+)?)/);
+    if (match) {
+      let a = parseFloat(match[1]), b = parseFloat(match[2]);
+      if (a > 10) a /= 100; if (b > 10) b /= 100;
+      item.m2Total = (item.totalCaixas * v('m2PorCaixa')) + (v('pecasAvulsas') * a * b);
+    }
+  } else if (confTipoAtual === 'argamassa') {
+    item.totalSacos = (v('pallets') * v('sacasPorPallet')) + v('sacasAvulsas');
+    item.totalKg = item.totalSacos * v('pesoSaco');
+  } else if (confTipoAtual === 'telha' || confTipoAtual === 'tijolo') {
+    item.totalPecas = (v('pallets') * v('pecasPorPallet')) + v('pecasAvulsas');
+  }
+
+  item.criadoEm = new Date().toLocaleString('pt-BR');
+
+  const lista = carregarConferencia();
+  lista.unshift(item);
+  salvarConferencia(lista);
+  renderFormConferencia();
+  renderConferencia();
+  toast('✅ Item adicionado à conferência!');
+}
+
+function carregarConferencia() {
+  try { return JSON.parse(localStorage.getItem(CHAVE_CONF)) || []; }
+  catch(e) { return []; }
+}
+
+function salvarConferencia(lista) {
+  localStorage.setItem(CHAVE_CONF, JSON.stringify(lista));
+  if (window._usuarioUid) sincronizarConferenciaFirestore(window._usuarioUid);
+}
+
+function excluirItemConferencia(id) {
+  if (!confirm('Excluir este item da conferência?')) return;
+  salvarConferencia(carregarConferencia().filter(i => i.id !== id));
+  renderConferencia();
+  toast('🗑️ Item removido.');
+}
+
+function limparConferencia() {
+  if (!confirm('Limpar toda a lista de conferência?')) return;
+  salvarConferencia([]);
+  renderConferencia();
+  toast('🗑️ Lista limpa.');
+}
+
+const CONF_ICONS = { piso:'🏗️', argamassa:'🪣', telha:'🏠', tijolo:'🧱', miudezas:'📦', outro:'➕' };
+
+function renderConferencia() {
+  renderFormConferencia();
+  const lista = carregarConferencia();
+  const resumoEl = document.getElementById('conf-resumo');
+  const listaEl = document.getElementById('conf-lista');
+
+  // Resumo por tipo
+  const contagem = {};
+  lista.forEach(i => { contagem[i.tipo] = (contagem[i.tipo] || 0) + 1; });
+  if (resumoEl) {
+    resumoEl.innerHTML = lista.length === 0 ? '' : `
+      <div class="conf-resumo-box">
+        📋 ${lista.length} item${lista.length>1?'s':''} na conferência:
+        ${Object.entries(contagem).map(([t,n]) => `${CONF_ICONS[t]||'📦'} ${n} ${t}`).join(' · ')}
+      </div>`;
+  }
+
+  if (!listaEl) return;
+  if (lista.length === 0) {
+    listaEl.innerHTML = `<div class="conf-lista-vazia"><div style="font-size:48px">📋</div><p>Nenhum item conferido ainda.</p></div>`;
+    return;
+  }
+
+  listaEl.innerHTML = lista.map(item => {
+    const icon = CONF_ICONS[item.tipo] || '📦';
+    // Monta tags de totais
+    let totalTag = '';
+    if (item.tipo === 'piso') {
+      totalTag = `<span class="tag laranja">📦 ${item.totalCaixas||0} cx</span>`;
+      if (item.pecasAvulsas > 0) totalTag += `<span class="tag">🔲 ${item.pecasAvulsas} pç</span>`;
+      if (item.m2Total > 0) totalTag += `<span class="tag verde">📐 ${parseFloat(item.m2Total).toFixed(2).replace('.',',')} m²</span>`;
+    } else if (item.tipo === 'argamassa') {
+      totalTag = `<span class="tag laranja">🪣 ${item.totalSacos||0} sacos</span>`;
+      if (item.totalKg > 0) totalTag += `<span class="tag">⚖️ ${item.totalKg} kg</span>`;
+    } else if (item.tipo === 'telha' || item.tipo === 'tijolo') {
+      totalTag = `<span class="tag laranja">📦 ${item.totalPecas||0} pç</span>`;
+    } else {
+      totalTag = item.quantidade ? `<span class="tag laranja">📦 ${item.quantidade} ${item.unidade||'un'}</span>` : '';
+    }
+
+    return `
+      <div class="conf-item">
+        ${item.foto ? `<img src="${item.foto}" onclick="abrirLightbox([this.src],0)" style="width:100%;max-height:180px;object-fit:cover;border-radius:10px;margin-bottom:10px;cursor:pointer" />` : ''}
+        <div class="conf-item-nome">${icon} ${item.nome}</div>
+        <div style="font-size:12px;color:var(--texto-suave);margin-bottom:6px">
+          ${item.marca ? `🏷️ ${item.marca}` : ''}
+          ${item.lote ? ` · Lote: ${item.lote}` : ''}
+          ${item.tamanho ? ` · 📐 ${item.tamanho}` : ''}
+          ${item.bitola ? ` · Bit: ${item.bitola}` : ''}
+          ${item.tonalidade ? ` · Tom: ${item.tonalidade}` : ''}
+          ${item.dimensoes ? ` · ${item.dimensoes}` : ''}
+          ${item.comprimento ? ` · ${item.comprimento}cm` : ''}
+        </div>
+        <div class="conf-item-tags">
+          ${item.pallets > 0 ? `<span class="tag">🪵 ${item.pallets} pallets</span>` : ''}
+          ${totalTag}
+        </div>
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-top:10px">
+          <span style="font-size:11px;color:var(--texto-suave)">🕐 ${item.criadoEm}</span>
+          <button onclick="excluirItemConferencia('${item.id}')" style="background:#fde8e8;color:#c0392b;border:none;border-radius:6px;padding:5px 12px;font-size:12px;font-weight:700;cursor:pointer">🗑️ Excluir</button>
+        </div>
+      </div>`;
+  }).join('');
+}
+
+function exportarConferenciaCSV() {
+  const lista = carregarConferencia();
+  if (!lista.length) { toast('⚠️ Nenhum item para exportar.', true); return; }
+  const sep = ';';
+  const header = ['Tipo','Nome','Marca','Lote','Tamanho','Bitola','Tonalidade','Pallets','Caixas Totais','Peças Avulsas','m² Total','Sacos','Kg Total','Qtd','Unidade','Obs','Data'].join(sep);
+  const linhas = lista.map(i => [
+    i.tipo||'', i.nome||'', i.marca||'', i.lote||'', i.tamanho||'', i.bitola||'', i.tonalidade||'',
+    i.pallets||'', i.totalCaixas||'', i.pecasAvulsas||'',
+    i.m2Total ? parseFloat(i.m2Total).toFixed(2).replace('.',',') : '',
+    i.totalSacos||'', i.totalKg||'', i.quantidade||'', i.unidade||'', i.obs||'', i.criadoEm||''
+  ].map(v=>`"${String(v).replace(/"/g,'""')}"`).join(sep));
+  const csv = '\uFEFF' + [header, ...linhas].join('\r\n');
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `conferencia_carga_${new Date().toLocaleDateString('pt-BR').replace(/\//g,'-')}.csv`;
+  a.click();
+  toast('📤 Exportado com sucesso!');
+}
+
+// Sync Firestore para conferência
+window.sincronizarConferenciaFirestore = async function(uid) {
+  try {
+    if (typeof setDoc === 'undefined') return;
+    const lista = carregarConferencia();
+    // Remove fotos base64 para não estourar o Firestore
+    const semFotos = lista.map(i => { const c = {...i}; delete c.foto; return c; });
+    await setDoc(doc(db, 'usuarios', uid, 'dados', 'conferencia'), { lista: semFotos, atualizadoEm: serverTimestamp() });
+  } catch(e) { console.error('Erro ao sincronizar conferência:', e); }
+};
+
 // ===================== ERROS DE CARREGAMENTO =====================
 const CHAVE_ERROS = 'estoque_erros_v1';
 let filtroErroAtual = 'todos';
@@ -3566,6 +4045,7 @@ function refMovimentacoes(uid) { return doc(db, 'usuarios', uid, 'dados', 'movim
 function refFotos(uid) { return doc(db, 'usuarios', uid, 'dados', 'fotos'); }
 function refUsuarios(uid) { return doc(db, 'usuarios', uid, 'dados', 'usuarios'); }
 function refErros(uid) { return doc(db, 'usuarios', uid, 'dados', 'erros'); }
+function refConferencia(uid) { return doc(db, 'usuarios', uid, 'dados', 'conferencia'); }
 
 // Sincroniza lista de usuários com Firestore
 window.sincronizarUsuariosFirestore = async function(uid) {
@@ -3876,7 +4356,24 @@ onAuthStateChanged(auth, async user => {
       }
     }, e => console.error('onSnapshot erros:', e));
 
-    window._unsubListeners = [unsubEstoque, unsubMovs, unsubUsuarios, unsubErros];
+    let _primeiraVezConf = true;
+    const unsubConf = onSnapshot(refConferencia(user.uid), snap => {
+      if (_primeiraVezConf) { _primeiraVezConf = false; return; }
+      if (!snap.exists()) return;
+      const confNuvem = snap.data().lista || [];
+      const confLocais = carregarConferencia();
+      const mapaC = {};
+      confLocais.forEach(i => { mapaC[i.id] = i; });
+      let mudouC = false;
+      confNuvem.forEach(i => { if (!mapaC[i.id]) { mapaC[i.id] = i; mudouC = true; } });
+      if (mudouC) {
+        localStorage.setItem(CHAVE_CONF, JSON.stringify(Object.values(mapaC).sort((a,b)=>b.id.localeCompare(a.id))));
+        renderConferencia();
+        toast('🔄 Conferência atualizada em tempo real');
+      }
+    }, e => console.error('onSnapshot conferencia:', e));
+
+    window._unsubListeners = [unsubEstoque, unsubMovs, unsubUsuarios, unsubErros, unsubConf];
 
   } else {
     window._usuarioUid = null;
