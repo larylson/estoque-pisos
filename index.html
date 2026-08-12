@@ -2688,9 +2688,18 @@ function toggleLocalizado(id) {
   const idx = dados.findIndex(x => String(x.id) === String(id));
   if (idx < 0) return;
   dados[idx].naoLocalizado = !dados[idx].naoLocalizado;
+
+  // Quando marcado como "não está no local", limpa o endereço
+  if (dados[idx].naoLocalizado) {
+    dados[idx].patio = '';
+    dados[idx].rua = '';
+    dados[idx].apartamento = '';
+    dados[idx].nivel = '';
+  }
+
   salvarDados(dados);
   const isNaoLocalizado = dados[idx].naoLocalizado;
-  toast(isNaoLocalizado ? '📍 Marcado como NÃO ESTÁ NO LOCAL' : '✅ Piso encontrado no local');
+  toast(isNaoLocalizado ? '📍 Marcado como NÃO ESTÁ NO LOCAL — endereço limpo' : '✅ Piso encontrado no local');
   fecharModalDireto();
   setTimeout(() => abrirDetalhe(id), 100);
   renderLista();
