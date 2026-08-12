@@ -3543,28 +3543,6 @@ function salvarItemConferencia() {
     const fardos = v('fardos');
     const pecasPorFardo = v('pecasPorFardo');
     const pecasAvulsas = v('pecasAvulsas');
-    const totalPecas = (fardos * pecasPorFardo) + pecasAvulsas;
-
-    // Calcula m² por peça a partir do tamanho (ex: 6x0,20 = 1,20 m²)
-    const tamanho = document.getElementById('conf_tamanho')?.value?.trim().replace(',', '.');
-    let m2PorPeca = 0;
-    if (tamanho) {
-      const match = tamanho.match(/(\d+(?:\.\d+)?)\s*[xX×]\s*(\d+(?:\.\d+)?)/);
-      if (match) m2PorPeca = parseFloat(match[1]) * parseFloat(match[2]);
-    }
-    const m2Total = totalPecas * m2PorPeca;
-
-    // Atualiza campo m² visível
-    const m2El = document.getElementById('conf_m2PorPeca');
-    if (m2El) m2El.value = m2PorPeca > 0 ? m2PorPeca.toFixed(4).replace('.', ',') : '';
-
-    el.textContent = totalPecas > 0
-      ? `📦 ${totalPecas} peças (${fardos} fardos × ${pecasPorFardo} + ${pecasAvulsas} avulsas)${m2Total > 0 ? ` · 📐 ${m2Total.toFixed(2).replace('.', ',')} m²` : ''}`
-      : '';
-  } else if (confTipoAtual === 'forro') {
-    const fardos = v('fardos');
-    const pecasPorFardo = v('pecasPorFardo');
-    const pecasAvulsas = v('pecasAvulsas');
     item.totalPecas = (fardos * pecasPorFardo) + pecasAvulsas;
     const tamanho = item.tamanho?.replace(',', '.');
     if (tamanho) {
