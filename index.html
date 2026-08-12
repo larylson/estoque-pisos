@@ -1505,6 +1505,9 @@ PASSOS PARA RODAR NO GITHUB PAGES:
         <div class="conf-tipo-btn" onclick="selecionarTipoConf('miudezas', this)">
           <span class="conf-tipo-icon">📦</span>Miudezas
         </div>
+        <div class="conf-tipo-btn" onclick="selecionarTipoConf('forro', this)">
+          <span class="conf-tipo-icon">🪵</span>Forro
+        </div>
         <div class="conf-tipo-btn" onclick="selecionarTipoConf('outro', this)">
           <span class="conf-tipo-icon">➕</span>Outro
         </div>
@@ -3347,6 +3350,14 @@ const CONF_CAMPOS = {
     { id: 'pecasAvulsas', label: 'Peças Avulsas', placeholder: '0', tipo: 'number' },
     { id: 'dimensoes', label: 'Dimensões', placeholder: 'Ex: 9x14x19', tipo: 'text' },
   ],
+  forro: [
+    { id: 'nome',          label: 'Nome do Forro *',       placeholder: 'Ex: Forro PVC Branco',  tipo: 'text' },
+    { id: 'tamanho',       label: 'Tamanho (LxC)',         placeholder: 'Ex: 6x0,20',            tipo: 'text' },
+    { id: 'milimetros',    label: 'Espessura (mm)',         placeholder: 'Ex: 8',                 tipo: 'number' },
+    { id: 'fardos',        label: '📦 Fardos',              placeholder: '0',                     tipo: 'number' },
+    { id: 'pecasPorFardo', label: 'Peças por Fardo',       placeholder: 'Ex: 12',                tipo: 'number' },
+    { id: 'pecasAvulsas',  label: '🔲 Peças Avulsas',       placeholder: '0',                     tipo: 'number' },
+  ],
   miudezas: [
     { id: 'nome', label: 'Nome do Item *', placeholder: 'Ex: Rejunte, Cola, Perfil...', tipo: 'text' },
     { id: 'marca', label: 'Marca', placeholder: 'Ex: Quartzolit', tipo: 'text' },
@@ -3368,6 +3379,7 @@ const CONF_TITULOS = {
   argamassa: '🪣 Cadastrar Argamassa',
   telha: '🏠 Cadastrar Telha',
   tijolo: '🧱 Cadastrar Tijolo',
+  forro: '🪵 Cadastrar Forro',
   miudezas: '📦 Cadastrar Miudeza',
   outro: '➕ Cadastrar Material',
 };
@@ -3383,14 +3395,26 @@ function renderFormConferencia() {
   const campos = CONF_CAMPOS[confTipoAtual] || [];
   document.getElementById('conf-form-titulo').textContent = CONF_TITULOS[confTipoAtual] || 'Cadastrar';
 
-  // Agrupa campos em pares para layout 2 colunas
   let html = '';
   let i = 0;
   while (i < campos.length) {
     const c = campos[i];
     const next = campos[i+1];
-    // Campos de texto ocupam linha inteira; numéricos em pares
-    if (c.tipo === 'text') {
+    const isForro = confTipoAtual === 'forro';
+    // Tamanho do forro: text com oninput para calcular m²
+    if (c.tipo === 'text' && c.id === 'tamanho' && isForro) {
+      html += `<div class="linha-2" style="margin-bottom:10px">
+        <div class="campo-grupo">
+          <label>${c.label}</label>
+          <input type="text" id="conf_${c.id}" placeholder="${c.placeholder}" autocomplete="off" oninput="calcularTotalConf()" />
+        </div>
+        <div class="campo-grupo">
+          <label>📐 m² por Peça <span style="font-weight:400;color:var(--texto-suave)">(auto)</span></label>
+          <input type="text" id="conf_m2PorPeca" placeholder="Calculado" readonly style="background:#f0f0ec;color:var(--texto-suave)" />
+        </div>
+      </div>`;
+      i++;
+    } else if (c.tipo === 'text') {
       html += `<div class="campo-grupo" style="margin-bottom:10px">
         <label>${c.label}</label>
         <input type="text" id="conf_${c.id}" placeholder="${c.placeholder}" autocomplete="off" />
@@ -3515,6 +3539,41 @@ function salvarItemConferencia() {
       if (a > 10) a /= 100; if (b > 10) b /= 100;
       item.m2Total = (item.totalCaixas * v('m2PorCaixa')) + (v('pecasAvulsas') * a * b);
     }
+  } else if (confTipoAtual === 'forro') {
+    const fardos = v('fardos');
+    const pecasPorFardo = v('pecasPorFardo');
+    const pecasAvulsas = v('pecasAvulsas');
+    const totalPecas = (fardos * pecasPorFardo) + pecasAvulsas;
+
+    // Calcula m² por peça a partir do tamanho (ex: 6x0,20 = 1,20 m²)
+    const tamanho = document.getElementById('conf_tamanho')?.value?.trim().replace(',', '.');
+    let m2PorPeca = 0;
+    if (tamanho) {
+      const match = tamanho.match(/(\d+(?:\.\d+)?)\s*[xX×]\s*(\d+(?:\.\d+)?)/);
+      if (match) m2PorPeca = parseFloat(match[1]) * parseFloat(match[2]);
+    }
+    const m2Total = totalPecas * m2PorPeca;
+
+    // Atualiza campo m² visível
+    const m2El = document.getElementById('conf_m2PorPeca');
+    if (m2El) m2El.value = m2PorPeca > 0 ? m2PorPeca.toFixed(4).replace('.', ',') : '';
+
+    el.textContent = totalPecas > 0
+      ? `📦 ${totalPecas} peças (${fardos} fardos × ${pecasPorFardo} + ${pecasAvulsas} avulsas)${m2Total > 0 ? ` · 📐 ${m2Total.toFixed(2).replace('.', ',')} m²` : ''}`
+      : '';
+  } else if (confTipoAtual === 'forro') {
+    const fardos = v('fardos');
+    const pecasPorFardo = v('pecasPorFardo');
+    const pecasAvulsas = v('pecasAvulsas');
+    item.totalPecas = (fardos * pecasPorFardo) + pecasAvulsas;
+    const tamanho = item.tamanho?.replace(',', '.');
+    if (tamanho) {
+      const match = tamanho.match(/(\d+(?:\.\d+)?)\s*[xX×]\s*(\d+(?:\.\d+)?)/);
+      if (match) {
+        item.m2PorPeca = parseFloat(match[1]) * parseFloat(match[2]);
+        item.m2Total = item.totalPecas * item.m2PorPeca;
+      }
+    }
   } else if (confTipoAtual === 'argamassa') {
     item.totalSacos = (v('pallets') * v('sacasPorPallet')) + v('sacasAvulsas');
     item.totalKg = item.totalSacos * v('pesoSaco');
@@ -3556,7 +3615,7 @@ function limparConferencia() {
   toast('🗑️ Lista limpa.');
 }
 
-const CONF_ICONS = { piso:'🏗️', argamassa:'🪣', telha:'🏠', tijolo:'🧱', miudezas:'📦', outro:'➕' };
+const CONF_ICONS = { piso:'🏗️', argamassa:'🪣', telha:'🏠', tijolo:'🧱', forro:'🪵', miudezas:'📦', outro:'➕' };
 
 function renderConferencia() {
   renderFormConferencia();
@@ -3589,6 +3648,12 @@ function renderConferencia() {
       totalTag = `<span class="tag laranja">📦 ${item.totalCaixas||0} cx</span>`;
       if (item.pecasAvulsas > 0) totalTag += `<span class="tag">🔲 ${item.pecasAvulsas} pç</span>`;
       if (item.m2Total > 0) totalTag += `<span class="tag verde">📐 ${parseFloat(item.m2Total).toFixed(2).replace('.',',')} m²</span>`;
+    } else if (item.tipo === 'forro') {
+      totalTag = `<span class="tag laranja">📦 ${item.totalPecas||0} peças</span>`;
+      if (item.fardos > 0) totalTag += `<span class="tag">🪵 ${item.fardos} fardos</span>`;
+      if (item.pecasAvulsas > 0) totalTag += `<span class="tag">🔲 ${item.pecasAvulsas} avulsas</span>`;
+      if (item.m2Total > 0) totalTag += `<span class="tag verde">📐 ${parseFloat(item.m2Total).toFixed(2).replace('.',',')} m²</span>`;
+      if (item.milimetros) totalTag += `<span class="tag">📏 ${item.milimetros}mm</span>`;
     } else if (item.tipo === 'argamassa') {
       totalTag = `<span class="tag laranja">🪣 ${item.totalSacos||0} sacos</span>`;
       if (item.totalKg > 0) totalTag += `<span class="tag">⚖️ ${item.totalKg} kg</span>`;
@@ -3606,10 +3671,13 @@ function renderConferencia() {
           ${item.marca ? `🏷️ ${item.marca}` : ''}
           ${item.lote ? ` · Lote: ${item.lote}` : ''}
           ${item.tamanho ? ` · 📐 ${item.tamanho}` : ''}
+          ${item.milimetros ? ` · ${item.milimetros}mm` : ''}
+          ${item.m2PorPeca ? ` · ${parseFloat(item.m2PorPeca).toFixed(4).replace('.',',')} m²/pç` : ''}
           ${item.bitola ? ` · Bit: ${item.bitola}` : ''}
           ${item.tonalidade ? ` · Tom: ${item.tonalidade}` : ''}
           ${item.dimensoes ? ` · ${item.dimensoes}` : ''}
           ${item.comprimento ? ` · ${item.comprimento}cm` : ''}
+          ${item.obs ? ` · ${item.obs}` : ''}
         </div>
         <div class="conf-item-tags">
           ${item.pallets > 0 ? `<span class="tag">🪵 ${item.pallets} pallets</span>` : ''}
@@ -3627,10 +3695,14 @@ function exportarConferenciaCSV() {
   const lista = carregarConferencia();
   if (!lista.length) { toast('⚠️ Nenhum item para exportar.', true); return; }
   const sep = ';';
-  const header = ['Tipo','Nome','Marca','Lote','Tamanho','Bitola','Tonalidade','Pallets','Caixas Totais','Peças Avulsas','m² Total','Sacos','Kg Total','Qtd','Unidade','Obs','Data'].join(sep);
+  const header = ['Tipo','Nome','Marca','Lote','Tamanho','Espessura (mm)','m²/Peça','Bitola','Tonalidade','Pallets','Fardos','Peças/Fardo','Caixas Totais','Peças Avulsas','Total Peças','m² Total','Sacos','Kg Total','Qtd','Unidade','Obs','Data'].join(sep);
   const linhas = lista.map(i => [
-    i.tipo||'', i.nome||'', i.marca||'', i.lote||'', i.tamanho||'', i.bitola||'', i.tonalidade||'',
-    i.pallets||'', i.totalCaixas||'', i.pecasAvulsas||'',
+    i.tipo||'', i.nome||'', i.marca||'', i.lote||'', i.tamanho||'',
+    i.milimetros||'',
+    i.m2PorPeca ? parseFloat(i.m2PorPeca).toFixed(4).replace('.',',') : '',
+    i.bitola||'', i.tonalidade||'',
+    i.pallets||'', i.fardos||'', i.pecasPorFardo||'',
+    i.totalCaixas||'', i.pecasAvulsas||'', i.totalPecas||'',
     i.m2Total ? parseFloat(i.m2Total).toFixed(2).replace('.',',') : '',
     i.totalSacos||'', i.totalKg||'', i.quantidade||'', i.unidade||'', i.obs||'', i.criadoEm||''
   ].map(v=>`"${String(v).replace(/"/g,'""')}"`).join(sep));
