@@ -1534,6 +1534,12 @@ PASSOS PARA RODAR NO GITHUB PAGES:
       <button onclick="salvarItemConferencia()" class="btn" style="background:var(--verde-escuro);color:#fff;width:100%;margin-top:14px">✅ Adicionar à Lista</button>
     </div>
 
+    <!-- Filtros por usuário -->
+    <div id="conf-filtros-wrap" style="margin-bottom:4px">
+      <div style="font-size:12px;font-weight:700;color:var(--texto-suave);margin-bottom:8px;text-transform:uppercase;letter-spacing:.5px">Filtrar por usuário</div>
+      <div id="conf-filtros-usuario" style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px"></div>
+    </div>
+
     <!-- Resumo e lista -->
     <div id="conf-resumo"></div>
     <div id="conf-lista"></div>
@@ -3309,6 +3315,7 @@ function registrarMovimentacao({ pisoId, pisoNome, lote, bitola, tonalidade, ori
 const CHAVE_CONF = 'estoque_conferencia_v1';
 let confTipoAtual = 'piso';
 let confFotoAtual = null;
+let filtroConfUsuario = 'todos'; // filtro ativo de usuário na conferência
 
 // Campos por tipo de material
 const CONF_CAMPOS = {
@@ -3441,6 +3448,16 @@ function renderFormConferencia() {
     }
   }
 
+  // Campo de responsável (usuário)
+  const usuarios = carregarUsuarios();
+  html += `<div class="campo-grupo" style="margin-bottom:10px">
+    <label>👤 Responsável</label>
+    <select id="conf_responsavel" style="width:100%;padding:11px 14px;font-size:14px;border-radius:8px;border:1.5px solid #d0c9bb;background:#fff">
+      <option value="">— Selecionar usuário —</option>
+      ${usuarios.map(u => `<option value="${u}">${u}</option>`).join('')}
+    </select>
+  </div>`;
+
   // Preview de total
   html += `<div id="conf-total-preview" style="font-size:13px;color:var(--verde-acento);font-weight:700;margin-top:4px"></div>`;
   document.getElementById('conf-form-campos').innerHTML = html;
@@ -3523,7 +3540,12 @@ function salvarItemConferencia() {
   const nomeField = document.getElementById('conf_nome');
   if (!nomeField?.value.trim()) { toast('⚠️ Informe o nome do item.', true); return; }
 
-  const item = { id: `${Date.now()}_${Math.random().toString(36).slice(2,6)}`, tipo: confTipoAtual, foto: confFotoAtual };
+  const item = {
+    id: `${Date.now()}_${Math.random().toString(36).slice(2,6)}`,
+    tipo: confTipoAtual,
+    foto: confFotoAtual,
+    responsavel: document.getElementById('conf_responsavel')?.value || ''
+  };
   campos.forEach(c => {
     const el = document.getElementById(`conf_${c.id}`);
     item[c.id] = el?.value.trim() || '';
@@ -3579,6 +3601,11 @@ function salvarConferencia(lista) {
   if (window._usuarioUid) sincronizarConferenciaFirestore(window._usuarioUid);
 }
 
+function setFiltroConfUsuario(usuario) {
+  filtroConfUsuario = usuario;
+  renderConferencia();
+}
+
 function excluirItemConferencia(id) {
   if (!confirm('Excluir este item da conferência?')) return;
   salvarConferencia(carregarConferencia().filter(i => i.id !== id));
@@ -3598,29 +3625,49 @@ const CONF_ICONS = { piso:'🏗️', argamassa:'🪣', telha:'🏠', tijolo:'�
 function renderConferencia() {
   renderFormConferencia();
   const lista = carregarConferencia();
+
+  // Renderiza filtros por usuário
+  const filtrosEl = document.getElementById('conf-filtros-usuario');
+  if (filtrosEl) {
+    const usuarios = [...new Set(lista.map(i => i.responsavel).filter(Boolean))];
+    if (usuarios.length > 0) {
+      filtrosEl.innerHTML = [
+        `<button onclick="setFiltroConfUsuario('todos')" style="padding:6px 14px;border-radius:20px;border:1.5px solid ${filtroConfUsuario==='todos'?'#1a2e1a':'#d0c9bb'};background:${filtroConfUsuario==='todos'?'#1a2e1a':'#fff'};color:${filtroConfUsuario==='todos'?'#fff':'#555'};font-size:12px;font-weight:700;cursor:pointer">Todos</button>`,
+        ...usuarios.map(u => `<button onclick="setFiltroConfUsuario('${u}')" style="padding:6px 14px;border-radius:20px;border:1.5px solid ${filtroConfUsuario===u?'#1a2e1a':'#d0c9bb'};background:${filtroConfUsuario===u?'#1a2e1a':'#fff'};color:${filtroConfUsuario===u?'#fff':'#555'};font-size:12px;font-weight:700;cursor:pointer">👤 ${u}</button>`)
+      ].join('');
+      document.getElementById('conf-filtros-wrap').style.display = 'block';
+    } else {
+      document.getElementById('conf-filtros-wrap').style.display = 'none';
+    }
+  }
+
+  // Aplica filtro por usuário
+  const listaFiltrada = filtroConfUsuario === 'todos'
+    ? lista
+    : lista.filter(i => i.responsavel === filtroConfUsuario);
+
   const resumoEl = document.getElementById('conf-resumo');
   const listaEl = document.getElementById('conf-lista');
 
-  // Resumo por tipo
+  // Resumo por tipo (da lista filtrada)
   const contagem = {};
-  lista.forEach(i => { contagem[i.tipo] = (contagem[i.tipo] || 0) + 1; });
+  listaFiltrada.forEach(i => { contagem[i.tipo] = (contagem[i.tipo] || 0) + 1; });
   if (resumoEl) {
-    resumoEl.innerHTML = lista.length === 0 ? '' : `
+    resumoEl.innerHTML = listaFiltrada.length === 0 ? '' : `
       <div class="conf-resumo-box">
-        📋 ${lista.length} item${lista.length>1?'s':''} na conferência:
+        📋 ${listaFiltrada.length} item${listaFiltrada.length>1?'s':''} ${filtroConfUsuario !== 'todos' ? `de <b>${filtroConfUsuario}</b>` : 'na conferência'}:
         ${Object.entries(contagem).map(([t,n]) => `${CONF_ICONS[t]||'📦'} ${n} ${t}`).join(' · ')}
       </div>`;
   }
 
   if (!listaEl) return;
-  if (lista.length === 0) {
-    listaEl.innerHTML = `<div class="conf-lista-vazia"><div style="font-size:48px">📋</div><p>Nenhum item conferido ainda.</p></div>`;
+  if (listaFiltrada.length === 0) {
+    listaEl.innerHTML = `<div class="conf-lista-vazia"><div style="font-size:48px">📋</div><p>${filtroConfUsuario !== 'todos' ? `Nenhuma conferência de <b>${filtroConfUsuario}</b>.` : 'Nenhum item conferido ainda.'}</p></div>`;
     return;
   }
 
-  listaEl.innerHTML = lista.map(item => {
+  listaEl.innerHTML = listaFiltrada.map(item => {
     const icon = CONF_ICONS[item.tipo] || '📦';
-    // Monta tags de totais
     let totalTag = '';
     if (item.tipo === 'piso') {
       totalTag = `<span class="tag laranja">📦 ${item.totalCaixas||0} cx</span>`;
@@ -3660,6 +3707,7 @@ function renderConferencia() {
         <div class="conf-item-tags">
           ${item.pallets > 0 ? `<span class="tag">🪵 ${item.pallets} pallets</span>` : ''}
           ${totalTag}
+          ${item.responsavel ? `<span class="tag azul">👤 ${item.responsavel}</span>` : ''}
         </div>
         <div style="display:flex;justify-content:space-between;align-items:center;margin-top:10px">
           <span style="font-size:11px;color:var(--texto-suave)">🕐 ${item.criadoEm}</span>
@@ -3673,9 +3721,10 @@ function exportarConferenciaCSV() {
   const lista = carregarConferencia();
   if (!lista.length) { toast('⚠️ Nenhum item para exportar.', true); return; }
   const sep = ';';
-  const header = ['Tipo','Nome','Marca','Lote','Tamanho','Espessura (mm)','m²/Peça','Bitola','Tonalidade','Pallets','Fardos','Peças/Fardo','Caixas Totais','Peças Avulsas','Total Peças','m² Total','Sacos','Kg Total','Qtd','Unidade','Obs','Data'].join(sep);
-  const linhas = lista.map(i => [
-    i.tipo||'', i.nome||'', i.marca||'', i.lote||'', i.tamanho||'',
+  const listaExportar = filtroConfUsuario === 'todos' ? lista : lista.filter(i => i.responsavel === filtroConfUsuario);
+  const header = ['Responsável','Tipo','Nome','Marca','Lote','Tamanho','Espessura (mm)','m²/Peça','Bitola','Tonalidade','Pallets','Fardos','Peças/Fardo','Caixas Totais','Peças Avulsas','Total Peças','m² Total','Sacos','Kg Total','Qtd','Unidade','Obs','Data'].join(sep);
+  const linhas = listaExportar.map(i => [
+    i.responsavel||'', i.tipo||'', i.nome||'', i.marca||'', i.lote||'', i.tamanho||'',
     i.milimetros||'',
     i.m2PorPeca ? parseFloat(i.m2PorPeca).toFixed(4).replace('.',',') : '',
     i.bitola||'', i.tonalidade||'',
@@ -3689,7 +3738,8 @@ function exportarConferenciaCSV() {
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url;
-  a.download = `conferencia_carga_${new Date().toLocaleDateString('pt-BR').replace(/\//g,'-')}.csv`;
+  const sufixo = filtroConfUsuario !== 'todos' ? `_${filtroConfUsuario}` : '';
+  a.download = `conferencia_carga${sufixo}_${new Date().toLocaleDateString('pt-BR').replace(/\//g,'-')}.csv`;
   a.click();
   toast('📤 Exportado com sucesso!');
 }
