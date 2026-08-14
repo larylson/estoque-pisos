@@ -888,6 +888,72 @@ PASSOS PARA RODAR NO GITHUB PAGES:
       box-shadow: 0 1px 6px rgba(0,0,0,0.08);
       border-left: 4px solid var(--verde-acento);
     }
+    .conf-item.nao-sistema {
+      border-left-color: #8e44ad;
+      background: #fdf8ff;
+    }
+    .conf-status-btn {
+      font-size: 12px;
+      font-weight: 700;
+      padding: 4px 10px;
+      border-radius: 20px;
+      cursor: pointer;
+      border: none;
+    }
+    .conf-status-btn.nao-adicionado {
+      background: #f5eef8;
+      color: #8e44ad;
+    }
+    .conf-status-btn.adicionado {
+      background: #d5f5dd;
+      color: #1a6b32;
+    }
+    .conf-acoes { display: flex; gap: 8px; margin-top: 10px; align-items: center; }
+    .conf-btn-editar {
+      background: #e8f5e9;
+      color: #1a5e20;
+      border: 1.5px solid #5a9e5a;
+      border-radius: 6px;
+      padding: 5px 12px;
+      font-size: 12px;
+      font-weight: 700;
+      cursor: pointer;
+    }
+    .conf-btn-excluir {
+      background: #fde8e8;
+      color: #c0392b;
+      border: none;
+      border-radius: 6px;
+      padding: 5px 12px;
+      font-size: 12px;
+      font-weight: 700;
+      cursor: pointer;
+    }
+    /* Modal de edição de conferência */
+    #conf-edit-modal {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.6);
+      z-index: 9000;
+      align-items: flex-end;
+      justify-content: center;
+    }
+    #conf-edit-modal.aberto { display: flex; }
+    #conf-edit-inner {
+      background: #fff;
+      border-radius: 20px 20px 0 0;
+      width: 100%;
+      max-width: 560px;
+      max-height: 90dvh;
+      display: flex;
+      flex-direction: column;
+    }
+    #conf-edit-body {
+      overflow-y: auto;
+      padding: 16px 20px 32px;
+      flex: 1;
+    }
     .conf-item-nome {
       font-size: 14px;
       font-weight: 700;
@@ -1599,6 +1665,14 @@ PASSOS PARA RODAR NO GITHUB PAGES:
 
     <!-- Lista de erros -->
     <div id="lista-erros"></div>
+  </div>
+</div>
+
+<!-- ===================== MODAL EDITAR CONFERÊNCIA ===================== -->
+<div id="conf-edit-modal" onclick="if(event.target===this)fecharEditConf()">
+  <div id="conf-edit-inner">
+    <div style="width:40px;height:4px;background:#ddd;border-radius:2px;margin:16px auto 0;flex-shrink:0"></div>
+    <div id="conf-edit-body"></div>
   </div>
 </div>
 
@@ -3606,6 +3680,157 @@ function setFiltroConfUsuario(usuario) {
   renderConferencia();
 }
 
+function toggleStatusConf(id) {
+  const lista = carregarConferencia();
+  const idx = lista.findIndex(i => i.id === id);
+  if (idx < 0) return;
+  lista[idx].noSistema = !lista[idx].noSistema;
+  salvarConferencia(lista);
+  renderConferencia();
+  toast(lista[idx].noSistema ? '✅ Marcado como No Sistema' : '🟣 Marcado como Não no Sistema');
+}
+
+function abrirEditConf(id) {
+  const lista = carregarConferencia();
+  const item = lista.find(i => i.id === id);
+  if (!item) return;
+
+  const campos = CONF_CAMPOS[item.tipo] || [];
+  const usuarios = carregarUsuarios();
+
+  let html = `<div style="font-weight:700;font-size:16px;color:var(--verde-escuro);margin-bottom:16px">✏️ Editar ${CONF_TITULOS[item.tipo] || 'Item'}</div>`;
+
+  campos.forEach(c => {
+    const val = item[c.id] || '';
+    if (c.id === 'tamanho' && item.tipo === 'forro') {
+      html += `<div class="linha-2" style="margin-bottom:10px">
+        <div class="campo-grupo">
+          <label>${c.label}</label>
+          <input type="text" id="cedit_${c.id}" value="${val}" autocomplete="off" oninput="calcularEditConf()" />
+        </div>
+        <div class="campo-grupo">
+          <label>📐 m²/Peça <span style="font-weight:400;color:var(--texto-suave)">(auto)</span></label>
+          <input type="text" id="cedit_m2PorPeca" value="${item.m2PorPeca ? parseFloat(item.m2PorPeca).toFixed(4).replace('.',',') : ''}" readonly style="background:#f0f0ec;color:var(--texto-suave)" />
+        </div>
+      </div>`;
+    } else if (c.tipo === 'text') {
+      html += `<div class="campo-grupo" style="margin-bottom:10px">
+        <label>${c.label}</label>
+        <input type="text" id="cedit_${c.id}" value="${val}" autocomplete="off" />
+      </div>`;
+    } else {
+      html += `<div class="campo-grupo" style="margin-bottom:10px">
+        <label>${c.label}</label>
+        <input type="number" id="cedit_${c.id}" value="${val}" min="0" inputmode="numeric" oninput="calcularEditConf()" />
+      </div>`;
+    }
+  });
+
+  html += `<div class="campo-grupo" style="margin-bottom:10px">
+    <label>👤 Responsável</label>
+    <select id="cedit_responsavel" style="width:100%;padding:11px 14px;font-size:14px;border-radius:8px;border:1.5px solid #d0c9bb;background:#fff">
+      <option value="">— Selecionar —</option>
+      ${usuarios.map(u => `<option value="${u}" ${item.responsavel===u?'selected':''}>${u}</option>`).join('')}
+    </select>
+  </div>`;
+
+  html += `<div id="cedit-total-preview" style="font-size:13px;color:var(--verde-acento);font-weight:700;margin-bottom:14px"></div>`;
+
+  html += `<div style="display:flex;gap:8px">
+    <button onclick="fecharEditConf()" style="flex:1;padding:12px;border-radius:10px;border:1.5px solid #d0c9bb;background:#fff;font-size:14px;font-weight:600;cursor:pointer">Cancelar</button>
+    <button onclick="salvarEditConf('${id}')" style="flex:2;padding:12px;border-radius:10px;border:none;background:var(--verde-escuro);color:#fff;font-size:14px;font-weight:700;cursor:pointer">💾 Salvar</button>
+  </div>`;
+
+  document.getElementById('conf-edit-body').innerHTML = html;
+  document.getElementById('conf-edit-modal').classList.add('aberto');
+}
+
+function calcularEditConf() {
+  // Reutiliza a lógica de cálculo usando os campos de edição
+  const tipo = document.getElementById('conf-edit-body')?.dataset.tipo;
+  const v = id => parseFloat(document.getElementById(`cedit_${id}`)?.value) || 0;
+  const el = document.getElementById('cedit-total-preview');
+  if (!el) return;
+
+  // Detecta tipo pela presença de campos
+  const hasFardos = !!document.getElementById('cedit_fardos');
+  const hasCaixasPorPallet = !!document.getElementById('cedit_caixasPorPallet');
+  const hasSacos = !!document.getElementById('cedit_sacasPorPallet');
+
+  if (hasFardos) {
+    // Forro
+    const total = (v('fardos') * v('pecasPorFardo')) + v('pecasAvulsas');
+    const tamanho = document.getElementById('cedit_tamanho')?.value?.trim().replace(',', '.');
+    let m2PorPeca = 0;
+    if (tamanho) {
+      const match = tamanho.match(/(\d+(?:\.\d+)?)\s*[xX×]\s*(\d+(?:\.\d+)?)/);
+      if (match) m2PorPeca = parseFloat(match[1]) * parseFloat(match[2]);
+    }
+    const m2El = document.getElementById('cedit_m2PorPeca');
+    if (m2El) m2El.value = m2PorPeca > 0 ? m2PorPeca.toFixed(4).replace('.', ',') : '';
+    el.textContent = total > 0 ? `📦 ${total} peças${m2PorPeca > 0 ? ` · 📐 ${(total * m2PorPeca).toFixed(2).replace('.',',')} m²` : ''}` : '';
+  } else if (hasCaixasPorPallet) {
+    // Piso
+    const totalCx = (v('pallets') * v('caixasPorPallet')) + v('caixasAvulsas');
+    el.textContent = totalCx > 0 ? `📦 ${totalCx} caixas` : '';
+  } else if (hasSacos) {
+    // Argamassa
+    const total = (v('pallets') * v('sacasPorPallet')) + v('sacasAvulsas');
+    el.textContent = total > 0 ? `🪣 ${total} sacos` : '';
+  } else {
+    const total = (v('pallets') * (v('pecasPorPallet') || 0)) + v('pecasAvulsas');
+    if (total > 0) el.textContent = `📦 ${total} peças`;
+    else el.textContent = '';
+  }
+}
+
+function fecharEditConf() {
+  document.getElementById('conf-edit-modal').classList.remove('aberto');
+}
+
+function salvarEditConf(id) {
+  const lista = carregarConferencia();
+  const idx = lista.findIndex(i => i.id === id);
+  if (idx < 0) return;
+
+  const item = lista[idx];
+  const campos = CONF_CAMPOS[item.tipo] || [];
+
+  campos.forEach(c => {
+    const el = document.getElementById(`cedit_${c.id}`);
+    if (el) item[c.id] = c.tipo === 'number' ? (parseFloat(el.value) || 0) : el.value.trim();
+  });
+
+  item.responsavel = document.getElementById('cedit_responsavel')?.value || '';
+
+  // Recalcula totais
+  const v = k => parseFloat(item[k]) || 0;
+  if (item.tipo === 'forro') {
+    item.totalPecas = (v('fardos') * v('pecasPorFardo')) + v('pecasAvulsas');
+    const t = item.tamanho?.replace(',', '.');
+    if (t) {
+      const match = t.match(/(\d+(?:\.\d+)?)\s*[xX×]\s*(\d+(?:\.\d+)?)/);
+      if (match) { item.m2PorPeca = parseFloat(match[1]) * parseFloat(match[2]); item.m2Total = item.totalPecas * item.m2PorPeca; }
+    }
+  } else if (item.tipo === 'piso') {
+    item.totalCaixas = (v('pallets') * v('caixasPorPallet')) + v('caixasAvulsas');
+    const match = item.tamanho?.replace(',','.').match(/(\d+(?:\.\d+)?)[xX×](\d+(?:\.\d+)?)/);
+    if (match) { let a=parseFloat(match[1]),b=parseFloat(match[2]); if(a>10)a/=100; if(b>10)b/=100; item.m2Total=(item.totalCaixas*v('m2PorCaixa'))+(v('pecasAvulsas')*a*b); }
+  } else if (item.tipo === 'argamassa') {
+    item.totalSacos = (v('pallets') * v('sacasPorPallet')) + v('sacasAvulsas');
+    item.totalKg = item.totalSacos * v('pesoSaco');
+  } else if (item.tipo === 'telha' || item.tipo === 'tijolo') {
+    item.totalPecas = (v('pallets') * v('pecasPorPallet')) + v('pecasAvulsas');
+  }
+
+  item.editadoEm = new Date().toLocaleString('pt-BR');
+  lista[idx] = item;
+  salvarConferencia(lista);
+  fecharEditConf();
+  renderConferencia();
+  toast('✅ Item atualizado!');
+}
+
 function excluirItemConferencia(id) {
   if (!confirm('Excluir este item da conferência?')) return;
   salvarConferencia(carregarConferencia().filter(i => i.id !== id));
@@ -3689,9 +3914,14 @@ function renderConferencia() {
     }
 
     return `
-      <div class="conf-item">
+      <div class="conf-item${item.noSistema ? '' : ' nao-sistema'}">
         ${item.foto ? `<img src="${item.foto}" onclick="abrirLightbox([this.src],0)" style="width:100%;max-height:180px;object-fit:cover;border-radius:10px;margin-bottom:10px;cursor:pointer" />` : ''}
-        <div class="conf-item-nome">${icon} ${item.nome}</div>
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px">
+          <div class="conf-item-nome">${icon} ${item.nome}</div>
+          <button class="conf-status-btn ${item.noSistema ? 'adicionado' : 'nao-adicionado'}" onclick="toggleStatusConf('${item.id}')">
+            ${item.noSistema ? '✅ No Sistema' : '🟣 Não no Sistema'}
+          </button>
+        </div>
         <div style="font-size:12px;color:var(--texto-suave);margin-bottom:6px">
           ${item.marca ? `🏷️ ${item.marca}` : ''}
           ${item.lote ? ` · Lote: ${item.lote}` : ''}
@@ -3709,9 +3939,10 @@ function renderConferencia() {
           ${totalTag}
           ${item.responsavel ? `<span class="tag azul">👤 ${item.responsavel}</span>` : ''}
         </div>
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-top:10px">
-          <span style="font-size:11px;color:var(--texto-suave)">🕐 ${item.criadoEm}</span>
-          <button onclick="excluirItemConferencia('${item.id}')" style="background:#fde8e8;color:#c0392b;border:none;border-radius:6px;padding:5px 12px;font-size:12px;font-weight:700;cursor:pointer">🗑️ Excluir</button>
+        <div class="conf-acoes">
+          <span style="font-size:11px;color:var(--texto-suave);flex:1">🕐 ${item.criadoEm}</span>
+          <button class="conf-btn-editar" onclick="abrirEditConf('${item.id}')">✏️ Editar</button>
+          <button class="conf-btn-excluir" onclick="excluirItemConferencia('${item.id}')">🗑️</button>
         </div>
       </div>`;
   }).join('');
