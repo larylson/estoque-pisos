@@ -3975,15 +3975,10 @@ function exportarConferenciaCSV() {
   toast('📤 Exportado com sucesso!');
 }
 
-// Sync Firestore para conferência
+// Sync Firestore para conferência - definido no módulo Firebase abaixo
 window.sincronizarConferenciaFirestore = async function(uid) {
-  try {
-    if (typeof setDoc === 'undefined') return;
-    const lista = carregarConferencia();
-    // Remove fotos base64 para não estourar o Firestore
-    const semFotos = lista.map(i => { const c = {...i}; delete c.foto; return c; });
-    await setDoc(doc(db, 'usuarios', uid, 'dados', 'conferencia'), { lista: semFotos, atualizadoEm: serverTimestamp() });
-  } catch(e) { console.error('Erro ao sincronizar conferência:', e); }
+  // Aguarda o módulo Firebase inicializar
+  if (window._fbSyncConf) window._fbSyncConf(uid);
 };
 
 // ===================== ERROS DE CARREGAMENTO =====================
@@ -4387,7 +4382,20 @@ function refUsuarios(uid) { return doc(db, 'usuarios', uid, 'dados', 'usuarios')
 function refErros(uid) { return doc(db, 'usuarios', uid, 'dados', 'erros'); }
 function refConferencia(uid) { return doc(db, 'usuarios', uid, 'dados', 'conferencia'); }
 
-// Sincroniza lista de usuários com Firestore
+// Expõe função real de sync de conferência para o escopo global
+window._fbSyncConf = async function(uid) {
+  try {
+    const lista = carregarConferencia();
+    const semFotos = lista.map(i => { const c = {...i}; delete c.foto; return c; });
+    await setDoc(refConferencia(uid), { lista: semFotos, atualizadoEm: serverTimestamp() });
+  } catch(e) { console.error('Erro ao sincronizar conferência:', e); }
+};
+
+// Sobrescreve com versão real usando setDoc/doc do módulo
+window.sincronizarConferenciaFirestore = async function(uid) {
+  await window._fbSyncConf(uid);
+};
+
 window.sincronizarUsuariosFirestore = async function(uid) {
   try {
     const lista = carregarUsuarios();
@@ -4395,50 +4403,11 @@ window.sincronizarUsuariosFirestore = async function(uid) {
   } catch(e) { console.error('Erro ao sincronizar usuários:', e); }
 };
 
-// Sincroniza erros de carregamento com Firestore
 window.sincronizarErrosFirestore = async function(uid) {
   try {
     const lista = carregarErros();
     await setDoc(refErros(uid), { lista, atualizadoEm: serverTimestamp() });
   } catch(e) { console.error('Erro ao sincronizar erros:', e); }
-};
-
-// Sincroniza URLs das fotos com o Firestore
-window.sincronizarFotosFirestore = async function(uid) {
-  try {
-    const mapaFotos = await carregarTodasFotosDB();
-    // Filtra só URLs (não base64) para não estourar o Firestore
-    const mapaUrls = {};
-    Object.entries(mapaFotos).forEach(([pisoId, fotos]) => {
-      const urls = (fotos || []).filter(f => f && f.startsWith('http'));
-      if (urls.length) mapaUrls[pisoId] = urls;
-    });
-    await setDoc(refFotos(uid), { fotos: mapaUrls, atualizadoEm: serverTimestamp() });
-  } catch(e) { console.error('Erro ao sincronizar fotos:', e); }
-};
-
-// Salva estoque no Firestore
-window.sincronizarEstoqueFirestore = async function(uid) {
-  try {
-    const dados = carregar();
-    // Remove fotos base64 para não estourar o Firestore (1MB por doc)
-    const semFotos = dados.map(d => { const c = {...d}; delete c.fotos; delete c.foto; return c; });
-    await setDoc(refEstoque(uid), {
-      pisos: semFotos,
-      atualizadoEm: serverTimestamp()
-    });
-  } catch(e) { console.error('Erro ao sincronizar estoque:', e); }
-};
-
-// Salva movimentações no Firestore
-window.sincronizarMovimentacoesFirestore = async function(uid) {
-  try {
-    const movs = carregarMovimentacoes();
-    await setDoc(refMovimentacoes(uid), {
-      movimentacoes: movs,
-      atualizadoEm: serverTimestamp()
-    });
-  } catch(e) { console.error('Erro ao sincronizar movimentações:', e); }
 };
 
 // Carrega dados do Firestore (ao logar em novo aparelho)
@@ -4527,10 +4496,11 @@ async function carregarDoFirestore(uid) {
     // Carrega usuários do Firestore
     if (snapUsuarios.exists()) {
       const listaRemota = snapUsuarios.data().lista || [];
+      // Usa a lista da nuvem como fonte de verdade — NÃO mescla com local
+      // para evitar que usuários deletados voltem
       const listaLocal = carregarUsuarios();
-      const merged = [...new Set([...listaLocal, ...listaRemota])];
-      if (merged.length !== listaLocal.length) {
-        localStorage.setItem(CHAVE_USUARIOS, JSON.stringify(merged));
+      if (JSON.stringify(listaRemota) !== JSON.stringify(listaLocal)) {
+        localStorage.setItem(CHAVE_USUARIOS, JSON.stringify(listaRemota));
         atualizarSelectResponsavel();
         foiAtualizado = true;
       }
@@ -4685,11 +4655,12 @@ onAuthStateChanged(auth, async user => {
       if (!snap.exists()) return;
       const listaRemota = snap.data().lista || [];
       const listaLocal = carregarUsuarios();
-      const merged = [...new Set([...listaLocal, ...listaRemota])];
-      if (merged.join() !== listaLocal.join()) {
-        localStorage.setItem(CHAVE_USUARIOS, JSON.stringify(merged));
+      // Substitui completamente — nuvem é fonte de verdade
+      if (JSON.stringify(listaRemota) !== JSON.stringify(listaLocal)) {
+        localStorage.setItem(CHAVE_USUARIOS, JSON.stringify(listaRemota));
         atualizarSelectResponsavel();
-        toast('🔄 Usuários atualizados');
+        renderConfig();
+        toast('🔄 Usuários sincronizados');
       }
     }, e => console.error('onSnapshot usuarios:', e));
 
