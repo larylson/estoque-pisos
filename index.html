@@ -1532,8 +1532,8 @@ PASSOS PARA RODAR NO GITHUB PAGES:
 
     <div class="card">
       <div class="card-titulo">👥 Usuários do Sistema</div>
-      <p style="font-size:13px;color:var(--texto-suave);margin-bottom:14px">Adicione os nomes das pessoas que trabalham com o estoque. Ao editar ou adicionar um piso, você poderá indicar quem fez a alteração.</p>
-      <div style="display:flex;gap:8px;margin-bottom:12px">
+      <p style="font-size:13px;color:var(--texto-suave);margin-bottom:14px">Gerencie os usuários do sistema. ⭐ = Mestre (Lorran, Lucas, João Paulo).</p>
+      <div id="config-add-usuario-wrap" style="display:flex;gap:8px;margin-bottom:12px">
         <input type="text" id="input-novo-usuario" placeholder="Nome do usuário ex: Lorran" style="flex:1;padding:10px 14px;font-size:14px;border-radius:8px;border:1.5px solid #d0c9bb" maxlength="30" onkeydown="if(event.key==='Enter')adicionarUsuario()" />
         <button onclick="adicionarUsuario()" style="background:var(--verde-escuro);color:#fff;border:none;border-radius:8px;padding:10px 16px;font-weight:700;font-size:14px;cursor:pointer">+ Add</button>
       </div>
@@ -2899,6 +2899,9 @@ function normalizarIds() {
 // Tamanho e no m²/Caixa de cada um — sem precisar abrir e salvar cada item.
 // Apaga TODOS os pisos cadastrados no estoque (ação irreversível)
 function apagarTodosOsPisos() {
+  if (!usuarioAtivoIsMestre()) {
+    toast('🔒 Apenas usuários mestres podem apagar todos os pisos.', true); return;
+  }
   const dados = carregar();
   if (dados.length === 0) { toast('ℹ️ Não há pisos cadastrados.', true); return; }
 
@@ -3528,7 +3531,7 @@ function renderFormConferencia() {
     <label>👤 Responsável</label>
     <select id="conf_responsavel" style="width:100%;padding:11px 14px;font-size:14px;border-radius:8px;border:1.5px solid #d0c9bb;background:#fff">
       <option value="">— Selecionar usuário —</option>
-      ${usuarios.map(u => `<option value="${u}">${u}</option>`).join('')}
+      ${usuarios.map(u => `<option value="${u.nome}">${u.nome}</option>`).join('')}
     </select>
   </div>`;
 
@@ -3730,7 +3733,7 @@ function abrirEditConf(id) {
     <label>👤 Responsável</label>
     <select id="cedit_responsavel" style="width:100%;padding:11px 14px;font-size:14px;border-radius:8px;border:1.5px solid #d0c9bb;background:#fff">
       <option value="">— Selecionar —</option>
-      ${usuarios.map(u => `<option value="${u}" ${item.responsavel===u?'selected':''}>${u}</option>`).join('')}
+      ${usuarios.map(u => `<option value="${u.nome}" ${item.responsavel===u.nome?'selected':''}>${u.nome}</option>`).join('')}
     </select>
   </div>`;
 
@@ -3832,10 +3835,40 @@ function salvarEditConf(id) {
 }
 
 function excluirItemConferencia(id) {
-  if (!confirm('Excluir este item da conferência?')) return;
-  salvarConferencia(carregarConferencia().filter(i => i.id !== id));
-  renderConferencia();
-  toast('🗑️ Item removido.');
+  const lista = carregarConferencia();
+  const item = lista.find(i => i.id === id);
+  if (!item) return;
+
+  const responsavel = item.responsavel || '';
+
+  // Mestres podem apagar qualquer item
+  if (usuarioAtivoIsMestre()) {
+    if (!confirm('Excluir este item da conferência?')) return;
+    salvarConferencia(lista.filter(i => i.id !== id));
+    renderConferencia();
+    toast('🗑️ Item removido.');
+    return;
+  }
+
+  // Usuário ativo é o responsável — pede confirmação com senha
+  if (window._usuarioAtivo && window._usuarioAtivo === responsavel) {
+    mostrarModalSenha('excluir_conf', id, () => {
+      salvarConferencia(carregarConferencia().filter(i => i.id !== id));
+      renderConferencia();
+      toast('🗑️ Item removido.');
+    });
+    return;
+  }
+
+  // Sem usuário ativo — pede login
+  mostrarModalSenha('excluir_conf', id, (usuario) => {
+    if (!isMestre(usuario) && usuario !== responsavel) {
+      toast('🔒 Apenas o responsável ou um mestre pode excluir este item.', true); return;
+    }
+    salvarConferencia(carregarConferencia().filter(i => i.id !== id));
+    renderConferencia();
+    toast('🗑️ Item removido.');
+  });
 }
 
 function limparConferencia() {
@@ -4061,7 +4094,7 @@ function renderErros() {
     const usuarios = carregarUsuarios();
     const atual = sel.value;
     sel.innerHTML = `<option value="">— Selecionar —</option>` +
-      usuarios.map(u => `<option value="${u}" ${atual===u?'selected':''}>${u}</option>`).join('');
+      usuarios.map(u => `<option value="${u.nome}" ${atual===u.nome?'selected':''}>${u.nome}</option>`).join('');
   }
 
   // Data padrão hoje
@@ -4128,10 +4161,48 @@ function renderErros() {
 
 // ===================== CONFIGURAÇÕES / USUÁRIOS =====================
 const CHAVE_USUARIOS = 'estoque_usuarios_v1';
+const CHAVE_SENHAS = 'estoque_senhas_v1';
+const MESTRES = ['lorran', 'lucas', 'joão paulo', 'joao paulo'];
+window._usuarioAtivo = null;
 
 function carregarUsuarios() {
-  try { return JSON.parse(localStorage.getItem(CHAVE_USUARIOS)) || []; }
-  catch(e) { return []; }
+  try {
+    const dados = JSON.parse(localStorage.getItem(CHAVE_USUARIOS)) || [];
+    return dados.map(u => typeof u === 'string' ? { nome: u } : u);
+  } catch(e) { return []; }
+}
+
+function carregarSenhas() {
+  try { return JSON.parse(localStorage.getItem(CHAVE_SENHAS)) || {}; }
+  catch(e) { return {}; }
+}
+
+function salvarSenhas(senhas) {
+  localStorage.setItem(CHAVE_SENHAS, JSON.stringify(senhas));
+}
+
+function hashSenha(senha) {
+  let h = 0;
+  for (let i = 0; i < senha.length; i++) { h = ((h << 5) - h) + senha.charCodeAt(i); h |= 0; }
+  return String(h);
+}
+
+function isMestre(nome) {
+  return MESTRES.includes((nome || '').toLowerCase().trim());
+}
+
+function usuarioAtivoIsMestre() {
+  return isMestre(window._usuarioAtivo);
+}
+
+function temSenha(nome) {
+  return !!(carregarSenhas()[(nome || '').toLowerCase()]);
+}
+
+function verificarSenha(nome, senha) {
+  const senhas = carregarSenhas();
+  const hash = senhas[(nome || '').toLowerCase()];
+  return hash && hash === hashSenha(senha);
 }
 
 function salvarUsuarios(lista) {
@@ -4141,14 +4212,15 @@ function salvarUsuarios(lista) {
 }
 
 function adicionarUsuario() {
+  if (!usuarioAtivoIsMestre()) { toast('🔒 Apenas mestres podem adicionar usuários.', true); return; }
   const input = document.getElementById('input-novo-usuario');
   const nome = (input?.value || '').trim();
   if (!nome) { toast('⚠️ Digite um nome.', true); return; }
   const lista = carregarUsuarios();
-  if (lista.some(u => u.toLowerCase() === nome.toLowerCase())) {
+  if (lista.some(u => u.nome.toLowerCase() === nome.toLowerCase())) {
     toast('⚠️ Usuário já existe.', true); return;
   }
-  lista.push(nome);
+  lista.push({ nome });
   salvarUsuarios(lista);
   if (input) input.value = '';
   renderConfig();
@@ -4156,11 +4228,73 @@ function adicionarUsuario() {
 }
 
 function removerUsuario(nome) {
+  if (!usuarioAtivoIsMestre()) { toast('🔒 Apenas mestres podem remover usuários.', true); return; }
   if (!confirm(`Remover "${nome}" da lista?`)) return;
-  const lista = carregarUsuarios().filter(u => u !== nome);
+  const lista = carregarUsuarios().filter(u => u.nome !== nome);
   salvarUsuarios(lista);
+  const senhas = carregarSenhas(); delete senhas[nome.toLowerCase()]; salvarSenhas(senhas);
   renderConfig();
   toast(`🗑️ "${nome}" removido.`);
+}
+
+function definirSenhaUsuario(nome) {
+  // Só o próprio usuário ou um mestre pode definir senha
+  if (window._usuarioAtivo !== nome && !usuarioAtivoIsMestre()) {
+    toast('🔒 Você só pode definir sua própria senha.', true); return;
+  }
+  const s1 = prompt(`Crie uma senha para "${nome}":\n(mínimo 4 caracteres)`);
+  if (s1 === null) return;
+  if (s1.length < 4) { toast('⚠️ Senha deve ter pelo menos 4 caracteres.', true); return; }
+  const s2 = prompt(`Confirme a senha para "${nome}":`);
+  if (s2 !== s1) { toast('⚠️ Senhas não coincidem.', true); return; }
+  const senhas = carregarSenhas();
+  senhas[nome.toLowerCase()] = hashSenha(s1);
+  salvarSenhas(senhas);
+  toast(`🔐 Senha definida para "${nome}"!`);
+  renderConfig();
+}
+
+function mostrarModalSenha(acao, contexto, callbackSucesso) {
+  const usuarios = carregarUsuarios();
+  const overlay = document.createElement('div');
+  overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:99997;display:flex;align-items:flex-end;justify-content:center';
+  overlay.innerHTML = `
+    <div style="background:#fff;border-radius:20px 20px 0 0;width:100%;max-width:480px;padding:24px 20px 40px">
+      <div style="width:40px;height:4px;background:#ddd;border-radius:2px;margin:0 auto 20px"></div>
+      <div style="font-size:17px;font-weight:700;color:#1a2e1a;margin-bottom:16px">🔐 Identificação</div>
+      <div class="campo-grupo" style="margin-bottom:12px">
+        <label>👤 Usuário</label>
+        <select id="sm-usuario" style="width:100%;padding:11px 14px;font-size:14px;border-radius:8px;border:1.5px solid #d0c9bb;background:#fff">
+          <option value="">— Selecionar —</option>
+          ${usuarios.map(u=>`<option value="${u.nome}">${u.nome}${isMestre(u.nome)?' ⭐':''}</option>`).join('')}
+        </select>
+      </div>
+      <div class="campo-grupo" style="margin-bottom:20px">
+        <label>🔑 Senha</label>
+        <input type="password" id="sm-senha" placeholder="Digite sua senha" style="width:100%;box-sizing:border-box;padding:11px 14px;font-size:14px;border-radius:8px;border:1.5px solid #d0c9bb" />
+      </div>
+      <div style="display:flex;gap:10px">
+        <button onclick="this.closest('div[style*=fixed]').remove()" style="flex:1;padding:13px;border-radius:10px;border:1.5px solid #d0c9bb;background:#fff;font-size:14px;font-weight:600;cursor:pointer">Cancelar</button>
+        <button id="sm-confirmar" style="flex:2;padding:13px;border-radius:10px;border:none;background:#1a2e1a;color:#fff;font-size:14px;font-weight:700;cursor:pointer">Confirmar</button>
+      </div>
+    </div>`;
+  document.body.appendChild(overlay);
+  document.getElementById('sm-confirmar').onclick = () => {
+    const usuario = document.getElementById('sm-usuario').value;
+    const senha = document.getElementById('sm-senha').value;
+    if (!usuario) { toast('⚠️ Selecione um usuário.', true); return; }
+    if (!temSenha(usuario)) {
+      if (isMestre(usuario) && senha === '') {
+        overlay.remove(); window._usuarioAtivo = usuario; callbackSucesso(usuario); return;
+      }
+      toast('⚠️ Este usuário ainda não tem senha definida.', true); return;
+    }
+    if (!verificarSenha(usuario, senha)) { toast('❌ Senha incorreta.', true); return; }
+    overlay.remove(); window._usuarioAtivo = usuario; callbackSucesso(usuario);
+  };
+  document.getElementById('sm-senha').addEventListener('keydown', e => {
+    if (e.key === 'Enter') document.getElementById('sm-confirmar').click();
+  });
 }
 
 function atualizarSelectResponsavel() {
@@ -4169,41 +4303,50 @@ function atualizarSelectResponsavel() {
   const atual = sel.value;
   const lista = carregarUsuarios();
   sel.innerHTML = `<option value="">— Selecionar usuário —</option>` +
-    lista.map(u => `<option value="${u}" ${atual === u ? 'selected' : ''}>${u}</option>`).join('');
+    lista.map(u => `<option value="${u.nome}" ${atual===u.nome?'selected':''}>${u.nome}</option>`).join('');
 }
 
 function renderConfig() {
-  // Lista de usuários
   const el = document.getElementById('lista-usuarios');
   const lista = carregarUsuarios();
+  const ehMestre = usuarioAtivoIsMestre();
+  const usuAtivo = window._usuarioAtivo;
+
   if (el) {
     el.innerHTML = lista.length === 0
       ? `<p style="font-size:13px;color:var(--texto-suave);text-align:center;padding:10px">Nenhum usuário cadastrado ainda.</p>`
       : lista.map(u => `
         <div class="usuario-item">
-          <span>👤 ${u}</span>
-          <button onclick="removerUsuario('${u}')">✕ Remover</button>
+          <div>
+            <span>${isMestre(u.nome)?'⭐':'👤'} ${u.nome}</span>
+            <span style="font-size:11px;color:${temSenha(u.nome)?'#1a6b32':'#c0392b'};margin-left:8px">${temSenha(u.nome)?'🔐':'⚠️ sem senha'}</span>
+          </div>
+          <div style="display:flex;gap:6px">
+            ${(usuAtivo===u.nome||ehMestre)?`<button onclick="definirSenhaUsuario('${u.nome}')" style="background:#e8f5e9;color:#1a5e20;border:none;border-radius:6px;padding:4px 8px;font-size:11px;font-weight:700;cursor:pointer">${temSenha(u.nome)?'🔑':'🔑 Definir'}</button>`:''}
+            ${ehMestre?`<button onclick="removerUsuario('${u.nome}')" style="background:#fde8e8;color:#c0392b;border:none;border-radius:6px;padding:4px 8px;font-size:12px;font-weight:700;cursor:pointer">✕</button>`:''}
+          </div>
         </div>`).join('');
   }
 
-  // Info da conta
+  const addWrap = document.getElementById('config-add-usuario-wrap');
+  if (addWrap) addWrap.style.display = ehMestre ? 'flex' : 'none';
+
   const contaEl = document.getElementById('config-conta');
   if (contaEl) {
-    const email = window._usuarioEmail || 'Não logado';
-    const uid = window._usuarioUid || '';
     contaEl.innerHTML = `
       <div style="display:flex;align-items:center;gap:10px;padding:8px 0">
         <span style="font-size:24px">👤</span>
         <div>
-          <div style="font-weight:700;color:var(--texto)">${email}</div>
-          <div style="font-size:11px;opacity:0.6">${uid.slice(0,16)}...</div>
+          <div style="font-weight:700;color:var(--texto)">${window._usuarioEmail||'Não logado'}</div>
+          ${usuAtivo?`<div style="font-size:12px;color:#1a6b32;font-weight:600;margin-top:2px">✅ ${usuAtivo}${isMestre(usuAtivo)?' ⭐ Mestre':''}</div>`:`<div style="font-size:12px;color:#c0392b;margin-top:2px">⚠️ Nenhum usuário selecionado</div>`}
         </div>
       </div>
-      <button onclick="window.fazerLogout()" style="width:100%;padding:10px;background:#fde8e8;color:#c0392b;border:none;border-radius:8px;font-weight:700;font-size:13px;cursor:pointer;margin-top:8px">🚪 Sair da conta</button>
-    `;
+      ${usuAtivo
+        ? `<button onclick="window._usuarioAtivo=null;renderConfig()" style="width:100%;padding:9px;background:#f5eef8;color:#8e44ad;border:none;border-radius:8px;font-weight:700;font-size:12px;cursor:pointer;margin-bottom:8px">🔓 Trocar usuário</button>`
+        : `<button onclick="mostrarModalSenha('login',null,u=>renderConfig())" style="width:100%;padding:10px;background:#1a2e1a;color:#fff;border:none;border-radius:8px;font-weight:700;font-size:13px;cursor:pointer;margin-bottom:8px">🔐 Fazer login como usuário</button>`}
+      <button onclick="window.fazerLogout()" style="width:100%;padding:10px;background:#fde8e8;color:#c0392b;border:none;border-radius:8px;font-weight:700;font-size:13px;cursor:pointer">🚪 Sair da conta Google</button>`;
   }
 
-  // Atualiza select no formulário
   atualizarSelectResponsavel();
 }
 
