@@ -4410,6 +4410,33 @@ window.sincronizarErrosFirestore = async function(uid) {
   } catch(e) { console.error('Erro ao sincronizar erros:', e); }
 };
 
+window.sincronizarEstoqueFirestore = async function(uid) {
+  try {
+    const dados = carregar();
+    const semFotos = dados.map(d => { const c = {...d}; delete c.fotos; delete c.foto; return c; });
+    await setDoc(refEstoque(uid), { pisos: semFotos, atualizadoEm: serverTimestamp() });
+  } catch(e) { console.error('Erro ao sincronizar estoque:', e); }
+};
+
+window.sincronizarMovimentacoesFirestore = async function(uid) {
+  try {
+    const movs = carregarMovimentacoes();
+    await setDoc(refMovimentacoes(uid), { movimentacoes: movs, atualizadoEm: serverTimestamp() });
+  } catch(e) { console.error('Erro ao sincronizar movimentações:', e); }
+};
+
+window.sincronizarFotosFirestore = async function(uid) {
+  try {
+    const mapaFotos = await carregarTodasFotosDB();
+    const mapaUrls = {};
+    Object.entries(mapaFotos).forEach(([pisoId, fotos]) => {
+      const urls = (fotos || []).filter(f => f && f.startsWith('http'));
+      if (urls.length) mapaUrls[pisoId] = urls;
+    });
+    await setDoc(refFotos(uid), { fotos: mapaUrls, atualizadoEm: serverTimestamp() });
+  } catch(e) { console.error('Erro ao sincronizar fotos:', e); }
+};
+
 // Carrega dados do Firestore (ao logar em novo aparelho)
 async function carregarDoFirestore(uid) {
   try {
@@ -4545,7 +4572,11 @@ async function carregarDoFirestore(uid) {
 
   } catch(e) {
     console.error('Erro ao carregar do Firestore:', e);
-    toast('⚠️ Sem conexão, usando dados locais.', true);
+    if (e?.code === 'unavailable' || e?.message?.includes('offline')) {
+      toast('⚠️ Sem conexão, usando dados locais.', true);
+    } else {
+      toast('⚠️ Erro ao sincronizar: ' + (e?.code || e?.message || 'desconhecido'), true);
+    }
   }
 }
 
@@ -4553,8 +4584,8 @@ async function carregarDoFirestore(uid) {
 const _salvarDadosOriginal = salvarDados;
 window.salvarDados = function(dados) {
   _salvarDadosOriginal(dados);
-  if (window._usuarioUid) {
-    sincronizarEstoqueFirestore(window._usuarioUid);
+  if (window._usuarioUid && window.sincronizarEstoqueFirestore) {
+    window.sincronizarEstoqueFirestore(window._usuarioUid);
   }
 };
 
@@ -4562,8 +4593,8 @@ window.salvarDados = function(dados) {
 const _salvarMovsOriginal = salvarMovimentacoes;
 window.salvarMovimentacoes = function(movs) {
   _salvarMovsOriginal(movs);
-  if (window._usuarioUid) {
-    sincronizarMovimentacoesFirestore(window._usuarioUid);
+  if (window._usuarioUid && window.sincronizarMovimentacoesFirestore) {
+    window.sincronizarMovimentacoesFirestore(window._usuarioUid);
   }
 };
 
