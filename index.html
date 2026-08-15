@@ -4446,12 +4446,13 @@ async function carregarDoFirestore(uid) {
   try {
     toast('☁️ Carregando dados da nuvem...');
 
-    const [snapEstoque, snapMovs, snapFotos, snapUsuarios, snapErros] = await Promise.all([
+    const [snapEstoque, snapMovs, snapFotos, snapUsuarios, snapErros, snapConferencia] = await Promise.all([
       getDoc(refEstoque(uid)),
       getDoc(refMovimentacoes(uid)),
       getDoc(refFotos(uid)),
       getDoc(refUsuarios(uid)),
-      getDoc(refErros(uid))
+      getDoc(refErros(uid)),
+      getDoc(refConferencia(uid))
     ]);
 
     let foiAtualizado = false;
@@ -4539,12 +4540,29 @@ async function carregarDoFirestore(uid) {
     if (snapErros.exists()) {
       const errosNuvem = snapErros.data().lista || [];
       const errosLocais = carregarErros();
-      // Mescla por ID sem duplicar
       const mapaErros = {};
       errosLocais.forEach(e => { mapaErros[e.id] = e; });
       errosNuvem.forEach(e => { if (!mapaErros[e.id]) { mapaErros[e.id] = e; foiAtualizado = true; } });
       const mergedErros = Object.values(mapaErros).sort((a,b) => b.id.localeCompare(a.id));
       localStorage.setItem(CHAVE_ERROS, JSON.stringify(mergedErros));
+    }
+
+    // Carrega conferência do Firestore
+    if (snapConferencia && snapConferencia.exists()) {
+      const confNuvem = snapConferencia.data().lista || [];
+      const confLocais = carregarConferencia();
+      const mapaFotosLocais = {};
+      confLocais.forEach(i => { if (i.foto) mapaFotosLocais[i.id] = i.foto; });
+      // Usa dados da nuvem como fonte principal, preserva fotos locais
+      const mergedConf = confNuvem.map(i => ({
+        ...i,
+        foto: mapaFotosLocais[i.id] || null
+      })).sort((a,b) => b.id.localeCompare(a.id));
+      if (JSON.stringify(mergedConf.map(i=>({...i,foto:undefined}))) !==
+          JSON.stringify(confLocais.map(i=>({...i,foto:undefined})).sort((a,b)=>b.id.localeCompare(a.id)))) {
+        localStorage.setItem(CHAVE_CONF, JSON.stringify(mergedConf));
+        foiAtualizado = true;
+      }
     }
 
     // Sincroniza dados locais para a nuvem após carregar
@@ -4553,6 +4571,7 @@ async function carregarDoFirestore(uid) {
     sincronizarFotosFirestore(uid);
     sincronizarUsuariosFirestore(uid);
     sincronizarErrosFirestore(uid);
+    sincronizarConferenciaFirestore(uid);
 
   } catch(e) {
     console.error('Erro ao carregar do Firestore:', e);
@@ -4681,18 +4700,12 @@ onAuthStateChanged(auth, async user => {
       if (!snap.exists()) return;
       const errosNuvem = snap.data().lista || [];
       const errosLocais = carregarErros();
-      const mapaErros = {};
-      errosLocais.forEach(e => { mapaErros[e.id] = e; });
-      let mudou = false;
-      errosNuvem.forEach(e => {
-        const local = mapaErros[e.id];
-        if (!local || local.status !== e.status) { mapaErros[e.id] = e; mudou = true; }
-      });
-      if (mudou) {
-        const merged = Object.values(mapaErros).sort((a,b) => b.id.localeCompare(a.id));
-        localStorage.setItem(CHAVE_ERROS, JSON.stringify(merged));
+      const nStr = JSON.stringify(errosNuvem.map(e=>({...e})).sort((a,b)=>a.id.localeCompare(b.id)));
+      const lStr = JSON.stringify(errosLocais.map(e=>({...e})).sort((a,b)=>a.id.localeCompare(b.id)));
+      if (nStr !== lStr) {
+        localStorage.setItem(CHAVE_ERROS, JSON.stringify(errosNuvem.sort((a,b)=>b.id.localeCompare(a.id))));
         renderErros();
-        toast('🔄 Erros atualizados em tempo real');
+        toast('🔄 Erros sincronizados');
       }
     }, e => console.error('onSnapshot erros:', e));
 
@@ -4702,14 +4715,24 @@ onAuthStateChanged(auth, async user => {
       if (!snap.exists()) return;
       const confNuvem = snap.data().lista || [];
       const confLocais = carregarConferencia();
-      const mapaC = {};
-      confLocais.forEach(i => { mapaC[i.id] = i; });
-      let mudouC = false;
-      confNuvem.forEach(i => { if (!mapaC[i.id]) { mapaC[i.id] = i; mudouC = true; } });
-      if (mudouC) {
-        localStorage.setItem(CHAVE_CONF, JSON.stringify(Object.values(mapaC).sort((a,b)=>b.id.localeCompare(a.id))));
+
+      // Compara por JSON para detectar qualquer mudança (edição, exclusão, status, novo)
+      const nuvemStr = JSON.stringify(confNuvem.map(i => ({...i, foto: undefined})).sort((a,b) => a.id.localeCompare(b.id)));
+      const localStr = JSON.stringify(confLocais.map(i => ({...i, foto: undefined})).sort((a,b) => a.id.localeCompare(b.id)));
+
+      if (nuvemStr !== localStr) {
+        // Preserva as fotos locais (não estão no Firestore)
+        const mapaFotosLocais = {};
+        confLocais.forEach(i => { if (i.foto) mapaFotosLocais[i.id] = i.foto; });
+
+        const merged = confNuvem.map(i => ({
+          ...i,
+          foto: mapaFotosLocais[i.id] || null
+        })).sort((a,b) => b.id.localeCompare(a.id));
+
+        localStorage.setItem(CHAVE_CONF, JSON.stringify(merged));
         renderConferencia();
-        toast('🔄 Conferência atualizada em tempo real');
+        toast('🔄 Conferência sincronizada');
       }
     }, e => console.error('onSnapshot conferencia:', e));
 
