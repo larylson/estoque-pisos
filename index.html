@@ -4179,6 +4179,8 @@ function carregarSenhas() {
 
 function salvarSenhas(senhas) {
   localStorage.setItem(CHAVE_SENHAS, JSON.stringify(senhas));
+  // Sincroniza senhas junto com usuários
+  if (window._usuarioUid) sincronizarUsuariosFirestore(window._usuarioUid);
 }
 
 function hashSenha(senha) {
@@ -4238,19 +4240,19 @@ function removerUsuario(nome) {
 }
 
 function definirSenhaUsuario(nome) {
-  // Só o próprio usuário ou um mestre pode definir senha
-  if (window._usuarioAtivo !== nome && !usuarioAtivoIsMestre()) {
-    toast('🔒 Você só pode definir sua própria senha.', true); return;
+  // Apenas mestres podem definir senha para qualquer usuário
+  if (!usuarioAtivoIsMestre()) {
+    toast('🔒 Apenas usuários mestres podem definir senhas.', true); return;
   }
-  const s1 = prompt(`Crie uma senha para "${nome}":\n(mínimo 4 caracteres)`);
+  const s1 = prompt(`Defina a senha de acesso para "${nome}":\n(mínimo 4 caracteres)\n\nDepois informe essa senha para ${nome} usar no login.`);
   if (s1 === null) return;
   if (s1.length < 4) { toast('⚠️ Senha deve ter pelo menos 4 caracteres.', true); return; }
-  const s2 = prompt(`Confirme a senha para "${nome}":`);
+  const s2 = prompt(`Confirme a senha de "${nome}":`);
   if (s2 !== s1) { toast('⚠️ Senhas não coincidem.', true); return; }
   const senhas = carregarSenhas();
   senhas[nome.toLowerCase()] = hashSenha(s1);
   salvarSenhas(senhas);
-  toast(`🔐 Senha definida para "${nome}"!`);
+  toast(`🔐 Senha definida para "${nome}"! Informe a senha para ele(a).`);
   renderConfig();
 }
 
@@ -4322,7 +4324,7 @@ function renderConfig() {
             <span style="font-size:11px;color:${temSenha(u.nome)?'#1a6b32':'#c0392b'};margin-left:8px">${temSenha(u.nome)?'🔐':'⚠️ sem senha'}</span>
           </div>
           <div style="display:flex;gap:6px">
-            ${(usuAtivo===u.nome||ehMestre)?`<button onclick="definirSenhaUsuario('${u.nome}')" style="background:#e8f5e9;color:#1a5e20;border:none;border-radius:6px;padding:4px 8px;font-size:11px;font-weight:700;cursor:pointer">${temSenha(u.nome)?'🔑':'🔑 Definir'}</button>`:''}
+            ${ehMestre?`<button onclick="definirSenhaUsuario('${u.nome}')" style="background:#e8f5e9;color:#1a5e20;border:none;border-radius:6px;padding:4px 8px;font-size:11px;font-weight:700;cursor:pointer">${temSenha(u.nome)?'🔑 Alterar':'🔑 Definir'}</button>`:''}
             ${ehMestre?`<button onclick="removerUsuario('${u.nome}')" style="background:#fde8e8;color:#c0392b;border:none;border-radius:6px;padding:4px 8px;font-size:12px;font-weight:700;cursor:pointer">✕</button>`:''}
           </div>
         </div>`).join('');
@@ -4542,7 +4544,8 @@ window.sincronizarConferenciaFirestore = async function(uid) {
 window.sincronizarUsuariosFirestore = async function(uid) {
   try {
     const lista = carregarUsuarios();
-    await setDoc(refUsuarios(uid), { lista, atualizadoEm: serverTimestamp() });
+    const senhas = carregarSenhas();
+    await setDoc(refUsuarios(uid), { lista, senhas, atualizadoEm: serverTimestamp() });
   } catch(e) { console.error('Erro ao sincronizar usuários:', e); }
 };
 
@@ -4666,12 +4669,19 @@ async function carregarDoFirestore(uid) {
     // Carrega usuários do Firestore
     if (snapUsuarios.exists()) {
       const listaRemota = snapUsuarios.data().lista || [];
-      // Usa a lista da nuvem como fonte de verdade — NÃO mescla com local
-      // para evitar que usuários deletados voltem
+      const senhasRemota = snapUsuarios.data().senhas || {};
+      // Usa a nuvem como fonte de verdade
       const listaLocal = carregarUsuarios();
       if (JSON.stringify(listaRemota) !== JSON.stringify(listaLocal)) {
         localStorage.setItem(CHAVE_USUARIOS, JSON.stringify(listaRemota));
         atualizarSelectResponsavel();
+        foiAtualizado = true;
+      }
+      // Mescla senhas: nuvem tem prioridade, mas mantém senhas locais que a nuvem não tem
+      const senhasLocal = carregarSenhas();
+      const senhasMerged = { ...senhasLocal, ...senhasRemota };
+      if (JSON.stringify(senhasMerged) !== JSON.stringify(senhasLocal)) {
+        localStorage.setItem(CHAVE_SENHAS, JSON.stringify(senhasMerged));
         foiAtualizado = true;
       }
     }
@@ -4828,11 +4838,25 @@ onAuthStateChanged(auth, async user => {
       if (_primeiraVezUsuarios) { _primeiraVezUsuarios = false; return; }
       if (!snap.exists()) return;
       const listaRemota = snap.data().lista || [];
+      const senhasRemota = snap.data().senhas || {};
       const listaLocal = carregarUsuarios();
+      const senhasLocal = carregarSenhas();
+      let mudou = false;
+
       // Substitui completamente — nuvem é fonte de verdade
       if (JSON.stringify(listaRemota) !== JSON.stringify(listaLocal)) {
         localStorage.setItem(CHAVE_USUARIOS, JSON.stringify(listaRemota));
         atualizarSelectResponsavel();
+        mudou = true;
+      }
+      // Senhas: mescla mantendo local + nuvem (nuvem tem prioridade em conflito)
+      const senhasMerged = { ...senhasLocal, ...senhasRemota };
+      if (JSON.stringify(senhasMerged) !== JSON.stringify(senhasLocal)) {
+        localStorage.setItem(CHAVE_SENHAS, JSON.stringify(senhasMerged));
+        mudou = true;
+      }
+
+      if (mudou) {
         renderConfig();
         toast('🔄 Usuários sincronizados');
       }
