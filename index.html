@@ -4163,7 +4163,26 @@ function renderErros() {
 const CHAVE_USUARIOS = 'estoque_usuarios_v1';
 const CHAVE_SENHAS = 'estoque_senhas_v1';
 const MESTRES = ['lorran', 'lucas', 'joão paulo', 'joao paulo'];
-window._usuarioAtivo = null;
+const CHAVE_USUARIO_ATIVO = 'estoque_usuario_ativo_v1';
+
+// Getter/setter persistente para o usuário ativo — sobrevive a reload da página
+Object.defineProperty(window, '_usuarioAtivo', {
+  get() {
+    if (this.__usuarioAtivoCache !== undefined) return this.__usuarioAtivoCache;
+    try {
+      this.__usuarioAtivoCache = localStorage.getItem(CHAVE_USUARIO_ATIVO) || null;
+    } catch(e) { this.__usuarioAtivoCache = null; }
+    return this.__usuarioAtivoCache;
+  },
+  set(valor) {
+    this.__usuarioAtivoCache = valor;
+    try {
+      if (valor) localStorage.setItem(CHAVE_USUARIO_ATIVO, valor);
+      else localStorage.removeItem(CHAVE_USUARIO_ATIVO);
+    } catch(e) {}
+  },
+  configurable: true
+});
 
 function carregarUsuarios() {
   try {
