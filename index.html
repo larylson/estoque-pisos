@@ -4166,16 +4166,14 @@ const MESTRES = ['lorran', 'lucas', 'joão paulo', 'joao paulo'];
 const CHAVE_USUARIO_ATIVO = 'estoque_usuario_ativo_v1';
 
 // Getter/setter persistente para o usuário ativo — sobrevive a reload da página
+// Lê/escreve direto no localStorage sem cache intermediário, para máxima confiabilidade
 Object.defineProperty(window, '_usuarioAtivo', {
   get() {
-    if (this.__usuarioAtivoCache !== undefined) return this.__usuarioAtivoCache;
     try {
-      this.__usuarioAtivoCache = localStorage.getItem(CHAVE_USUARIO_ATIVO) || null;
-    } catch(e) { this.__usuarioAtivoCache = null; }
-    return this.__usuarioAtivoCache;
+      return localStorage.getItem(CHAVE_USUARIO_ATIVO) || null;
+    } catch(e) { return null; }
   },
   set(valor) {
-    this.__usuarioAtivoCache = valor;
     try {
       if (valor) localStorage.setItem(CHAVE_USUARIO_ATIVO, valor);
       else localStorage.removeItem(CHAVE_USUARIO_ATIVO);
@@ -4790,6 +4788,11 @@ onAuthStateChanged(auth, async user => {
 
     normalizarIds();
     atualizarSubtitulo();
+
+    // Atualiza a UI da aba Config caso o usuário já esteja nela (usuário ativo persistido)
+    if (document.getElementById('pag-config')?.classList.contains('ativa')) {
+      renderConfig();
+    }
 
     // Inicializa IndexedDB e migra fotos
     await abrirDB().catch(() => {});
