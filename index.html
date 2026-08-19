@@ -908,17 +908,21 @@ PASSOS PARA RODAR NO GITHUB PAGES:
       background: #d5f5dd;
       color: #1a6b32;
     }
-    .conf-status-btn.reconf-ok {
-      background: #d5f5dd;
-      color: #1a6b32;
+    .conf-status-btn.reconf-pendente {
+      background: #fde9d0;
+      color: #b5651d;
     }
     .conf-status-btn.reconf-precisa {
       background: #fde8e8;
       color: #c0392b;
     }
-    .conf-status-btn.reconf-reconferindo {
+    .conf-status-btn.reconf-conferindo {
       background: #fdf3d0;
       color: #a67c00;
+    }
+    .conf-status-btn.reconf-conferido {
+      background: #d5f5dd;
+      color: #1a6b32;
     }
     .conf-acoes { display: flex; gap: 8px; margin-top: 10px; align-items: center; }
     .conf-btn-editar {
@@ -3711,24 +3715,26 @@ function toggleStatusConf(id) {
   toast(lista[idx].noSistema ? '✅ Marcado como No Sistema' : '🟣 Marcado como Não no Sistema');
 }
 
-// Estados cíclicos de reconferência: ok → precisa reconferir → reconferindo → ok
+// Estados cíclicos de reconferência: pendente → precisa conferência → conferindo → conferido → pendente
 const CONF_RECONF_LABELS = {
-  ok: '✅ Não Precisa Reconferir',
-  precisa: '⚠️ Precisa Reconferir',
-  reconferindo: '🔄 Reconferindo'
+  pendente: '🟠 Pendente',
+  precisa: '⚠️ Precisa de Conferência',
+  conferindo: '🔄 Conferindo',
+  conferido: '✅ Conferido'
 };
 const CONF_RECONF_CLASSES = {
-  ok: 'reconf-ok',
+  pendente: 'reconf-pendente',
   precisa: 'reconf-precisa',
-  reconferindo: 'reconf-reconferindo'
+  conferindo: 'reconf-conferindo',
+  conferido: 'reconf-conferido'
 };
-const CONF_RECONF_ORDEM = ['ok', 'precisa', 'reconferindo'];
+const CONF_RECONF_ORDEM = ['pendente', 'precisa', 'conferindo', 'conferido'];
 
 function toggleReconferencia(id) {
   const lista = carregarConferencia();
   const idx = lista.findIndex(i => i.id === id);
   if (idx < 0) return;
-  const atual = lista[idx].reconferencia || 'ok';
+  const atual = lista[idx].reconferencia || 'pendente';
   const proxIdx = (CONF_RECONF_ORDEM.indexOf(atual) + 1) % CONF_RECONF_ORDEM.length;
   lista[idx].reconferencia = CONF_RECONF_ORDEM[proxIdx];
   salvarConferencia(lista);
@@ -3998,8 +4004,8 @@ function renderConferencia() {
             <button class="conf-status-btn ${item.noSistema ? 'adicionado' : 'nao-adicionado'}" onclick="toggleStatusConf('${item.id}')">
               ${item.noSistema ? '✅ No Sistema' : '🟣 Não no Sistema'}
             </button>
-            <button class="conf-status-btn ${CONF_RECONF_CLASSES[item.reconferencia||'ok']}" onclick="toggleReconferencia('${item.id}')">
-              ${CONF_RECONF_LABELS[item.reconferencia||'ok']}
+            <button class="conf-status-btn ${CONF_RECONF_CLASSES[item.reconferencia||'pendente']}" onclick="toggleReconferencia('${item.id}')">
+              ${CONF_RECONF_LABELS[item.reconferencia||'pendente']}
             </button>
           </div>
         </div>
