@@ -908,6 +908,18 @@ PASSOS PARA RODAR NO GITHUB PAGES:
       background: #d5f5dd;
       color: #1a6b32;
     }
+    .conf-status-btn.reconf-ok {
+      background: #d5f5dd;
+      color: #1a6b32;
+    }
+    .conf-status-btn.reconf-precisa {
+      background: #fde8e8;
+      color: #c0392b;
+    }
+    .conf-status-btn.reconf-reconferindo {
+      background: #fdf3d0;
+      color: #a67c00;
+    }
     .conf-acoes { display: flex; gap: 8px; margin-top: 10px; align-items: center; }
     .conf-btn-editar {
       background: #e8f5e9;
@@ -1486,7 +1498,7 @@ PASSOS PARA RODAR NO GITHUB PAGES:
       <p style="font-size:11px;color:#888;text-align:center">Pisos com <b>📍 Não está no local</b> são sempre excluídos quando filtrando por rua</p>
     </div>
 
-    <button class="btn" style="margin-top:10px;background:#fde8e8;color:#c0392b;font-weight:700" onclick="apagarTodosOsPisos()">🗑️ Apagar todos os pisos</button>
+    <button id="btn-apagar-tudo" class="btn" style="margin-top:10px;background:#fde8e8;color:#c0392b;font-weight:700;display:none" onclick="apagarTodosOsPisos()">🗑️ Apagar todos os pisos</button>
 
     <div style="margin-top: 12px; background: #fff; border-radius: 12px; padding: 16px; box-shadow: 0 2px 12px rgba(0,0,0,0.12);">
       <div class="card-titulo" style="margin-bottom: 14px;">📲 Transferir para outro celular</div>
@@ -2936,6 +2948,12 @@ function recalcularTodasMetragens() {
 }
 
 function renderRelatorio() {
+  // Mostra o botão "Apagar todos os pisos" apenas para usuários mestres
+  const btnApagarTudo = document.getElementById('btn-apagar-tudo');
+  if (btnApagarTudo) {
+    btnApagarTudo.style.display = (typeof usuarioAtivoIsMestre === 'function' && usuarioAtivoIsMestre()) ? 'block' : 'none';
+  }
+
   const dados = carregar();
   const totalPisos = dados.length;
   const totalCaixas = dados.reduce((s, d) => s + d.caixas, 0);
@@ -3693,6 +3711,31 @@ function toggleStatusConf(id) {
   toast(lista[idx].noSistema ? '✅ Marcado como No Sistema' : '🟣 Marcado como Não no Sistema');
 }
 
+// Estados cíclicos de reconferência: ok → precisa reconferir → reconferindo → ok
+const CONF_RECONF_LABELS = {
+  ok: '✅ Não Precisa Reconferir',
+  precisa: '⚠️ Precisa Reconferir',
+  reconferindo: '🔄 Reconferindo'
+};
+const CONF_RECONF_CLASSES = {
+  ok: 'reconf-ok',
+  precisa: 'reconf-precisa',
+  reconferindo: 'reconf-reconferindo'
+};
+const CONF_RECONF_ORDEM = ['ok', 'precisa', 'reconferindo'];
+
+function toggleReconferencia(id) {
+  const lista = carregarConferencia();
+  const idx = lista.findIndex(i => i.id === id);
+  if (idx < 0) return;
+  const atual = lista[idx].reconferencia || 'ok';
+  const proxIdx = (CONF_RECONF_ORDEM.indexOf(atual) + 1) % CONF_RECONF_ORDEM.length;
+  lista[idx].reconferencia = CONF_RECONF_ORDEM[proxIdx];
+  salvarConferencia(lista);
+  renderConferencia();
+  toast(`🔄 ${CONF_RECONF_LABELS[lista[idx].reconferencia]}`);
+}
+
 function abrirEditConf(id) {
   const lista = carregarConferencia();
   const item = lista.find(i => i.id === id);
@@ -3949,11 +3992,16 @@ function renderConferencia() {
     return `
       <div class="conf-item${item.noSistema ? '' : ' nao-sistema'}">
         ${item.foto ? `<img src="${item.foto}" onclick="abrirLightbox([this.src],0)" style="width:100%;max-height:180px;object-fit:cover;border-radius:10px;margin-bottom:10px;cursor:pointer" />` : ''}
-        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px;gap:6px;flex-wrap:wrap">
           <div class="conf-item-nome">${icon} ${item.nome}</div>
-          <button class="conf-status-btn ${item.noSistema ? 'adicionado' : 'nao-adicionado'}" onclick="toggleStatusConf('${item.id}')">
-            ${item.noSistema ? '✅ No Sistema' : '🟣 Não no Sistema'}
-          </button>
+          <div style="display:flex;gap:6px;flex-wrap:wrap">
+            <button class="conf-status-btn ${item.noSistema ? 'adicionado' : 'nao-adicionado'}" onclick="toggleStatusConf('${item.id}')">
+              ${item.noSistema ? '✅ No Sistema' : '🟣 Não no Sistema'}
+            </button>
+            <button class="conf-status-btn ${CONF_RECONF_CLASSES[item.reconferencia||'ok']}" onclick="toggleReconferencia('${item.id}')">
+              ${CONF_RECONF_LABELS[item.reconferencia||'ok']}
+            </button>
+          </div>
         </div>
         <div style="font-size:12px;color:var(--texto-suave);margin-bottom:6px">
           ${item.marca ? `🏷️ ${item.marca}` : ''}
