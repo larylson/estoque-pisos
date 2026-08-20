@@ -3747,6 +3747,30 @@ function abrirEditConf(id) {
   const item = lista.find(i => i.id === id);
   if (!item) return;
 
+  const responsavel = item.responsavel || '';
+
+  // Mestres podem editar qualquer item
+  if (usuarioAtivoIsMestre()) {
+    _abrirEditConfForm(item);
+    return;
+  }
+
+  // Usuário ativo é o próprio responsável — libera direto
+  if (window._usuarioAtivo && window._usuarioAtivo === responsavel) {
+    _abrirEditConfForm(item);
+    return;
+  }
+
+  // Sem permissão confirmada ainda — pede login
+  mostrarModalSenha('editar_conf', id, (usuario) => {
+    if (!isMestre(usuario) && usuario !== responsavel) {
+      toast('🔒 Apenas o responsável ou um mestre pode editar este item.', true); return;
+    }
+    _abrirEditConfForm(item);
+  });
+}
+
+function _abrirEditConfForm(item) {
   const campos = CONF_CAMPOS[item.tipo] || [];
   const usuarios = carregarUsuarios();
 
