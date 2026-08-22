@@ -3814,7 +3814,7 @@ function _abrirEditConfForm(item) {
 
   html += `<div style="display:flex;gap:8px">
     <button onclick="fecharEditConf()" style="flex:1;padding:12px;border-radius:10px;border:1.5px solid #d0c9bb;background:#fff;font-size:14px;font-weight:600;cursor:pointer">Cancelar</button>
-    <button onclick="salvarEditConf('${id}')" style="flex:2;padding:12px;border-radius:10px;border:none;background:var(--verde-escuro);color:#fff;font-size:14px;font-weight:700;cursor:pointer">💾 Salvar</button>
+    <button onclick="salvarEditConf('${item.id}')" style="flex:2;padding:12px;border-radius:10px;border:none;background:var(--verde-escuro);color:#fff;font-size:14px;font-weight:700;cursor:pointer">💾 Salvar</button>
   </div>`;
 
   document.getElementById('conf-edit-body').innerHTML = html;
