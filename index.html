@@ -1616,6 +1616,13 @@ PASSOS PARA RODAR NO GITHUB PAGES:
       <button onclick="salvarItemConferencia()" class="btn" style="background:var(--verde-escuro);color:#fff;width:100%;margin-top:14px">✅ Adicionar à Lista</button>
     </div>
 
+    <!-- Busca por texto -->
+    <input type="search" id="conf-busca-texto" placeholder="🔍 Buscar item na conferência..." oninput="renderConferencia()" style="width:100%;box-sizing:border-box;padding:11px 14px;font-size:14px;border-radius:10px;border:1.5px solid #d0c9bb;background:#fff;margin-bottom:12px" />
+
+    <!-- Filtro por tipo de material -->
+    <div style="font-size:12px;font-weight:700;color:var(--texto-suave);margin-bottom:8px;text-transform:uppercase;letter-spacing:.5px">Filtrar por tipo</div>
+    <div id="conf-filtros-tipo" style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px"></div>
+
     <!-- Filtros por usuário -->
     <div id="conf-filtros-wrap" style="margin-bottom:4px">
       <div style="font-size:12px;font-weight:700;color:var(--texto-suave);margin-bottom:8px;text-transform:uppercase;letter-spacing:.5px">Filtrar por usuário</div>
@@ -3415,6 +3422,7 @@ const CHAVE_CONF = 'estoque_conferencia_v1';
 let confTipoAtual = 'piso';
 let confFotoAtual = null;
 let filtroConfUsuario = 'todos'; // filtro ativo de usuário na conferência
+let filtroConfTipo = 'todos'; // filtro ativo de tipo de material na conferência
 
 // Campos por tipo de material
 const CONF_CAMPOS = {
@@ -3705,6 +3713,11 @@ function setFiltroConfUsuario(usuario) {
   renderConferencia();
 }
 
+function setFiltroConfTipo(tipo) {
+  filtroConfTipo = tipo;
+  renderConferencia();
+}
+
 function toggleStatusConf(id) {
   const lista = carregarConferencia();
   const idx = lista.findIndex(i => i.id === id);
@@ -3972,10 +3985,34 @@ function renderConferencia() {
     }
   }
 
-  // Aplica filtro por usuário
-  const listaFiltrada = filtroConfUsuario === 'todos'
-    ? lista
-    : lista.filter(i => i.responsavel === filtroConfUsuario);
+  // Renderiza filtros por tipo de material
+  const filtrosTipoEl = document.getElementById('conf-filtros-tipo');
+  if (filtrosTipoEl) {
+    const tipos = [...new Set(lista.map(i => i.tipo).filter(Boolean))];
+    if (tipos.length > 0) {
+      filtrosTipoEl.innerHTML = [
+        `<button onclick="setFiltroConfTipo('todos')" style="padding:6px 14px;border-radius:20px;border:1.5px solid ${filtroConfTipo==='todos'?'#1a2e1a':'#d0c9bb'};background:${filtroConfTipo==='todos'?'#1a2e1a':'#fff'};color:${filtroConfTipo==='todos'?'#fff':'#555'};font-size:12px;font-weight:700;cursor:pointer">Todos</button>`,
+        ...tipos.map(t => `<button onclick="setFiltroConfTipo('${t}')" style="padding:6px 14px;border-radius:20px;border:1.5px solid ${filtroConfTipo===t?'#1a2e1a':'#d0c9bb'};background:${filtroConfTipo===t?'#1a2e1a':'#fff'};color:${filtroConfTipo===t?'#fff':'#555'};font-size:12px;font-weight:700;cursor:pointer">${CONF_ICONS[t]||'📦'} ${CONF_TITULOS[t]?.replace('Cadastrar ','')||t}</button>`)
+      ].join('');
+    } else {
+      filtrosTipoEl.innerHTML = '';
+    }
+  }
+
+  // Aplica os 3 filtros combinados: usuário + tipo + busca por texto
+  const buscaTexto = (document.getElementById('conf-busca-texto')?.value || '').toLowerCase().trim();
+  let listaFiltrada = lista;
+  if (filtroConfUsuario !== 'todos') listaFiltrada = listaFiltrada.filter(i => i.responsavel === filtroConfUsuario);
+  if (filtroConfTipo !== 'todos') listaFiltrada = listaFiltrada.filter(i => i.tipo === filtroConfTipo);
+  if (buscaTexto) {
+    listaFiltrada = listaFiltrada.filter(i =>
+      (i.nome || '').toLowerCase().includes(buscaTexto) ||
+      (i.marca || '').toLowerCase().includes(buscaTexto) ||
+      (i.lote || '').toLowerCase().includes(buscaTexto) ||
+      (i.codigo || '').toLowerCase().includes(buscaTexto) ||
+      (i.obs || '').toLowerCase().includes(buscaTexto)
+    );
+  }
 
   const resumoEl = document.getElementById('conf-resumo');
   const listaEl = document.getElementById('conf-lista');
@@ -3983,17 +4020,18 @@ function renderConferencia() {
   // Resumo por tipo (da lista filtrada)
   const contagem = {};
   listaFiltrada.forEach(i => { contagem[i.tipo] = (contagem[i.tipo] || 0) + 1; });
+  const filtroAtivo = filtroConfUsuario !== 'todos' || filtroConfTipo !== 'todos' || buscaTexto;
   if (resumoEl) {
     resumoEl.innerHTML = listaFiltrada.length === 0 ? '' : `
       <div class="conf-resumo-box">
-        📋 ${listaFiltrada.length} item${listaFiltrada.length>1?'s':''} ${filtroConfUsuario !== 'todos' ? `de <b>${filtroConfUsuario}</b>` : 'na conferência'}:
+        📋 ${listaFiltrada.length} item${listaFiltrada.length>1?'s':''} ${filtroAtivo ? 'encontrado'+(listaFiltrada.length>1?'s':'') : 'na conferência'}${filtroConfUsuario !== 'todos' ? ` de <b>${filtroConfUsuario}</b>` : ''}:
         ${Object.entries(contagem).map(([t,n]) => `${CONF_ICONS[t]||'📦'} ${n} ${t}`).join(' · ')}
       </div>`;
   }
 
   if (!listaEl) return;
   if (listaFiltrada.length === 0) {
-    listaEl.innerHTML = `<div class="conf-lista-vazia"><div style="font-size:48px">📋</div><p>${filtroConfUsuario !== 'todos' ? `Nenhuma conferência de <b>${filtroConfUsuario}</b>.` : 'Nenhum item conferido ainda.'}</p></div>`;
+    listaEl.innerHTML = `<div class="conf-lista-vazia"><div style="font-size:48px">📋</div><p>${filtroAtivo ? 'Nenhum item encontrado com esses filtros.' : 'Nenhum item conferido ainda.'}</p></div>`;
     return;
   }
 
@@ -4063,7 +4101,19 @@ function exportarConferenciaCSV() {
   const lista = carregarConferencia();
   if (!lista.length) { toast('⚠️ Nenhum item para exportar.', true); return; }
   const sep = ';';
-  const listaExportar = filtroConfUsuario === 'todos' ? lista : lista.filter(i => i.responsavel === filtroConfUsuario);
+  const buscaTexto = (document.getElementById('conf-busca-texto')?.value || '').toLowerCase().trim();
+  let listaExportar = lista;
+  if (filtroConfUsuario !== 'todos') listaExportar = listaExportar.filter(i => i.responsavel === filtroConfUsuario);
+  if (filtroConfTipo !== 'todos') listaExportar = listaExportar.filter(i => i.tipo === filtroConfTipo);
+  if (buscaTexto) {
+    listaExportar = listaExportar.filter(i =>
+      (i.nome || '').toLowerCase().includes(buscaTexto) ||
+      (i.marca || '').toLowerCase().includes(buscaTexto) ||
+      (i.lote || '').toLowerCase().includes(buscaTexto) ||
+      (i.codigo || '').toLowerCase().includes(buscaTexto) ||
+      (i.obs || '').toLowerCase().includes(buscaTexto)
+    );
+  }
   const header = ['Responsável','Tipo','Nome','Marca','Lote','Tamanho','Espessura (mm)','m²/Peça','Bitola','Tonalidade','Pallets','Fardos','Peças/Fardo','Caixas Totais','Peças Avulsas','Total Peças','m² Total','Sacos','Kg Total','Qtd','Unidade','Obs','Data'].join(sep);
   const linhas = listaExportar.map(i => [
     i.responsavel||'', i.tipo||'', i.nome||'', i.marca||'', i.lote||'', i.tamanho||'',
@@ -4080,8 +4130,9 @@ function exportarConferenciaCSV() {
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url;
-  const sufixo = filtroConfUsuario !== 'todos' ? `_${filtroConfUsuario}` : '';
-  a.download = `conferencia_carga${sufixo}_${new Date().toLocaleDateString('pt-BR').replace(/\//g,'-')}.csv`;
+  const sufixoUsuario = filtroConfUsuario !== 'todos' ? `_${filtroConfUsuario}` : '';
+  const sufixoTipo = filtroConfTipo !== 'todos' ? `_${filtroConfTipo}` : '';
+  a.download = `conferencia_carga${sufixoUsuario}${sufixoTipo}_${new Date().toLocaleDateString('pt-BR').replace(/\//g,'-')}.csv`;
   a.click();
   toast('📤 Exportado com sucesso!');
 }
