@@ -1273,6 +1273,14 @@ PASSOS PARA RODAR NO GITHUB PAGES:
       <input type="checkbox" id="manter-conectado" checked />
       Manter conectado
     </label>
+    <div style="display:flex;align-items:center;gap:10px;margin:16px 0">
+      <div style="flex:1;height:1px;background:#e5e0d5"></div>
+      <span style="font-size:12px;color:#999">ou</span>
+      <div style="flex:1;height:1px;background:#e5e0d5"></div>
+    </div>
+    <button id="btn-login-visitante" onclick="window.fazerLoginVisitante()" style="width:100%;padding:13px;background:#f5f2ec;border:1.5px solid #d0c9bb;border-radius:12px;font-size:14px;font-weight:700;color:#555;cursor:pointer">
+      👤 Entrar como Visitante
+    </button>
   </div>
 </div>
 
@@ -4441,7 +4449,7 @@ function renderConfig() {
       ${usuAtivo
         ? `<button onclick="window._usuarioAtivo=null;renderConfig()" style="width:100%;padding:9px;background:#f5eef8;color:#8e44ad;border:none;border-radius:8px;font-weight:700;font-size:12px;cursor:pointer;margin-bottom:8px">🔓 Trocar usuário</button>`
         : `<button onclick="mostrarModalSenha('login',null,u=>renderConfig())" style="width:100%;padding:10px;background:#1a2e1a;color:#fff;border:none;border-radius:8px;font-weight:700;font-size:13px;cursor:pointer;margin-bottom:8px">🔐 Fazer login como usuário</button>`}
-      <button onclick="window.fazerLogout()" style="width:100%;padding:10px;background:#fde8e8;color:#c0392b;border:none;border-radius:8px;font-weight:700;font-size:13px;cursor:pointer">🚪 Sair da conta Google</button>`;
+      <button onclick="window.fazerLogout()" style="width:100%;padding:10px;background:#fde8e8;color:#c0392b;border:none;border-radius:8px;font-weight:700;font-size:13px;cursor:pointer">🚪 Sair da conta</button>`;
   }
 
   atualizarSelectResponsavel();
@@ -4587,7 +4595,7 @@ atualizarSelectResponsavel(); // popula o select de responsável ao carregar
 import { initializeApp } from "https://www.gstatic.com/firebasejs/12.16.0/firebase-app.js";
 import { getAnalytics } from "https://www.gstatic.com/firebasejs/12.16.0/firebase-analytics.js";
 import {
-  getAuth, GoogleAuthProvider, signInWithPopup, signOut,
+  getAuth, GoogleAuthProvider, signInWithPopup, signInAnonymously, signOut,
   onAuthStateChanged, setPersistence,
   browserLocalPersistence, browserSessionPersistence
 } from "https://www.gstatic.com/firebasejs/12.16.0/firebase-auth.js";
@@ -4615,12 +4623,16 @@ const provider = new GoogleAuthProvider();
 // ===================== FIRESTORE SYNC =====================
 
 // Referências dos documentos do usuário
-function refEstoque(uid) { return doc(db, 'usuarios', uid, 'dados', 'estoque'); }
-function refMovimentacoes(uid) { return doc(db, 'usuarios', uid, 'dados', 'movimentacoes'); }
-function refFotos(uid) { return doc(db, 'usuarios', uid, 'dados', 'fotos'); }
-function refUsuarios(uid) { return doc(db, 'usuarios', uid, 'dados', 'usuarios'); }
-function refErros(uid) { return doc(db, 'usuarios', uid, 'dados', 'erros'); }
-function refConferencia(uid) { return doc(db, 'usuarios', uid, 'dados', 'conferencia'); }
+// Workspace compartilhado: todos os usuários (Google ou Visitante) acessam os mesmos dados,
+// independente de qual conta ou UID fez login. O parâmetro uid é mantido nas assinaturas
+// por compatibilidade com as chamadas existentes, mas não é mais usado no caminho do documento.
+const WORKSPACE_ID = 'estoque-pisos-sm-compartilhado';
+function refEstoque(uid) { return doc(db, 'workspace', WORKSPACE_ID, 'dados', 'estoque'); }
+function refMovimentacoes(uid) { return doc(db, 'workspace', WORKSPACE_ID, 'dados', 'movimentacoes'); }
+function refFotos(uid) { return doc(db, 'workspace', WORKSPACE_ID, 'dados', 'fotos'); }
+function refUsuarios(uid) { return doc(db, 'workspace', WORKSPACE_ID, 'dados', 'usuarios'); }
+function refErros(uid) { return doc(db, 'workspace', WORKSPACE_ID, 'dados', 'erros'); }
+function refConferencia(uid) { return doc(db, 'workspace', WORKSPACE_ID, 'dados', 'conferencia'); }
 
 // Expõe função real de sync de conferência para o escopo global
 window._fbSyncConf = async function(uid) {
@@ -4850,14 +4862,20 @@ window.salvarMovimentacoes = function(movs) {
 onAuthStateChanged(auth, async user => {
   if (user) {
     window._usuarioUid = user.uid;
-    window._usuarioEmail = user.email;
+    window._usuarioEmail = user.isAnonymous ? 'Visitante' : user.email;
 
     document.getElementById('tela-login').style.display = 'none';
     document.getElementById('app-root').style.display = 'flex';
 
     const headerUser = document.getElementById('header-user');
     if (headerUser) {
-      headerUser.innerHTML = `
+      headerUser.innerHTML = user.isAnonymous
+        ? `
+        <span style="font-size:16px">👤</span>
+        <span style="font-size:12px;color:#cde8cd">Visitante</span>
+        <button onclick="window.fazerLogout()" style="background:rgba(255,255,255,0.15);border:none;color:#fff;font-size:11px;padding:4px 8px;border-radius:6px;cursor:pointer">Sair</button>
+      `
+        : `
         <img src="${user.photoURL || ''}" style="width:28px;height:28px;border-radius:50%;object-fit:cover;border:2px solid #5a9e5a" onerror="this.style.display='none'" />
         <span style="font-size:12px;color:#cde8cd;max-width:100px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${user.displayName?.split(' ')[0] || user.email}</span>
         <button onclick="window.fazerLogout()" style="background:rgba(255,255,255,0.15);border:none;color:#fff;font-size:11px;padding:4px 8px;border-radius:6px;cursor:pointer">Sair</button>
@@ -5027,8 +5045,21 @@ window.fazerLogin = async function() {
   }
 };
 
+window.fazerLoginVisitante = async function() {
+  const manterConectado = document.getElementById('manter-conectado')?.checked;
+  const btnVisitante = document.getElementById('btn-login-visitante');
+  try {
+    if (btnVisitante) { btnVisitante.disabled = true; btnVisitante.textContent = '⏳ Entrando...'; }
+    await setPersistence(auth, manterConectado ? browserLocalPersistence : browserSessionPersistence);
+    await signInAnonymously(auth);
+  } catch(e) {
+    if (btnVisitante) { btnVisitante.disabled = false; btnVisitante.textContent = '👤 Entrar como Visitante'; }
+    alert('Erro ao entrar como visitante: ' + (e.message || e.code));
+  }
+};
+
 window.fazerLogout = async function() {
-  if (!confirm('Sair da conta Google?')) return;
+  if (!confirm('Sair da conta?')) return;
   if (window._unsubListeners) { window._unsubListeners.forEach(u => u()); window._unsubListeners = []; }
   await signOut(auth);
 };
