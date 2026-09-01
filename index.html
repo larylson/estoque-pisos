@@ -1983,7 +1983,7 @@ function calcularMetragemTotal(item) {
 }
 
 function fmtM2(valor) {
-  return valor.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' m²';
+  return valor.toLocaleString('pt-BR', { minimumFractionDigits: 4, maximumFractionDigits: 4 }) + ' m²';
 }
 
 // Calcula quantas peças cabem em uma caixa: m²/Caixa ÷ área de cada peça
@@ -3050,7 +3050,7 @@ const COLUNAS_EXPORT = [
   { id: 'pecas',            label: 'Peças Avulsas',        fn: d => d.pecas||0 },
   { id: 'm2PorCaixa',       label: 'm²/Caixa',             fn: d => d.m2PorCaixa ? d.m2PorCaixa.toString().replace('.',',') : '' },
   { id: 'pecasPorCaixa',    label: 'Peças/Caixa',          fn: d => d.pecasPorCaixa||'' },
-  { id: 'metragem',         label: 'Metragem (m²)',        fn: d => calcularMetragemTotal(d) > 0 ? calcularMetragemTotal(d).toFixed(2).replace('.',',') : '' },
+  { id: 'metragem',         label: 'Metragem (m²)',        fn: d => calcularMetragemTotal(d) > 0 ? calcularMetragemTotal(d).toFixed(4).replace('.',',') : '' },
   { id: 'data',             label: 'Data Cadastro',        fn: d => d.data||'' },
   { id: 'dataAlteracao',    label: 'Última Alteração',     fn: d => d.dataAlteracao||'' },
 ];
@@ -3589,7 +3589,7 @@ function calcularTotalConf() {
     const m2Avulsas = v('pecasAvulsas') * areaPeca;
     const total = m2 + m2Avulsas;
     el.textContent = totalCaixas > 0 || v('pecasAvulsas') > 0
-      ? `📦 ${totalCaixas} cx · 🔲 ${v('pecasAvulsas')} pç avulsas${total > 0 ? ` · 📐 ${total.toFixed(2).replace('.',',')} m²` : ''}`
+      ? `📦 ${totalCaixas} cx · 🔲 ${v('pecasAvulsas')} pç avulsas${total > 0 ? ` · 📐 ${total.toFixed(4).replace('.',',')} m²` : ''}`
       : '';
   } else if (tipo === 'argamassa') {
     const total = (v('pallets') * v('sacasPorPallet')) + v('sacasAvulsas');
@@ -3844,7 +3844,7 @@ function calcularEditConf() {
     }
     const m2El = document.getElementById('cedit_m2PorPeca');
     if (m2El) m2El.value = m2PorPeca > 0 ? m2PorPeca.toFixed(4).replace('.', ',') : '';
-    el.textContent = total > 0 ? `📦 ${total} peças${m2PorPeca > 0 ? ` · 📐 ${(total * m2PorPeca).toFixed(2).replace('.',',')} m²` : ''}` : '';
+    el.textContent = total > 0 ? `📦 ${total} peças${m2PorPeca > 0 ? ` · 📐 ${(total * m2PorPeca).toFixed(4).replace('.',',')} m²` : ''}` : '';
   } else if (hasCaixasPorPallet) {
     // Piso
     const totalCx = (v('pallets') * v('caixasPorPallet')) + v('caixasAvulsas');
@@ -4003,12 +4003,12 @@ function renderConferencia() {
     if (item.tipo === 'piso') {
       totalTag = `<span class="tag laranja">📦 ${item.totalCaixas||0} cx</span>`;
       if (item.pecasAvulsas > 0) totalTag += `<span class="tag">🔲 ${item.pecasAvulsas} pç</span>`;
-      if (item.m2Total > 0) totalTag += `<span class="tag verde">📐 ${parseFloat(item.m2Total).toFixed(2).replace('.',',')} m²</span>`;
+      if (item.m2Total > 0) totalTag += `<span class="tag verde">📐 ${parseFloat(item.m2Total).toFixed(4).replace('.',',')} m²</span>`;
     } else if (item.tipo === 'forro') {
       totalTag = `<span class="tag laranja">📦 ${item.totalPecas||0} peças</span>`;
       if (item.fardos > 0) totalTag += `<span class="tag">🪵 ${item.fardos} fardos</span>`;
       if (item.pecasAvulsas > 0) totalTag += `<span class="tag">🔲 ${item.pecasAvulsas} avulsas</span>`;
-      if (item.m2Total > 0) totalTag += `<span class="tag verde">📐 ${parseFloat(item.m2Total).toFixed(2).replace('.',',')} m²</span>`;
+      if (item.m2Total > 0) totalTag += `<span class="tag verde">📐 ${parseFloat(item.m2Total).toFixed(4).replace('.',',')} m²</span>`;
       if (item.milimetros) totalTag += `<span class="tag">📏 ${item.milimetros}mm</span>`;
     } else if (item.tipo === 'argamassa') {
       totalTag = `<span class="tag laranja">🪣 ${item.totalSacos||0} sacos</span>`;
@@ -4072,7 +4072,7 @@ function exportarConferenciaCSV() {
     i.bitola||'', i.tonalidade||'',
     i.pallets||'', i.fardos||'', i.pecasPorFardo||'',
     i.totalCaixas||'', i.pecasAvulsas||'', i.totalPecas||'',
-    i.m2Total ? parseFloat(i.m2Total).toFixed(2).replace('.',',') : '',
+    i.m2Total ? parseFloat(i.m2Total).toFixed(4).replace('.',',') : '',
     i.totalSacos||'', i.totalKg||'', i.quantidade||'', i.unidade||'', i.obs||'', i.criadoEm||''
   ].map(v=>`"${String(v).replace(/"/g,'""')}"`).join(sep));
   const csv = '\uFEFF' + [header, ...linhas].join('\r\n');
