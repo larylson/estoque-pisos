@@ -2767,6 +2767,7 @@ function toggleConferido(id) {
   const idx = dados.findIndex(x => String(x.id) === String(id));
   if (idx < 0) return;
   dados[idx].naoConferido = !dados[idx].naoConferido;
+  dados[idx].dataAlteracao = new Date().toLocaleString('pt-BR');
   salvarDados(dados);
   const isNaoConferido = dados[idx].naoConferido;
   toast(isNaoConferido ? '⚠️ Marcado como NÃO CONFERIDO' : '✅ Marcado como Conferido');
@@ -2781,6 +2782,7 @@ function toggleSistema(id) {
   const idx = dados.findIndex(x => String(x.id) === String(id));
   if (idx < 0) return;
   dados[idx].naoSistema = !dados[idx].naoSistema;
+  dados[idx].dataAlteracao = new Date().toLocaleString('pt-BR');
   salvarDados(dados);
   const isNaoSistema = dados[idx].naoSistema;
   toast(isNaoSistema ? '🟣 Marcado como NÃO ADICIONADO AO SISTEMA' : '✅ Marcado como Adicionado ao Sistema');
@@ -2803,6 +2805,7 @@ function toggleLocalizado(id) {
     dados[idx].nivel = '';
   }
 
+  dados[idx].dataAlteracao = new Date().toLocaleString('pt-BR');
   salvarDados(dados);
   const isNaoLocalizado = dados[idx].naoLocalizado;
   toast(isNaoLocalizado ? '📍 Marcado como NÃO ESTÁ NO LOCAL — endereço limpo' : '✅ Piso encontrado no local');
@@ -3439,6 +3442,7 @@ const CONF_CAMPOS = {
     { id: 'caixasAvulsas', label: 'Caixas Avulsas', placeholder: '0', tipo: 'number' },
     { id: 'pecasAvulsas', label: 'Peças Avulsas', placeholder: '0', tipo: 'number' },
     { id: 'm2PorCaixa', label: 'm² por Caixa', placeholder: 'Ex: 2.20', tipo: 'number' },
+    { id: 'pecasPorCaixa', label: '🔢 Peças/Caixa (auto)', placeholder: 'Calculado', tipo: 'readonly' },
   ],
   argamassa: [
     { id: 'nome', label: 'Nome da Argamassa *', placeholder: 'Ex: Argamassa AC-III', tipo: 'text' },
@@ -3528,10 +3532,24 @@ function renderFormConferencia() {
         </div>
       </div>`;
       i++;
+    } else if (c.id === 'm2PorCaixa' && confTipoAtual === 'piso') {
+      // m²/Caixa pareado com Peças/Caixa calculado automaticamente
+      html += `<div class="linha-2" style="margin-bottom:10px">
+        <div class="campo-grupo">
+          <label>${c.label}</label>
+          <input type="number" id="conf_${c.id}" placeholder="${c.placeholder}" min="0" step="0.01" inputmode="decimal" oninput="calcularTotalConf()" />
+        </div>
+        <div class="campo-grupo">
+          <label>🔢 Peças/Caixa <span style="font-weight:400;color:var(--texto-suave)">(auto)</span></label>
+          <input type="text" id="conf_pecasPorCaixa" placeholder="Calculado" readonly style="background:#f0f0ec;color:var(--texto-suave)" />
+        </div>
+      </div>`;
+      i += 2; // pula também o campo pecasPorCaixa (já renderizado aqui)
     } else if (c.tipo === 'text') {
+      const precisaCalculo = c.id === 'tamanho';
       html += `<div class="campo-grupo" style="margin-bottom:10px">
         <label>${c.label}</label>
-        <input type="text" id="conf_${c.id}" placeholder="${c.placeholder}" autocomplete="off" />
+        <input type="text" id="conf_${c.id}" placeholder="${c.placeholder}" autocomplete="off" ${precisaCalculo ? 'oninput="calcularTotalConf()"' : ''} />
       </div>`;
       i++;
     } else if (next && next.tipo === 'number') {
@@ -3593,6 +3611,12 @@ function calcularTotalConf() {
         if (a > 10) a /= 100; if (b > 10) b /= 100;
         areaPeca = a * b;
       }
+    }
+    // Calcula e preenche Peças/Caixa automaticamente (m²/Caixa ÷ área da peça)
+    const pecasPorCaixaEl = document.getElementById('conf_pecasPorCaixa');
+    if (pecasPorCaixaEl) {
+      const pecasCalc = calcularPecasPorCaixa(tamanho, v('m2PorCaixa'));
+      pecasPorCaixaEl.value = pecasCalc > 0 ? pecasCalc : '';
     }
     const m2Avulsas = v('pecasAvulsas') * areaPeca;
     const total = m2 + m2Avulsas;
@@ -3791,6 +3815,9 @@ function _abrirEditConfForm(item) {
 
   campos.forEach(c => {
     const val = item[c.id] || '';
+    if (c.id === 'pecasPorCaixa' && item.tipo === 'piso') {
+      return; // já renderizado junto com m2PorCaixa abaixo
+    }
     if (c.id === 'tamanho' && item.tipo === 'forro') {
       html += `<div class="linha-2" style="margin-bottom:10px">
         <div class="campo-grupo">
@@ -3802,10 +3829,21 @@ function _abrirEditConfForm(item) {
           <input type="text" id="cedit_m2PorPeca" value="${item.m2PorPeca ? parseFloat(item.m2PorPeca).toFixed(4).replace('.',',') : ''}" readonly style="background:#f0f0ec;color:var(--texto-suave)" />
         </div>
       </div>`;
+    } else if (c.id === 'm2PorCaixa' && item.tipo === 'piso') {
+      html += `<div class="linha-2" style="margin-bottom:10px">
+        <div class="campo-grupo">
+          <label>${c.label}</label>
+          <input type="number" id="cedit_${c.id}" value="${val}" min="0" step="0.01" inputmode="decimal" oninput="calcularEditConf()" />
+        </div>
+        <div class="campo-grupo">
+          <label>🔢 Peças/Caixa <span style="font-weight:400;color:var(--texto-suave)">(auto)</span></label>
+          <input type="text" id="cedit_pecasPorCaixa" value="${item.pecasPorCaixa || ''}" readonly style="background:#f0f0ec;color:var(--texto-suave)" />
+        </div>
+      </div>`;
     } else if (c.tipo === 'text') {
       html += `<div class="campo-grupo" style="margin-bottom:10px">
         <label>${c.label}</label>
-        <input type="text" id="cedit_${c.id}" value="${val}" autocomplete="off" />
+        <input type="text" id="cedit_${c.id}" value="${val}" autocomplete="off" ${c.id === 'tamanho' ? 'oninput="calcularEditConf()"' : ''} />
       </div>`;
     } else {
       html += `<div class="campo-grupo" style="margin-bottom:10px">
@@ -3861,6 +3899,12 @@ function calcularEditConf() {
   } else if (hasCaixasPorPallet) {
     // Piso
     const totalCx = (v('pallets') * v('caixasPorPallet')) + v('caixasAvulsas');
+    const tamanho = document.getElementById('cedit_tamanho')?.value?.trim();
+    const pecasPorCaixaEl = document.getElementById('cedit_pecasPorCaixa');
+    if (pecasPorCaixaEl) {
+      const pecasCalc = calcularPecasPorCaixa(tamanho, v('m2PorCaixa'));
+      pecasPorCaixaEl.value = pecasCalc > 0 ? pecasCalc : '';
+    }
     el.textContent = totalCx > 0 ? `📦 ${totalCx} caixas` : '';
   } else if (hasSacos) {
     // Argamassa
@@ -4077,6 +4121,7 @@ function renderConferencia() {
           ${item.tamanho ? ` · 📐 ${item.tamanho}` : ''}
           ${item.milimetros ? ` · ${item.milimetros}mm` : ''}
           ${item.m2PorPeca ? ` · ${parseFloat(item.m2PorPeca).toFixed(4).replace('.',',')} m²/pç` : ''}
+          ${item.pecasPorCaixa ? ` · 🔢 ${item.pecasPorCaixa} pç/cx` : ''}
           ${item.bitola ? ` · Bit: ${item.bitola}` : ''}
           ${item.tonalidade ? ` · Tom: ${item.tonalidade}` : ''}
           ${item.dimensoes ? ` · ${item.dimensoes}` : ''}
