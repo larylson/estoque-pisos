@@ -1087,6 +1087,49 @@ PASSOS PARA RODAR NO GITHUB PAGES:
       color: #fff;
       border-color: var(--verde-escuro);
     }
+    .quebra-filtro-btn {
+      padding: 7px 14px;
+      border-radius: 20px;
+      border: 1.5px solid #d0c9bb;
+      background: #fff;
+      font-size: 12px;
+      font-weight: 700;
+      cursor: pointer;
+      color: #555;
+    }
+    .quebra-filtro-btn.ativo {
+      background: #c0392b;
+      color: #fff;
+      border-color: #c0392b;
+    }
+    .quebra-item {
+      background: var(--branco);
+      border-radius: var(--radius);
+      padding: 14px 16px;
+      margin-bottom: 10px;
+      box-shadow: 0 1px 6px rgba(0,0,0,0.08);
+      border-left: 4px solid #c0392b;
+    }
+    .quebra-item.retirado {
+      border-left-color: #5a9e5a;
+      opacity: 0.75;
+    }
+    .quebra-status-btn {
+      font-size: 12px;
+      font-weight: 700;
+      padding: 4px 10px;
+      border-radius: 20px;
+      cursor: pointer;
+      border: none;
+    }
+    .quebra-status-btn.pendente {
+      background: #fde8e8;
+      color: #c0392b;
+    }
+    .quebra-status-btn.retirado {
+      background: #d5f5dd;
+      color: #1a6b32;
+    }
     .erro-resumo {
       display: flex;
       gap: 8px;
@@ -1312,6 +1355,9 @@ PASSOS PARA RODAR NO GITHUB PAGES:
     </div>
     <div class="tab" onclick="irPara('conferencia')">
       <span class="tab-icon">📋</span>Conferência
+    </div>
+    <div class="tab" onclick="irPara('quebras')">
+      <span class="tab-icon">💔</span>Quebras
     </div>
   </div>
 </div>
@@ -1614,6 +1660,7 @@ PASSOS PARA RODAR NO GITHUB PAGES:
       </div>
 
       <button onclick="salvarItemConferencia()" class="btn" style="background:var(--verde-escuro);color:#fff;width:100%;margin-top:14px">✅ Adicionar à Lista</button>
+      <button onclick="salvarItemComoAvaria()" class="btn" style="background:#fde8e8;color:#c0392b;font-weight:700;width:100%;margin-top:8px;border:1.5px solid #f5b7b1">💔 Adicionar Avaria</button>
     </div>
 
     <!-- Busca por texto -->
@@ -1637,6 +1684,40 @@ PASSOS PARA RODAR NO GITHUB PAGES:
     <div style="display:flex;gap:8px;margin-top:8px">
       <button onclick="exportarConferenciaCSV()" class="btn exportar-btn" style="flex:1">📤 Exportar CSV</button>
       <button onclick="limparConferencia()" class="btn" style="flex:1;background:#fde8e8;color:#c0392b;font-weight:700">🗑️ Limpar Lista</button>
+    </div>
+
+  </div>
+</div>
+
+<!-- ===================== PÁGINA: QUEBRAS / AVARIAS ===================== -->
+<div class="pagina" id="pag-quebras">
+  <div style="padding:16px">
+
+    <!-- Busca por texto -->
+    <input type="search" id="quebras-busca-texto" placeholder="🔍 Buscar item quebrado..." oninput="renderQuebras()" style="width:100%;box-sizing:border-box;padding:11px 14px;font-size:14px;border-radius:10px;border:1.5px solid #d0c9bb;background:#fff;margin-bottom:12px" />
+
+    <!-- Filtro por tipo de material -->
+    <div style="font-size:12px;font-weight:700;color:var(--texto-suave);margin-bottom:8px;text-transform:uppercase;letter-spacing:.5px">Filtrar por tipo</div>
+    <div id="quebras-filtros-tipo" style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px"></div>
+
+    <!-- Filtro por status -->
+    <div style="font-size:12px;font-weight:700;color:var(--texto-suave);margin-bottom:8px;text-transform:uppercase;letter-spacing:.5px">Filtrar por status</div>
+    <div style="display:flex;gap:6px;margin-bottom:12px">
+      <button class="quebra-filtro-btn ativo" onclick="setFiltroQuebraStatus('todos', this)">Todos</button>
+      <button class="quebra-filtro-btn" onclick="setFiltroQuebraStatus('pendente', this)">💔 Pendentes</button>
+      <button class="quebra-filtro-btn" onclick="setFiltroQuebraStatus('retirado', this)">✅ Retirados</button>
+    </div>
+
+    <!-- Resumo -->
+    <div id="quebras-resumo"></div>
+
+    <!-- Lista -->
+    <div id="quebras-lista"></div>
+
+    <!-- Botões de ação -->
+    <div style="display:flex;gap:8px;margin-top:8px">
+      <button onclick="exportarQuebrasCSV()" class="btn exportar-btn" style="flex:1">📤 Exportar CSV</button>
+      <button onclick="limparQuebras()" class="btn" style="flex:1;background:#fde8e8;color:#c0392b;font-weight:700">🗑️ Limpar Lista</button>
     </div>
 
   </div>
@@ -2053,7 +2134,7 @@ function irPara(pag) {
   document.querySelectorAll('.tab').forEach(t => t.classList.remove('ativo'));
   document.getElementById('pag-' + pag).classList.add('ativa');
   const tabs = document.querySelectorAll('.tab');
-  const idx = { cadastrar: 0, estoque: 1, relatorio: 2, movimentacoes: 3, galeria: 4, config: 5, erros: 6, conferencia: 7 };
+  const idx = { cadastrar: 0, estoque: 1, relatorio: 2, movimentacoes: 3, galeria: 4, config: 5, erros: 6, conferencia: 7, quebras: 8 };
   const activeTab = tabs[idx[pag]];
   activeTab.classList.add('ativo');
   activeTab.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
@@ -2064,6 +2145,7 @@ function irPara(pag) {
   if (pag === 'config') renderConfig();
   if (pag === 'erros') renderErros();
   if (pag === 'conferencia') renderConferencia();
+  if (pag === 'quebras') renderQuebras();
 }
 
 // ===================== FORMULÁRIO =====================
@@ -2767,7 +2849,6 @@ function toggleConferido(id) {
   const idx = dados.findIndex(x => String(x.id) === String(id));
   if (idx < 0) return;
   dados[idx].naoConferido = !dados[idx].naoConferido;
-  dados[idx].dataAlteracao = new Date().toLocaleString('pt-BR');
   salvarDados(dados);
   const isNaoConferido = dados[idx].naoConferido;
   toast(isNaoConferido ? '⚠️ Marcado como NÃO CONFERIDO' : '✅ Marcado como Conferido');
@@ -2782,7 +2863,6 @@ function toggleSistema(id) {
   const idx = dados.findIndex(x => String(x.id) === String(id));
   if (idx < 0) return;
   dados[idx].naoSistema = !dados[idx].naoSistema;
-  dados[idx].dataAlteracao = new Date().toLocaleString('pt-BR');
   salvarDados(dados);
   const isNaoSistema = dados[idx].naoSistema;
   toast(isNaoSistema ? '🟣 Marcado como NÃO ADICIONADO AO SISTEMA' : '✅ Marcado como Adicionado ao Sistema');
@@ -2805,7 +2885,6 @@ function toggleLocalizado(id) {
     dados[idx].nivel = '';
   }
 
-  dados[idx].dataAlteracao = new Date().toLocaleString('pt-BR');
   salvarDados(dados);
   const isNaoLocalizado = dados[idx].naoLocalizado;
   toast(isNaoLocalizado ? '📍 Marcado como NÃO ESTÁ NO LOCAL — endereço limpo' : '✅ Piso encontrado no local');
@@ -3533,7 +3612,6 @@ function renderFormConferencia() {
       </div>`;
       i++;
     } else if (c.id === 'm2PorCaixa' && confTipoAtual === 'piso') {
-      // m²/Caixa pareado com Peças/Caixa calculado automaticamente
       html += `<div class="linha-2" style="margin-bottom:10px">
         <div class="campo-grupo">
           <label>${c.label}</label>
@@ -3544,7 +3622,7 @@ function renderFormConferencia() {
           <input type="text" id="conf_pecasPorCaixa" placeholder="Calculado" readonly style="background:#f0f0ec;color:var(--texto-suave)" />
         </div>
       </div>`;
-      i += 2; // pula também o campo pecasPorCaixa (já renderizado aqui)
+      i += 2;
     } else if (c.tipo === 'text') {
       const precisaCalculo = c.id === 'tamanho';
       html += `<div class="campo-grupo" style="margin-bottom:10px">
@@ -3612,14 +3690,14 @@ function calcularTotalConf() {
         areaPeca = a * b;
       }
     }
-    // Calcula e preenche Peças/Caixa automaticamente (m²/Caixa ÷ área da peça)
+    const m2Avulsas = v('pecasAvulsas') * areaPeca;
+    const total = m2 + m2Avulsas;
+    // Calcula e preenche Peças/Caixa automaticamente
     const pecasPorCaixaEl = document.getElementById('conf_pecasPorCaixa');
     if (pecasPorCaixaEl) {
       const pecasCalc = calcularPecasPorCaixa(tamanho, v('m2PorCaixa'));
       pecasPorCaixaEl.value = pecasCalc > 0 ? pecasCalc : '';
     }
-    const m2Avulsas = v('pecasAvulsas') * areaPeca;
-    const total = m2 + m2Avulsas;
     el.textContent = totalCaixas > 0 || v('pecasAvulsas') > 0
       ? `📦 ${totalCaixas} cx · 🔲 ${v('pecasAvulsas')} pç avulsas${total > 0 ? ` · 📐 ${total.toFixed(4).replace('.',',')} m²` : ''}`
       : '';
@@ -3666,10 +3744,11 @@ function confCarregarFoto(event) {
   event.target.value = '';
 }
 
-function salvarItemConferencia() {
+// Monta o objeto do item a partir dos campos preenchidos no formulário de conferência
+function montarItemConfDoForm() {
   const campos = CONF_CAMPOS[confTipoAtual] || [];
   const nomeField = document.getElementById('conf_nome');
-  if (!nomeField?.value.trim()) { toast('⚠️ Informe o nome do item.', true); return; }
+  if (!nomeField?.value.trim()) { toast('⚠️ Informe o nome do item.', true); return null; }
 
   const item = {
     id: `${Date.now()}_${Math.random().toString(36).slice(2,6)}`,
@@ -3713,6 +3792,12 @@ function salvarItemConferencia() {
   }
 
   item.criadoEm = new Date().toLocaleString('pt-BR');
+  return item;
+}
+
+function salvarItemConferencia() {
+  const item = montarItemConfDoForm();
+  if (!item) return;
 
   const lista = carregarConferencia();
   lista.unshift(item);
@@ -3720,6 +3805,21 @@ function salvarItemConferencia() {
   renderFormConferencia();
   renderConferencia();
   toast('✅ Item adicionado à conferência!');
+}
+
+// Salva o item preenchido diretamente na aba Quebras (avaria), em vez da conferência normal
+function salvarItemComoAvaria() {
+  const item = montarItemConfDoForm();
+  if (!item) return;
+
+  item.avaria = true;
+  item.statusQuebra = 'pendente'; // pendente → retirado
+
+  const lista = carregarQuebras();
+  lista.unshift(item);
+  salvarQuebras(lista);
+  renderFormConferencia();
+  toast('💔 Item enviado para a aba Quebras!');
 }
 
 function carregarConferencia() {
@@ -4159,11 +4259,12 @@ function exportarConferenciaCSV() {
       (i.obs || '').toLowerCase().includes(buscaTexto)
     );
   }
-  const header = ['Responsável','Tipo','Nome','Marca','Lote','Tamanho','Espessura (mm)','m²/Peça','Bitola','Tonalidade','Pallets','Fardos','Peças/Fardo','Caixas Totais','Peças Avulsas','Total Peças','m² Total','Sacos','Kg Total','Qtd','Unidade','Obs','Data'].join(sep);
+  const header = ['Responsável','Tipo','Nome','Marca','Lote','Tamanho','Espessura (mm)','m²/Peça','Peças/Caixa','Bitola','Tonalidade','Pallets','Fardos','Peças/Fardo','Caixas Totais','Peças Avulsas','Total Peças','m² Total','Sacos','Kg Total','Qtd','Unidade','Obs','Data'].join(sep);
   const linhas = listaExportar.map(i => [
     i.responsavel||'', i.tipo||'', i.nome||'', i.marca||'', i.lote||'', i.tamanho||'',
     i.milimetros||'',
     i.m2PorPeca ? parseFloat(i.m2PorPeca).toFixed(4).replace('.',',') : '',
+    i.pecasPorCaixa||'',
     i.bitola||'', i.tonalidade||'',
     i.pallets||'', i.fardos||'', i.pecasPorFardo||'',
     i.totalCaixas||'', i.pecasAvulsas||'', i.totalPecas||'',
@@ -4175,9 +4276,10 @@ function exportarConferenciaCSV() {
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url;
-  const sufixoUsuario = filtroConfUsuario !== 'todos' ? `_${filtroConfUsuario}` : '';
-  const sufixoTipo = filtroConfTipo !== 'todos' ? `_${filtroConfTipo}` : '';
-  a.download = `conferencia_carga${sufixoUsuario}${sufixoTipo}_${new Date().toLocaleDateString('pt-BR').replace(/\//g,'-')}.csv`;
+  const sufixoU = filtroConfUsuario !== 'todos' ? `_${filtroConfUsuario}` : '';
+  const sufixoT = filtroConfTipo !== 'todos' ? `_${filtroConfTipo}` : '';
+  const sufixo = sufixoU + sufixoT;
+  a.download = `conferencia_carga${sufixo}_${new Date().toLocaleDateString('pt-BR').replace(/\//g,'-')}.csv`;
   a.click();
   toast('📤 Exportado com sucesso!');
 }
@@ -4187,6 +4289,231 @@ window.sincronizarConferenciaFirestore = async function(uid) {
   // Aguarda o módulo Firebase inicializar
   if (window._fbSyncConf) window._fbSyncConf(uid);
 };
+
+// ===================== QUEBRAS / AVARIAS =====================
+const CHAVE_QUEBRAS = 'estoque_quebras_v1';
+let filtroQuebraStatus = 'todos';
+let filtroQuebraTipo = 'todos';
+
+function carregarQuebras() {
+  try { return JSON.parse(localStorage.getItem(CHAVE_QUEBRAS)) || []; }
+  catch(e) { return []; }
+}
+
+function salvarQuebras(lista) {
+  localStorage.setItem(CHAVE_QUEBRAS, JSON.stringify(lista));
+  if (window._usuarioUid && window.sincronizarQuebrasFirestore) {
+    window.sincronizarQuebrasFirestore(window._usuarioUid);
+  }
+}
+
+function setFiltroQuebraStatus(status, btn) {
+  filtroQuebraStatus = status;
+  document.querySelectorAll('.quebra-filtro-btn').forEach(b => b.classList.remove('ativo'));
+  if (btn) btn.classList.add('ativo');
+  renderQuebras();
+}
+
+function setFiltroQuebraTipo(tipo) {
+  filtroQuebraTipo = tipo;
+  renderQuebras();
+}
+
+function toggleStatusQuebra(id) {
+  const lista = carregarQuebras();
+  const idx = lista.findIndex(i => i.id === id);
+  if (idx < 0) return;
+  lista[idx].statusQuebra = lista[idx].statusQuebra === 'retirado' ? 'pendente' : 'retirado';
+  if (lista[idx].statusQuebra === 'retirado') lista[idx].retiradoEm = new Date().toLocaleString('pt-BR');
+  else delete lista[idx].retiradoEm;
+  salvarQuebras(lista);
+  renderQuebras();
+  toast(lista[idx].statusQuebra === 'retirado' ? '✅ Marcado como Retirado do estoque!' : '💔 Reaberto como Pendente.');
+}
+
+function excluirQuebra(id) {
+  const lista = carregarQuebras();
+  const item = lista.find(i => i.id === id);
+  if (!item) return;
+  const responsavel = item.responsavel || '';
+
+  if (usuarioAtivoIsMestre()) {
+    if (!confirm('Excluir este item de quebras?')) return;
+    salvarQuebras(lista.filter(i => i.id !== id));
+    renderQuebras();
+    toast('🗑️ Item removido.');
+    return;
+  }
+
+  if (window._usuarioAtivo && window._usuarioAtivo === responsavel) {
+    mostrarModalSenha('excluir_quebra', id, () => {
+      salvarQuebras(carregarQuebras().filter(i => i.id !== id));
+      renderQuebras();
+      toast('🗑️ Item removido.');
+    });
+    return;
+  }
+
+  mostrarModalSenha('excluir_quebra', id, (usuario) => {
+    if (!isMestre(usuario) && usuario !== responsavel) {
+      toast('🔒 Apenas o responsável ou um mestre pode excluir este item.', true); return;
+    }
+    salvarQuebras(carregarQuebras().filter(i => i.id !== id));
+    renderQuebras();
+    toast('🗑️ Item removido.');
+  });
+}
+
+function limparQuebras() {
+  if (!usuarioAtivoIsMestre()) { toast('🔒 Apenas mestres podem limpar toda a lista.', true); return; }
+  if (!confirm('Limpar toda a lista de quebras?')) return;
+  salvarQuebras([]);
+  renderQuebras();
+  toast('🗑️ Lista limpa.');
+}
+
+function renderQuebras() {
+  const lista = carregarQuebras();
+
+  // Filtros por tipo de material
+  const filtrosTipoEl = document.getElementById('quebras-filtros-tipo');
+  if (filtrosTipoEl) {
+    const tipos = [...new Set(lista.map(i => i.tipo).filter(Boolean))];
+    if (tipos.length > 0) {
+      filtrosTipoEl.innerHTML = [
+        `<button onclick="setFiltroQuebraTipo('todos')" style="padding:6px 14px;border-radius:20px;border:1.5px solid ${filtroQuebraTipo==='todos'?'#1a2e1a':'#d0c9bb'};background:${filtroQuebraTipo==='todos'?'#1a2e1a':'#fff'};color:${filtroQuebraTipo==='todos'?'#fff':'#555'};font-size:12px;font-weight:700;cursor:pointer">Todos</button>`,
+        ...tipos.map(t => `<button onclick="setFiltroQuebraTipo('${t}')" style="padding:6px 14px;border-radius:20px;border:1.5px solid ${filtroQuebraTipo===t?'#1a2e1a':'#d0c9bb'};background:${filtroQuebraTipo===t?'#1a2e1a':'#fff'};color:${filtroQuebraTipo===t?'#fff':'#555'};font-size:12px;font-weight:700;cursor:pointer">${CONF_ICONS[t]||'📦'} ${CONF_TITULOS[t]?.replace('Cadastrar ','')||t}</button>`)
+      ].join('');
+    } else {
+      filtrosTipoEl.innerHTML = '';
+    }
+  }
+
+  // Aplica filtros: status + tipo + busca
+  const buscaTexto = (document.getElementById('quebras-busca-texto')?.value || '').toLowerCase().trim();
+  let listaFiltrada = lista;
+  if (filtroQuebraStatus !== 'todos') listaFiltrada = listaFiltrada.filter(i => (i.statusQuebra || 'pendente') === filtroQuebraStatus);
+  if (filtroQuebraTipo !== 'todos') listaFiltrada = listaFiltrada.filter(i => i.tipo === filtroQuebraTipo);
+  if (buscaTexto) {
+    listaFiltrada = listaFiltrada.filter(i =>
+      (i.nome || '').toLowerCase().includes(buscaTexto) ||
+      (i.marca || '').toLowerCase().includes(buscaTexto) ||
+      (i.lote || '').toLowerCase().includes(buscaTexto) ||
+      (i.codigo || '').toLowerCase().includes(buscaTexto) ||
+      (i.obs || '').toLowerCase().includes(buscaTexto)
+    );
+  }
+
+  const pendentes = lista.filter(i => (i.statusQuebra || 'pendente') === 'pendente').length;
+  const retirados = lista.filter(i => i.statusQuebra === 'retirado').length;
+
+  const resumoEl = document.getElementById('quebras-resumo');
+  if (resumoEl) {
+    resumoEl.innerHTML = lista.length === 0 ? '' : `
+      <div style="display:flex;gap:8px;margin-bottom:14px">
+        <div style="flex:1;background:#fff;border-radius:10px;padding:10px;text-align:center;box-shadow:0 1px 6px rgba(0,0,0,0.08)">
+          <div style="font-size:22px;font-weight:800;color:#c0392b">${pendentes}</div>
+          <div style="font-size:11px;color:var(--texto-suave)">Pendentes</div>
+        </div>
+        <div style="flex:1;background:#fff;border-radius:10px;padding:10px;text-align:center;box-shadow:0 1px 6px rgba(0,0,0,0.08)">
+          <div style="font-size:22px;font-weight:800;color:#5a9e5a">${retirados}</div>
+          <div style="font-size:11px;color:var(--texto-suave)">Retirados</div>
+        </div>
+        <div style="flex:1;background:#fff;border-radius:10px;padding:10px;text-align:center;box-shadow:0 1px 6px rgba(0,0,0,0.08)">
+          <div style="font-size:22px;font-weight:800;color:var(--verde-escuro)">${lista.length}</div>
+          <div style="font-size:11px;color:var(--texto-suave)">Total</div>
+        </div>
+      </div>`;
+  }
+
+  const listaEl = document.getElementById('quebras-lista');
+  if (!listaEl) return;
+
+  if (listaFiltrada.length === 0) {
+    listaEl.innerHTML = `<div class="lista-vazia"><div class="emoji">💔</div><p>${lista.length === 0 ? 'Nenhum item quebrado registrado.' : 'Nenhum item encontrado com esses filtros.'}</p></div>`;
+    return;
+  }
+
+  listaEl.innerHTML = listaFiltrada.map(item => {
+    const status = item.statusQuebra || 'pendente';
+    const icon = CONF_ICONS[item.tipo] || '📦';
+    let totalTag = '';
+    if (item.tipo === 'piso') {
+      totalTag = `<span class="tag laranja">📦 ${item.totalCaixas||0} cx</span>`;
+      if (item.pecasAvulsas > 0) totalTag += `<span class="tag">🔲 ${item.pecasAvulsas} pç</span>`;
+      if (item.m2Total > 0) totalTag += `<span class="tag verde">📐 ${parseFloat(item.m2Total).toFixed(4).replace('.',',')} m²</span>`;
+    } else if (item.tipo === 'forro') {
+      totalTag = `<span class="tag laranja">📦 ${item.totalPecas||0} peças</span>`;
+      if (item.fardos > 0) totalTag += `<span class="tag">🪵 ${item.fardos} fardos</span>`;
+    } else if (item.tipo === 'argamassa') {
+      totalTag = `<span class="tag laranja">🪣 ${item.totalSacos||0} sacos</span>`;
+      if (item.totalKg > 0) totalTag += `<span class="tag">⚖️ ${item.totalKg} kg</span>`;
+    } else if (item.tipo === 'telha' || item.tipo === 'tijolo') {
+      totalTag = `<span class="tag laranja">📦 ${item.totalPecas||0} pç</span>`;
+    } else {
+      totalTag = item.quantidade ? `<span class="tag laranja">📦 ${item.quantidade} ${item.unidade||'un'}</span>` : '';
+    }
+
+    return `
+      <div class="quebra-item ${status}">
+        ${item.foto ? `<img src="${item.foto}" onclick="abrirLightbox([this.src],0)" style="width:100%;max-height:180px;object-fit:cover;border-radius:10px;margin-bottom:10px;cursor:pointer" />` : ''}
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px;gap:6px;flex-wrap:wrap">
+          <div class="conf-item-nome">${icon} ${item.nome}</div>
+          <button class="quebra-status-btn ${status}" onclick="toggleStatusQuebra('${item.id}')">
+            ${status === 'retirado' ? '✅ Retirado' : '💔 Pendente'}
+          </button>
+        </div>
+        <div style="font-size:12px;color:var(--texto-suave);margin-bottom:6px">
+          ${item.marca ? `🏷️ ${item.marca}` : ''}
+          ${item.lote ? ` · Lote: ${item.lote}` : ''}
+          ${item.tamanho ? ` · 📐 ${item.tamanho}` : ''}
+          ${item.obs ? ` · ${item.obs}` : ''}
+        </div>
+        <div class="conf-item-tags">
+          ${item.pallets > 0 ? `<span class="tag">🪵 ${item.pallets} pallets</span>` : ''}
+          ${totalTag}
+          ${item.responsavel ? `<span class="tag azul">👤 ${item.responsavel}</span>` : ''}
+        </div>
+        <div class="conf-acoes">
+          <span style="font-size:11px;color:var(--texto-suave);flex:1">🕐 ${item.criadoEm}${item.retiradoEm ? ` · ✅ Retirado: ${item.retiradoEm}` : ''}</span>
+          <button class="conf-btn-excluir" onclick="excluirQuebra('${item.id}')">🗑️</button>
+        </div>
+      </div>`;
+  }).join('');
+}
+
+function exportarQuebrasCSV() {
+  const lista = carregarQuebras();
+  if (!lista.length) { toast('⚠️ Nenhum item para exportar.', true); return; }
+  const sep = ';';
+  const buscaTexto = (document.getElementById('quebras-busca-texto')?.value || '').toLowerCase().trim();
+  let listaExportar = lista;
+  if (filtroQuebraStatus !== 'todos') listaExportar = listaExportar.filter(i => (i.statusQuebra || 'pendente') === filtroQuebraStatus);
+  if (filtroQuebraTipo !== 'todos') listaExportar = listaExportar.filter(i => i.tipo === filtroQuebraTipo);
+  if (buscaTexto) {
+    listaExportar = listaExportar.filter(i =>
+      (i.nome || '').toLowerCase().includes(buscaTexto) ||
+      (i.marca || '').toLowerCase().includes(buscaTexto) ||
+      (i.lote || '').toLowerCase().includes(buscaTexto)
+    );
+  }
+  const header = ['Status','Responsável','Tipo','Nome','Marca','Lote','Tamanho','Pallets','Caixas Totais','Peças Avulsas','m² Total','Sacos','Kg Total','Qtd','Unidade','Obs','Data Registro','Data Retirada'].join(sep);
+  const linhas = listaExportar.map(i => [
+    (i.statusQuebra||'pendente')==='retirado'?'Retirado':'Pendente',
+    i.responsavel||'', i.tipo||'', i.nome||'', i.marca||'', i.lote||'', i.tamanho||'',
+    i.pallets||'', i.totalCaixas||'', i.pecasAvulsas||'',
+    i.m2Total ? parseFloat(i.m2Total).toFixed(4).replace('.',',') : '',
+    i.totalSacos||'', i.totalKg||'', i.quantidade||'', i.unidade||'', i.obs||'', i.criadoEm||'', i.retiradoEm||''
+  ].map(v=>`"${String(v).replace(/"/g,'""')}"`).join(sep));
+  const csv = '\uFEFF' + [header, ...linhas].join('\r\n');
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `quebras_avarias_${new Date().toLocaleDateString('pt-BR').replace(/\//g,'-')}.csv`;
+  a.click();
+  toast('📤 Exportado com sucesso!');
+}
 
 // ===================== ERROS DE CARREGAMENTO =====================
 const CHAVE_ERROS = 'estoque_erros_v1';
@@ -4717,6 +5044,7 @@ function refFotos(uid) { return doc(db, 'usuarios', uid, 'dados', 'fotos'); }
 function refUsuarios(uid) { return doc(db, 'usuarios', uid, 'dados', 'usuarios'); }
 function refErros(uid) { return doc(db, 'usuarios', uid, 'dados', 'erros'); }
 function refConferencia(uid) { return doc(db, 'usuarios', uid, 'dados', 'conferencia'); }
+function refQuebras(uid) { return doc(db, 'usuarios', uid, 'dados', 'quebras'); }
 
 // Expõe função real de sync de conferência para o escopo global
 window._fbSyncConf = async function(uid) {
@@ -4730,6 +5058,14 @@ window._fbSyncConf = async function(uid) {
 // Sobrescreve com versão real usando setDoc/doc do módulo
 window.sincronizarConferenciaFirestore = async function(uid) {
   await window._fbSyncConf(uid);
+};
+
+window.sincronizarQuebrasFirestore = async function(uid) {
+  try {
+    const lista = carregarQuebras();
+    const semFotos = lista.map(i => { const c = {...i}; delete c.foto; return c; });
+    await setDoc(refQuebras(uid), { lista: semFotos, atualizadoEm: serverTimestamp() });
+  } catch(e) { console.error('Erro ao sincronizar quebras:', e); }
 };
 
 window.sincronizarUsuariosFirestore = async function(uid) {
@@ -4779,13 +5115,14 @@ async function carregarDoFirestore(uid) {
   try {
     toast('☁️ Carregando dados da nuvem...');
 
-    const [snapEstoque, snapMovs, snapFotos, snapUsuarios, snapErros, snapConferencia] = await Promise.all([
+    const [snapEstoque, snapMovs, snapFotos, snapUsuarios, snapErros, snapConferencia, snapQuebras] = await Promise.all([
       getDoc(refEstoque(uid)),
       getDoc(refMovimentacoes(uid)),
       getDoc(refFotos(uid)),
       getDoc(refUsuarios(uid)),
       getDoc(refErros(uid)),
-      getDoc(refConferencia(uid))
+      getDoc(refConferencia(uid)),
+      getDoc(refQuebras(uid))
     ]);
 
     let foiAtualizado = false;
@@ -4906,6 +5243,23 @@ async function carregarDoFirestore(uid) {
       }
     }
 
+    // Carrega quebras do Firestore
+    if (snapQuebras && snapQuebras.exists()) {
+      const quebrasNuvem = snapQuebras.data().lista || [];
+      const quebrasLocais = carregarQuebras();
+      const mapaFotosLocaisQ = {};
+      quebrasLocais.forEach(i => { if (i.foto) mapaFotosLocaisQ[i.id] = i.foto; });
+      const mergedQuebras = quebrasNuvem.map(i => ({
+        ...i,
+        foto: mapaFotosLocaisQ[i.id] || null
+      })).sort((a,b) => b.id.localeCompare(a.id));
+      if (JSON.stringify(mergedQuebras.map(i=>({...i,foto:undefined}))) !==
+          JSON.stringify(quebrasLocais.map(i=>({...i,foto:undefined})).sort((a,b)=>b.id.localeCompare(a.id)))) {
+        localStorage.setItem(CHAVE_QUEBRAS, JSON.stringify(mergedQuebras));
+        foiAtualizado = true;
+      }
+    }
+
     // Sincroniza dados locais para a nuvem após carregar
     sincronizarEstoqueFirestore(uid);
     sincronizarMovimentacoesFirestore(uid);
@@ -4913,6 +5267,7 @@ async function carregarDoFirestore(uid) {
     sincronizarUsuariosFirestore(uid);
     sincronizarErrosFirestore(uid);
     sincronizarConferenciaFirestore(uid);
+    sincronizarQuebrasFirestore(uid);
 
   } catch(e) {
     console.error('Erro ao carregar do Firestore:', e);
@@ -5101,7 +5456,32 @@ onAuthStateChanged(auth, async user => {
       }
     }, e => console.error('onSnapshot conferencia:', e));
 
-    window._unsubListeners = [unsubEstoque, unsubMovs, unsubUsuarios, unsubErros, unsubConf];
+    let _primeiraVezQuebras = true;
+    const unsubQuebras = onSnapshot(refQuebras(user.uid), snap => {
+      if (_primeiraVezQuebras) { _primeiraVezQuebras = false; return; }
+      if (!snap.exists()) return;
+      const quebrasNuvem = snap.data().lista || [];
+      const quebrasLocais = carregarQuebras();
+
+      const nuvemStr = JSON.stringify(quebrasNuvem.map(i => ({...i, foto: undefined})).sort((a,b) => a.id.localeCompare(b.id)));
+      const localStr = JSON.stringify(quebrasLocais.map(i => ({...i, foto: undefined})).sort((a,b) => a.id.localeCompare(b.id)));
+
+      if (nuvemStr !== localStr) {
+        const mapaFotosLocais = {};
+        quebrasLocais.forEach(i => { if (i.foto) mapaFotosLocais[i.id] = i.foto; });
+
+        const merged = quebrasNuvem.map(i => ({
+          ...i,
+          foto: mapaFotosLocais[i.id] || null
+        })).sort((a,b) => b.id.localeCompare(a.id));
+
+        localStorage.setItem(CHAVE_QUEBRAS, JSON.stringify(merged));
+        renderQuebras();
+        toast('🔄 Quebras sincronizadas');
+      }
+    }, e => console.error('onSnapshot quebras:', e));
+
+    window._unsubListeners = [unsubEstoque, unsubMovs, unsubUsuarios, unsubErros, unsubConf, unsubQuebras];
 
   } else {
     window._usuarioUid = null;
