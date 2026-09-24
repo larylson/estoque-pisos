@@ -3516,6 +3516,7 @@ const CONF_CAMPOS = {
     { id: 'tamanho', label: 'Tamanho', placeholder: 'Ex: 82x82', tipo: 'text' },
     { id: 'bitola', label: 'Bitola', placeholder: 'Ex: A, B, C', tipo: 'text' },
     { id: 'tonalidade', label: 'Tonalidade', placeholder: 'Ex: T1, T2', tipo: 'text' },
+    { id: 'endereco', label: '📍 Endereço', placeholder: 'Ex: 04.43.10.00.01', tipo: 'endereco' },
     { id: 'pallets', label: '🪵 Pallets', placeholder: '0', tipo: 'number' },
     { id: 'caixasPorPallet', label: 'Caixas/Pallet', placeholder: 'Ex: 40', tipo: 'number' },
     { id: 'caixasAvulsas', label: 'Caixas Avulsas', placeholder: '0', tipo: 'number' },
@@ -3623,6 +3624,12 @@ function renderFormConferencia() {
         </div>
       </div>`;
       i += 2;
+    } else if (c.tipo === 'endereco') {
+      html += `<div class="campo-grupo" style="margin-bottom:10px">
+        <label>${c.label}</label>
+        <input type="text" id="conf_${c.id}" placeholder="${c.placeholder}" autocomplete="off" inputmode="numeric" maxlength="14" oninput="aplicarMascaraEndereco(this)" />
+      </div>`;
+      i++;
     } else if (c.tipo === 'text') {
       const precisaCalculo = c.id === 'tamanho';
       html += `<div class="campo-grupo" style="margin-bottom:10px">
@@ -3668,6 +3675,20 @@ function renderFormConferencia() {
   // Reset foto
   confFotoAtual = null;
   document.getElementById('conf-foto-preview').innerHTML = '';
+}
+
+// Aplica máscara de endereço: insere pontos automaticamente a cada 2 dígitos
+// Ex: digitando "0443100001" vira "04.43.10.00.01"
+function aplicarMascaraEndereco(input) {
+  const cursorNoFim = input.selectionEnd === input.value.length;
+  let apenasNumeros = input.value.replace(/\D/g, '').slice(0, 10); // máximo 5 grupos de 2 dígitos
+  let formatado = '';
+  for (let i = 0; i < apenasNumeros.length; i += 2) {
+    if (formatado) formatado += '.';
+    formatado += apenasNumeros.slice(i, i + 2);
+  }
+  input.value = formatado;
+  if (cursorNoFim) input.setSelectionRange(formatado.length, formatado.length);
 }
 
 function calcularTotalConf() {
@@ -3939,6 +3960,11 @@ function _abrirEditConfForm(item) {
           <label>🔢 Peças/Caixa <span style="font-weight:400;color:var(--texto-suave)">(auto)</span></label>
           <input type="text" id="cedit_pecasPorCaixa" value="${item.pecasPorCaixa || ''}" readonly style="background:#f0f0ec;color:var(--texto-suave)" />
         </div>
+      </div>`;
+    } else if (c.tipo === 'endereco') {
+      html += `<div class="campo-grupo" style="margin-bottom:10px">
+        <label>${c.label}</label>
+        <input type="text" id="cedit_${c.id}" value="${val}" autocomplete="off" inputmode="numeric" maxlength="14" oninput="aplicarMascaraEndereco(this)" />
       </div>`;
     } else if (c.tipo === 'text') {
       html += `<div class="campo-grupo" style="margin-bottom:10px">
@@ -4222,6 +4248,7 @@ function renderConferencia() {
           ${item.milimetros ? ` · ${item.milimetros}mm` : ''}
           ${item.m2PorPeca ? ` · ${parseFloat(item.m2PorPeca).toFixed(4).replace('.',',')} m²/pç` : ''}
           ${item.pecasPorCaixa ? ` · 🔢 ${item.pecasPorCaixa} pç/cx` : ''}
+          ${item.endereco ? ` · 📍 ${item.endereco}` : ''}
           ${item.bitola ? ` · Bit: ${item.bitola}` : ''}
           ${item.tonalidade ? ` · Tom: ${item.tonalidade}` : ''}
           ${item.dimensoes ? ` · ${item.dimensoes}` : ''}
@@ -4259,12 +4286,13 @@ function exportarConferenciaCSV() {
       (i.obs || '').toLowerCase().includes(buscaTexto)
     );
   }
-  const header = ['Responsável','Tipo','Nome','Marca','Lote','Tamanho','Espessura (mm)','m²/Peça','Peças/Caixa','Bitola','Tonalidade','Pallets','Fardos','Peças/Fardo','Caixas Totais','Peças Avulsas','Total Peças','m² Total','Sacos','Kg Total','Qtd','Unidade','Obs','Data'].join(sep);
+  const header = ['Responsável','Tipo','Nome','Marca','Lote','Tamanho','Espessura (mm)','m²/Peça','Peças/Caixa','Endereço','Bitola','Tonalidade','Pallets','Fardos','Peças/Fardo','Caixas Totais','Peças Avulsas','Total Peças','m² Total','Sacos','Kg Total','Qtd','Unidade','Obs','Data'].join(sep);
   const linhas = listaExportar.map(i => [
     i.responsavel||'', i.tipo||'', i.nome||'', i.marca||'', i.lote||'', i.tamanho||'',
     i.milimetros||'',
     i.m2PorPeca ? parseFloat(i.m2PorPeca).toFixed(4).replace('.',',') : '',
     i.pecasPorCaixa||'',
+    i.endereco||'',
     i.bitola||'', i.tonalidade||'',
     i.pallets||'', i.fardos||'', i.pecasPorFardo||'',
     i.totalCaixas||'', i.pecasAvulsas||'', i.totalPecas||'',
