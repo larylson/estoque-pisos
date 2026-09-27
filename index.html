@@ -1676,6 +1676,28 @@ PASSOS PARA RODAR NO GITHUB PAGES:
       <div id="conf-filtros-usuario" style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px"></div>
     </div>
 
+    <!-- Filtro por status Sistema e Reconferência -->
+    <div class="linha-2" style="margin-bottom:12px">
+      <div class="campo-grupo">
+        <label style="font-size:11px;text-transform:uppercase;letter-spacing:.5px">🟣 Status Sistema</label>
+        <select id="conf-filtro-sistema" onchange="setFiltroConfSistema(this.value)" style="width:100%;padding:9px 12px;font-size:13px;border-radius:8px;border:1.5px solid #d0c9bb;background:#fff">
+          <option value="todos">Todos</option>
+          <option value="no_sistema">✅ No Sistema</option>
+          <option value="nao_sistema">🟣 Não no Sistema</option>
+        </select>
+      </div>
+      <div class="campo-grupo">
+        <label style="font-size:11px;text-transform:uppercase;letter-spacing:.5px">🔄 Status Conferência</label>
+        <select id="conf-filtro-reconferencia" onchange="setFiltroConfReconferencia(this.value)" style="width:100%;padding:9px 12px;font-size:13px;border-radius:8px;border:1.5px solid #d0c9bb;background:#fff">
+          <option value="todos">Todos</option>
+          <option value="pendente">🟠 Pendente</option>
+          <option value="precisa">⚠️ Precisa de Conferência</option>
+          <option value="conferindo">🔄 Conferindo</option>
+          <option value="conferido">✅ Conferido</option>
+        </select>
+      </div>
+    </div>
+
     <!-- Resumo e lista -->
     <div id="conf-resumo"></div>
     <div id="conf-lista"></div>
@@ -3505,6 +3527,8 @@ let confTipoAtual = 'piso';
 let confFotoAtual = null;
 let filtroConfUsuario = 'todos'; // filtro ativo de usuário na conferência
 let filtroConfTipo = 'todos'; // filtro ativo de tipo de material na conferência
+let filtroConfSistema = 'todos'; // filtro por status "No Sistema" / "Não no Sistema"
+let filtroConfReconferencia = 'todos'; // filtro por status de reconferência
 
 // Campos por tipo de material
 const CONF_CAMPOS = {
@@ -3863,6 +3887,16 @@ function setFiltroConfTipo(tipo) {
   renderConferencia();
 }
 
+function setFiltroConfSistema(valor) {
+  filtroConfSistema = valor;
+  renderConferencia();
+}
+
+function setFiltroConfReconferencia(valor) {
+  filtroConfReconferencia = valor;
+  renderConferencia();
+}
+
 function toggleStatusConf(id) {
   const lista = carregarConferencia();
   const idx = lista.findIndex(i => i.id === id);
@@ -4169,18 +4203,22 @@ function renderConferencia() {
     }
   }
 
-  // Aplica os 3 filtros combinados: usuário + tipo + busca por texto
+  // Aplica os filtros combinados: usuário + tipo + sistema + reconferência + busca por texto
   const buscaTexto = (document.getElementById('conf-busca-texto')?.value || '').toLowerCase().trim();
   let listaFiltrada = lista;
   if (filtroConfUsuario !== 'todos') listaFiltrada = listaFiltrada.filter(i => i.responsavel === filtroConfUsuario);
   if (filtroConfTipo !== 'todos') listaFiltrada = listaFiltrada.filter(i => i.tipo === filtroConfTipo);
+  if (filtroConfSistema === 'no_sistema') listaFiltrada = listaFiltrada.filter(i => i.noSistema);
+  else if (filtroConfSistema === 'nao_sistema') listaFiltrada = listaFiltrada.filter(i => !i.noSistema);
+  if (filtroConfReconferencia !== 'todos') listaFiltrada = listaFiltrada.filter(i => (i.reconferencia || 'pendente') === filtroConfReconferencia);
   if (buscaTexto) {
     listaFiltrada = listaFiltrada.filter(i =>
       (i.nome || '').toLowerCase().includes(buscaTexto) ||
       (i.marca || '').toLowerCase().includes(buscaTexto) ||
       (i.lote || '').toLowerCase().includes(buscaTexto) ||
       (i.codigo || '').toLowerCase().includes(buscaTexto) ||
-      (i.obs || '').toLowerCase().includes(buscaTexto)
+      (i.obs || '').toLowerCase().includes(buscaTexto) ||
+      (i.endereco || '').toLowerCase().includes(buscaTexto)
     );
   }
 
@@ -4190,7 +4228,7 @@ function renderConferencia() {
   // Resumo por tipo (da lista filtrada)
   const contagem = {};
   listaFiltrada.forEach(i => { contagem[i.tipo] = (contagem[i.tipo] || 0) + 1; });
-  const filtroAtivo = filtroConfUsuario !== 'todos' || filtroConfTipo !== 'todos' || buscaTexto;
+  const filtroAtivo = filtroConfUsuario !== 'todos' || filtroConfTipo !== 'todos' || filtroConfSistema !== 'todos' || filtroConfReconferencia !== 'todos' || buscaTexto;
   if (resumoEl) {
     resumoEl.innerHTML = listaFiltrada.length === 0 ? '' : `
       <div class="conf-resumo-box">
@@ -4277,13 +4315,17 @@ function exportarConferenciaCSV() {
   let listaExportar = lista;
   if (filtroConfUsuario !== 'todos') listaExportar = listaExportar.filter(i => i.responsavel === filtroConfUsuario);
   if (filtroConfTipo !== 'todos') listaExportar = listaExportar.filter(i => i.tipo === filtroConfTipo);
+  if (filtroConfSistema === 'no_sistema') listaExportar = listaExportar.filter(i => i.noSistema);
+  else if (filtroConfSistema === 'nao_sistema') listaExportar = listaExportar.filter(i => !i.noSistema);
+  if (filtroConfReconferencia !== 'todos') listaExportar = listaExportar.filter(i => (i.reconferencia || 'pendente') === filtroConfReconferencia);
   if (buscaTexto) {
     listaExportar = listaExportar.filter(i =>
       (i.nome || '').toLowerCase().includes(buscaTexto) ||
       (i.marca || '').toLowerCase().includes(buscaTexto) ||
       (i.lote || '').toLowerCase().includes(buscaTexto) ||
       (i.codigo || '').toLowerCase().includes(buscaTexto) ||
-      (i.obs || '').toLowerCase().includes(buscaTexto)
+      (i.obs || '').toLowerCase().includes(buscaTexto) ||
+      (i.endereco || '').toLowerCase().includes(buscaTexto)
     );
   }
   const header = ['Responsável','Tipo','Nome','Marca','Lote','Tamanho','Espessura (mm)','m²/Peça','Peças/Caixa','Endereço','Bitola','Tonalidade','Pallets','Fardos','Peças/Fardo','Caixas Totais','Peças Avulsas','Total Peças','m² Total','Sacos','Kg Total','Qtd','Unidade','Obs','Data'].join(sep);
