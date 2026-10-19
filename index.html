@@ -2027,6 +2027,14 @@ function carregar() {
   catch(e) { return []; }
 }
 
+// Converte datas no formato pt-BR ("18/08/2026, 21:23:14" ou "18/08/2026") em número
+// comparável. Comparar essas strings diretamente está ERRADO (dia vem antes do mês).
+function tsDataBR(str) {
+  const m = String(str || '').match(/(\d{1,2})\/(\d{1,2})\/(\d{4})(?:,?\s*(\d{1,2}):(\d{2})(?::(\d{2}))?)?/);
+  if (!m) return 0;
+  return new Date(+m[3], +m[2] - 1, +m[1], +(m[4] || 0), +(m[5] || 0), +(m[6] || 0)).getTime();
+}
+
 function salvarDados(dados) {
   try {
     localStorage.setItem(CHAVE, JSON.stringify(dados));
@@ -4162,6 +4170,7 @@ function excluirItemConferencia(id) {
 }
 
 function limparConferencia() {
+  if (!usuarioAtivoIsMestre()) { toast('🔒 Apenas mestres podem limpar toda a lista.', true); return; }
   if (!confirm('Limpar toda a lista de conferência?')) return;
   salvarConferencia([]);
   renderConferencia();
@@ -4644,11 +4653,26 @@ function toggleStatusErro(id) {
 }
 
 function excluirErro(id) {
-  if (!confirm('Excluir este registro de erro?')) return;
-  const lista = carregarErros().filter(e => e.id !== id);
-  salvarErros(lista);
-  renderErros();
-  toast('🗑️ Erro excluído.');
+  const item = carregarErros().find(e => e.id === id);
+  if (!item) return;
+  const responsavel = item.responsavel || '';
+  const remover = () => {
+    salvarErros(carregarErros().filter(e => e.id !== id));
+    renderErros();
+    toast('🗑️ Erro excluído.');
+  };
+  // Mestre: confirma e apaga
+  if (usuarioAtivoIsMestre()) {
+    if (confirm('Excluir este registro de erro?')) remover();
+    return;
+  }
+  // Demais: só o responsável (com senha) ou um mestre
+  mostrarModalSenha('excluir_erro', id, (usuario) => {
+    if (!isMestre(usuario) && usuario !== responsavel) {
+      toast('🔒 Apenas o responsável ou um mestre pode excluir este erro.', true); return;
+    }
+    remover();
+  });
 }
 
 function setFiltroErro(filtro, btn) {
@@ -4874,7 +4898,8 @@ function mostrarModalSenha(acao, contexto, callbackSucesso) {
     const senha = document.getElementById('sm-senha').value;
     if (!usuario) { toast('⚠️ Selecione um usuário.', true); return; }
     if (!temSenha(usuario)) {
-      if (isMestre(usuario) && senha === '') {
+      // Entrada sem senha só é permitida na 1ª configuração (nenhum mestre tem senha ainda)
+      if (isMestre(usuario) && senha === '' && !MESTRES.some(n => temSenha(n))) {
         overlay.remove(); window._usuarioAtivo = usuario; callbackSucesso(usuario); return;
       }
       toast('⚠️ Este usuário ainda não tem senha definida.', true); return;
@@ -5215,7 +5240,7 @@ async function carregarDoFirestore(uid) {
           // Usa o mais recente baseado em dataAlteracao ou data
           const tsNuvem = dNuvem.dataAlteracao || dNuvem.data || '';
           const tsLocal = local.dataAlteracao || local.data || '';
-          if (tsNuvem > tsLocal) {
+          if (tsDataBR(tsNuvem) > tsDataBR(tsLocal)) {
             mapaLocal[id] = { ...dNuvem, fotos: local.fotos, foto: local.foto }; // preserva fotos locais
             foiAtualizado = true;
           }
@@ -5426,7 +5451,7 @@ onAuthStateChanged(auth, async user => {
         else {
           const tsN = dN.dataAlteracao || dN.data || '';
           const tsL = local.dataAlteracao || local.data || '';
-          if (tsN > tsL) { mapaLocal[id] = { ...dN, fotos: local.fotos, foto: local.foto }; mudou = true; }
+          if (tsDataBR(tsN) > tsDataBR(tsL)) { mapaLocal[id] = { ...dN, fotos: local.fotos, foto: local.foto }; mudou = true; }
         }
       });
       // Detecta exclusões na nuvem
