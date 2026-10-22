@@ -141,29 +141,6 @@ PASSOS PARA RODAR NO GITHUB PAGES:
     .pagina { display: none; padding: 16px; }
     .pagina.ativa { display: block; }
 
-    /* RESPONSIVO PC */
-    @media (min-width: 768px) {
-      body { background: #e8e4dc; }
-      #app-root {
-        max-width: 900px;
-        margin: 0 auto;
-        box-shadow: 0 0 40px rgba(0,0,0,0.18);
-        min-height: 100dvh;
-        background: var(--fundo);
-      }
-      .tab { min-width: 90px; font-size: 12px; padding: 12px 16px; }
-      .tab-icon { font-size: 18px; }
-      .galeria-grid { grid-template-columns: 1fr 1fr 1fr; }
-      .linha-4 { grid-template-columns: 1fr 1fr 1fr 1fr; }
-      .modal { max-width: 560px; }
-      #tela-login { background: #e8e4dc; }
-      #tela-login .login-card { box-shadow: 0 8px 40px rgba(0,0,0,0.2); }
-    }
-    @media (min-width: 1024px) {
-      #app-root { max-width: 1000px; }
-      .galeria-grid { grid-template-columns: 1fr 1fr 1fr 1fr; }
-    }
-
     /* FORMULÁRIO */
     .card {
       background: var(--branco);
@@ -1296,7 +1273,75 @@ PASSOS PARA RODAR NO GITHUB PAGES:
     @media (max-width: 360px) {
       .linha-3 { grid-template-columns: 1fr 1fr; }
     }
-  </style>
+  
+    /* RESPONSIVO PC / TABLET */
+    @media (min-width: 768px) {
+      body { max-width: none; background: #e8e4dc; }
+      #app-root {
+        width: 100%;
+        max-width: 1200px;
+        margin: 0 auto;
+        box-shadow: 0 0 40px rgba(0,0,0,0.18);
+        min-height: 100dvh;
+        background: var(--bege);
+      }
+      /* todas as abas visíveis, sem rolagem lateral */
+      .tabs { overflow-x: visible; }
+      .tab { flex: 1 1 auto; min-width: 0; font-size: 13px; padding: 12px 8px; }
+      .tab-icon { font-size: 20px; }
+      .pagina { padding: 24px; }
+
+      /* Cadastrar: cartões em 2 colunas, botão salvar na largura toda */
+      #pag-cadastrar.ativa {
+        display: block;
+        column-count: 2;
+        column-gap: 20px;
+      }
+      #pag-cadastrar .card { break-inside: avoid; margin-top: 0 !important; }
+      #pag-cadastrar .btn-salvar { column-span: all; }
+
+      /* Listas em grade */
+      #lista-estoque, #conf-lista, #quebras-lista, #lista-erros, #lista-movimentacoes {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(380px, 1fr));
+        gap: 12px;
+        align-items: start;
+      }
+      #lista-estoque > *, #conf-lista > *, #quebras-lista > *, #lista-erros > *, #lista-movimentacoes > * {
+        margin-bottom: 0;
+      }
+      #lista-estoque > .lista-vazia, #conf-lista > .conf-lista-vazia,
+      #quebras-lista > .lista-vazia, #lista-erros > .lista-vazia,
+      #lista-movimentacoes > .lista-vazia { grid-column: 1 / -1; }
+
+      /* Conferência: tipos em 4 colunas e formulário em 2 colunas */
+      .conf-tipo-grid { grid-template-columns: repeat(4, 1fr); }
+      #conf-form-campos { display: grid; grid-template-columns: 1fr 1fr; gap: 0 16px; }
+      #conf-form-campos > .linha-2, #conf-form-campos > #conf-total-preview { grid-column: 1 / -1; }
+      .resumo-grid { grid-template-columns: repeat(5, 1fr); }
+      .galeria-grid { grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); }
+
+      /* Janelas (modais) centralizadas na tela, não coladas embaixo */
+      .modal-overlay { align-items: center; justify-content: center; }
+      .modal { max-width: 640px; border-radius: 20px; max-height: 90dvh; margin: 0; }
+      .modal-handle { display: none; }
+      #conf-edit-modal { align-items: center; }
+      #conf-edit-inner { border-radius: 20px; max-width: 640px; }
+
+      #tela-login { background: #e8e4dc; }
+      #tela-login .login-card { box-shadow: 0 8px 40px rgba(0,0,0,0.2); }
+    }
+    @media (min-width: 1280px) {
+      #app-root { max-width: 1320px; }
+      #lista-estoque, #conf-lista, #quebras-lista, #lista-erros, #lista-movimentacoes {
+        grid-template-columns: repeat(auto-fill, minmax(420px, 1fr));
+      }
+    }
+    @media (min-width: 1600px) {
+      #app-root { max-width: 1560px; }
+    }
+
+</style>
 </head>
 <body>
 
