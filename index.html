@@ -4460,6 +4460,12 @@ function renderConferencia() {
         </div>
         <div class="conf-item-tags">
           ${item.pallets > 0 ? `<span class="tag">🪵 ${item.pallets} pallets</span>` : ''}
+          ${(() => {
+            const n = parseFloat(item.caixasPorPallet || item.sacasPorPallet || item.pecasPorPallet) || 0;
+            if (!n) return '';
+            const un = item.caixasPorPallet ? 'cx' : (item.sacasPorPallet ? 'sc' : 'pç');
+            return `<span class="tag">🧱 ${n} ${un}/pallet</span>`;
+          })()}
           ${totalTag}
           ${item.responsavel ? `<span class="tag azul">👤 ${item.responsavel}</span>` : ''}
         </div>
@@ -4709,6 +4715,12 @@ function renderQuebras() {
         </div>
         <div class="conf-item-tags">
           ${item.pallets > 0 ? `<span class="tag">🪵 ${item.pallets} pallets</span>` : ''}
+          ${(() => {
+            const n = parseFloat(item.caixasPorPallet || item.sacasPorPallet || item.pecasPorPallet) || 0;
+            if (!n) return '';
+            const un = item.caixasPorPallet ? 'cx' : (item.sacasPorPallet ? 'sc' : 'pç');
+            return `<span class="tag">🧱 ${n} ${un}/pallet</span>`;
+          })()}
           ${totalTag}
           ${item.responsavel ? `<span class="tag azul">👤 ${item.responsavel}</span>` : ''}
         </div>
