@@ -1365,7 +1365,7 @@ PASSOS PARA RODAR NO GITHUB PAGES:
     body.ro-movimentacoes .btn-limpar-mov,
     body.ro-conferencia [data-edit-area="conferencia"], body.ro-conferencia [onclick^="abrirEditConf("],
     body.ro-conferencia [onclick^="excluirItemConferencia("], body.ro-conferencia [onclick^="limparConferencia("],
-    body.ro-quebras [onclick^="excluirQuebra("], body.ro-quebras [onclick^="limparQuebras("],
+    body.ro-quebras [data-edit-area="quebras"], body.ro-quebras [onclick^="excluirQuebra("], body.ro-quebras [onclick^="limparQuebras("],
     body.ro-erros [data-edit-area="erros"], body.ro-erros [onclick^="excluirErro("] { display:none !important; }
     body.ro-conferencia [onclick^="toggleStatusConf("], body.ro-conferencia [onclick^="toggleReconferencia("],
     body.ro-quebras [onclick^="toggleStatusQuebra("], body.ro-erros [onclick^="toggleStatusErro("] { pointer-events:none; opacity:.85; }
@@ -1696,6 +1696,7 @@ PASSOS PARA RODAR NO GITHUB PAGES:
 <div class="pagina" id="pag-conferencia">
   <div style="padding:16px">
 
+    <div id="conf-form-slot"><div id="conf-form-wrap">
     <!-- Seleção do tipo de material -->
     <div class="card" data-edit-area="conferencia">
       <div class="card-titulo">🚛 Tipo de Material</div>
@@ -1741,9 +1742,10 @@ PASSOS PARA RODAR NO GITHUB PAGES:
         <div id="conf-foto-preview" style="margin-top:8px"></div>
       </div>
 
-      <button onclick="salvarItemConferencia()" class="btn" style="background:var(--verde-escuro);color:#fff;width:100%;margin-top:14px">✅ Adicionar à Lista</button>
-      <button onclick="salvarItemComoAvaria()" class="btn" style="background:#fde8e8;color:#c0392b;font-weight:700;width:100%;margin-top:8px;border:1.5px solid #f5b7b1">💔 Adicionar Avaria</button>
+      <button id="btn-conf-add" onclick="salvarItemConferencia()" class="btn" style="background:var(--verde-escuro);color:#fff;width:100%;margin-top:14px">✅ Adicionar à Lista</button>
+      <button id="btn-quebra-add" onclick="salvarItemQuebra()" class="btn" style="display:none;background:#c0392b;color:#fff;font-weight:700;width:100%;margin-top:14px">💔 Adicionar à Quebras</button>
     </div>
+    </div></div>
 
     <!-- Busca por texto -->
     <input type="search" id="conf-busca-texto" placeholder="🔍 Buscar item na conferência..." oninput="renderConferencia()" style="width:100%;box-sizing:border-box;padding:11px 14px;font-size:14px;border-radius:10px;border:1.5px solid #d0c9bb;background:#fff;margin-bottom:12px" />
@@ -1796,6 +1798,9 @@ PASSOS PARA RODAR NO GITHUB PAGES:
 <!-- ===================== PÁGINA: QUEBRAS / AVARIAS ===================== -->
 <div class="pagina" id="pag-quebras">
   <div style="padding:16px">
+
+    <!-- Formulário de quebra (mesmo formulário da Conferência, movido para cá ao abrir a aba) -->
+    <div id="quebras-form-slot"></div>
 
     <!-- Busca por texto -->
     <input type="search" id="quebras-busca-texto" placeholder="🔍 Buscar item quebrado..." oninput="renderQuebras()" style="width:100%;box-sizing:border-box;padding:11px 14px;font-size:14px;border-radius:10px;border:1.5px solid #d0c9bb;background:#fff;margin-bottom:12px" />
@@ -2313,6 +2318,7 @@ function irPara(pag) {
   if (pag === 'galeria') renderGaleria();
   if (pag === 'config') renderConfig();
   if (pag === 'erros') renderErros();
+  if (pag === 'conferencia' || pag === 'quebras') posicionarFormConf(pag);
   if (pag === 'conferencia') renderConferencia();
   if (pag === 'quebras') renderQuebras();
 }
@@ -3771,7 +3777,10 @@ function selecionarTipoConf(tipo, btn) {
 
 function renderFormConferencia() {
   const campos = CONF_CAMPOS[confTipoAtual] || [];
-  document.getElementById('conf-form-titulo').textContent = CONF_TITULOS[confTipoAtual] || 'Cadastrar';
+  const tituloBase = CONF_TITULOS[confTipoAtual] || 'Cadastrar';
+  document.getElementById('conf-form-titulo').textContent = confFormModo === 'quebras'
+    ? '💔 ' + tituloBase.replace(/^\S+\s*/, '').replace('Cadastrar', 'Registrar Quebra de')
+    : tituloBase;
 
   let html = '';
   let i = 0;
@@ -4009,9 +4018,24 @@ function salvarItemConferencia() {
   toast('✅ Item adicionado à conferência!');
 }
 
-// Salva o item preenchido diretamente na aba Quebras (avaria), em vez da conferência normal
-function salvarItemComoAvaria() {
-  if (!exigirEdicao('conferencia')) return;
+// O formulário de cadastro é o mesmo para Conferência e Quebras: ele é movido para a aba aberta
+let confFormModo = 'conferencia'; // 'conferencia' | 'quebras'
+function posicionarFormConf(pag) {
+  const wrap = document.getElementById('conf-form-wrap');
+  const slot = document.getElementById(pag === 'quebras' ? 'quebras-form-slot' : 'conf-form-slot');
+  if (!wrap || !slot) return;
+  const mudou = confFormModo !== pag || wrap.parentElement !== slot;
+  confFormModo = pag;
+  if (wrap.parentElement !== slot) slot.appendChild(wrap);
+  wrap.querySelectorAll('[data-edit-area]').forEach(el => el.dataset.editArea = pag);
+  document.getElementById('btn-conf-add').style.display = pag === 'quebras' ? 'none' : '';
+  document.getElementById('btn-quebra-add').style.display = pag === 'quebras' ? '' : 'none';
+  if (mudou) renderFormConferencia();
+}
+
+// Salva o item preenchido diretamente na aba Quebras
+function salvarItemQuebra() {
+  if (!exigirEdicao('quebras')) return;
   const item = montarItemConfDoForm();
   if (!item) return;
 
@@ -4022,8 +4046,10 @@ function salvarItemComoAvaria() {
   lista.unshift(item);
   salvarQuebras(lista);
   renderFormConferencia();
-  toast('💔 Item enviado para a aba Quebras!');
+  renderQuebras();
+  toast('💔 Quebra registrada!');
 }
+function salvarItemComoAvaria() { salvarItemQuebra(); }
 
 function carregarConferencia() {
   try { return JSON.parse(localStorage.getItem(CHAVE_CONF)) || []; }
