@@ -3774,6 +3774,17 @@ function carregarMovimentacoes() {
 function salvarMovimentacoes(movs) {
   localStorage.setItem(CHAVE_MOV, JSON.stringify(movs));
 }
+// Sincronização entre aparelhos: junta as listas por id e respeita o momento em que a lista foi limpa
+const CHAVE_MOV_LIMPO = 'estoque_mov_limpo_v1';
+function carregarMovLimpo() { return parseInt(localStorage.getItem(CHAVE_MOV_LIMPO)) || 0; }
+function salvarMovLimpo(ts) { localStorage.setItem(CHAVE_MOV_LIMPO, String(ts || 0)); }
+function mesclarMovs(locais, nuvem, limpoEm) {
+  const mapa = new Map();
+  [...(nuvem || []), ...(locais || [])].forEach(m => { if (m && m.id && !mapa.has(m.id)) mapa.set(m.id, m); });
+  return [...mapa.values()]
+    .filter(m => tsMov(m) > (limpoEm || 0))
+    .sort((a, b) => tsMov(b) - tsMov(a));
+}
 
 function fmtLocal(l) {
   if (l == null) return '(sem local)';
@@ -6289,6 +6300,7 @@ function textoMovWhats(m) {
   if (m.lote) partes.push(`Lote: ${m.lote}`);
   if (m.bitola) partes.push(`Bit: ${m.bitola}`);
   if (m.tonalidade) partes.push(`Tom: ${m.tonalidade}`);
+  if (m.destino) partes.push(`Destino: ${fmtLocal(m.destino)}`);
   return partes.join(' | ');
 }
 
@@ -6410,7 +6422,9 @@ function renderMovimentacoes() {
 }
 function limparMovimentacoes() {
   if (!exigirEdicao('movimentacoes')) return;
-  if (!confirm('Apagar todo o histórico de movimentações?')) return;
+  if (!confirm('Apagar todo o histórico de movimentações?\n\nIsso apaga em todos os aparelhos.')) return;
+  salvarMovLimpo(Date.now());
+  movSelecionadas.clear();
   salvarMovimentacoes([]);
   renderMovimentacoes();
   toast('🗑️ Histórico limpo.');
@@ -6545,8 +6559,18 @@ window.sincronizarEstoqueFirestore = async function(uid) {
 
 window.sincronizarMovimentacoesFirestore = async function(uid) {
   try {
-    const movs = carregarMovimentacoes();
-    await setDoc(refMovimentacoes(uid), { movimentacoes: movs, atualizadoEm: serverTimestamp() });
+    // Lê a nuvem e mescla (não sobrescreve o que outro aparelho registrou; respeita "Limpar")
+    const snap = await getDoc(refMovimentacoes(uid));
+    const d = snap.exists() ? snap.data() : {};
+    const limpo = Math.max(carregarMovLimpo(), d.limpoEm || 0);
+    const locais = carregarMovimentacoes();
+    const merged = mesclarMovs(locais, d.movimentacoes || [], limpo);
+    salvarMovLimpo(limpo);
+    if (JSON.stringify(merged) !== JSON.stringify(locais)) _salvarMovsOriginal(merged);
+    const nuvemAtual = JSON.stringify(d.movimentacoes || []);
+    if (!snap.exists() || nuvemAtual !== JSON.stringify(merged) || (d.limpoEm || 0) !== limpo) {
+      await setDoc(refMovimentacoes(uid), { movimentacoes: merged, limpoEm: limpo, atualizadoEm: serverTimestamp() });
+    }
   } catch(e) { console.error('Erro ao sincronizar movimentações:', e); }
 };
 
@@ -6614,10 +6638,13 @@ async function carregarDoFirestore(uid) {
     }
 
     if (snapMovs.exists()) {
-      const movsNuvem = snapMovs.data().movimentacoes || [];
+      const dm = snapMovs.data();
+      const limpo = Math.max(carregarMovLimpo(), dm.limpoEm || 0);
       const movsLocais = carregarMovimentacoes();
-      if (movsNuvem.length > movsLocais.length) {
-        salvarMovimentacoes(movsNuvem);
+      const merged = mesclarMovs(movsLocais, dm.movimentacoes || [], limpo);
+      salvarMovLimpo(limpo);
+      if (JSON.stringify(merged) !== JSON.stringify(movsLocais)) {
+        _salvarMovsOriginal(merged);
         foiAtualizado = true;
       }
     }
@@ -6821,14 +6848,20 @@ onAuthStateChanged(auth, async user => {
     const unsubMovs = onSnapshot(refMovimentacoes(user.uid), snap => {
       if (_primeiraVezMovs) { _primeiraVezMovs = false; return; }
       if (!snap.exists()) return;
-      const movsNuvem = snap.data().movimentacoes || [];
+      const dm = snap.data();
+      const limpo = Math.max(carregarMovLimpo(), dm.limpoEm || 0);
       const movsLocais = carregarMovimentacoes();
-      if (movsNuvem.length !== movsLocais.length) {
-        salvarMovimentacoes(movsNuvem);
+      const nuvemValidas = (dm.movimentacoes || []).filter(m => tsMov(m) > limpo);
+      const merged = mesclarMovs(movsLocais, dm.movimentacoes || [], limpo);
+      salvarMovLimpo(limpo);
+      if (JSON.stringify(merged) !== JSON.stringify(movsLocais)) {
+        _salvarMovsOriginal(merged); // grava só no aparelho (sem reenviar)
         if (document.getElementById('pag-movimentacoes')?.classList.contains('ativa')) renderMovimentacoes();
         if (document.getElementById('pag-mapa')?.classList.contains('ativa')) renderMapa();
-        toast('🔄 Movimentações atualizadas');
+        toast(merged.length < movsLocais.length && !merged.length ? '🔄 Movimentações limpas em outro aparelho' : '🔄 Movimentações atualizadas');
       }
+      // este aparelho tem registros que a nuvem não tem → envia
+      if (merged.length !== nuvemValidas.length || (dm.limpoEm || 0) !== limpo) sincronizarMovimentacoesFirestore(user.uid);
     }, e => console.error('onSnapshot movs:', e));
 
     // Listener em tempo real — Usuários
