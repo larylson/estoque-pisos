@@ -7,33 +7,15 @@
   <meta name="mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-  <meta name="apple-mobile-web-app-title" content="Estoque Pisos" />
-  <meta name="description" content="Gerenciador de estoque de pisos e revestimentos" />
-  <title>🏗️ Estoque de Pisos</title>
+  <meta name="apple-mobile-web-app-title" content="Estoque SM" />
+  <meta name="application-name" content="Estoque SM" />
+  <meta name="description" content="Estoque de pisos — Santa Marta Telhas e Acabamentos" />
+  <title>Estoque Santa Marta</title>
 
-  <!-- Ícone SVG embutido para PWA -->
-  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='20' fill='%231a2e1a'/><text y='68' x='50' text-anchor='middle' font-size='55'>🏗️</text></svg>" />
-  <link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='20' fill='%231a2e1a'/><text y='68' x='50' text-anchor='middle' font-size='55'>🏗️</text></svg>" />
-
-  <!-- Manifest PWA embutido -->
-  <link rel="manifest" href="data:application/manifest+json,{
-    &quot;name&quot;: &quot;Estoque de Pisos&quot;,
-    &quot;short_name&quot;: &quot;Estoque&quot;,
-    &quot;description&quot;: &quot;Gerenciador de estoque de pisos e revestimentos&quot;,
-    &quot;start_url&quot;: &quot;.&quot;,
-    &quot;display&quot;: &quot;standalone&quot;,
-    &quot;background_color&quot;: &quot;%23f5f2ec&quot;,
-    &quot;theme_color&quot;: &quot;%231a2e1a&quot;,
-    &quot;orientation&quot;: &quot;portrait&quot;,
-    &quot;icons&quot;: [{
-      &quot;src&quot;: &quot;data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='20' fill='%231a2e1a'/><text y='68' x='50' text-anchor='middle' font-size='55'>🏗️</text></svg>&quot;,
-      &quot;sizes&quot;: &quot;any&quot;,
-      &quot;type&quot;: &quot;image/svg+xml&quot;,
-      &quot;purpose&quot;: &quot;any maskable&quot;
-    }]
-  }" />
-  <link rel="apple-touch-icon" href="icon-192.png" />
-  <title>Estoque de Pisos</title>
+  <!-- App instalável (PWA): arquivos ao lado do index.html no GitHub -->
+  <link rel="manifest" href="manifest.json" />
+  <link rel="icon" type="image/png" href="favicon.png" />
+  <link rel="apple-touch-icon" href="apple-touch-icon.png" />
 
 <!--
 PASSOS PARA RODAR NO GITHUB PAGES:
@@ -1199,8 +1181,9 @@ PASSOS PARA RODAR NO GITHUB PAGES:
     }
     .login-logo {
       font-size: 64px;
-      margin-bottom: 12px;
+      margin-bottom: 14px;
     }
+    .login-logo img { display:block; width:min(240px, 62vw); height:auto; border-radius:18px; background:#fff; padding:10px 14px; box-shadow:0 6px 24px rgba(0,0,0,.35); }
     .login-titulo {
       font-size: 26px;
       font-weight: 800;
@@ -1448,15 +1431,27 @@ PASSOS PARA RODAR NO GITHUB PAGES:
     .mapa-folha-caixa { background:#fff; border-radius:18px 18px 0 0; width:100%; max-width:560px; box-sizing:border-box;
       max-height:78vh; max-height:78dvh; overflow:auto; -webkit-overflow-scrolling:touch; overscroll-behavior:contain;
       padding:18px 16px calc(36px + env(safe-area-inset-bottom, 0px)); }
+
+    /* ===== APP INSTALÁVEL ===== */
+    .header-marca { display:flex; align-items:center; gap:8px; }
+    .header-logo { width:30px; height:30px; border-radius:8px; background:#fff; padding:2px; box-sizing:border-box; flex:0 0 auto; }
+    .btn-instalar-app { border:none; cursor:pointer; font-weight:700; }
+    .header-instalar { background:#ff7a1a; color:#fff; border-radius:8px; padding:6px 10px; font-size:12px; white-space:nowrap; box-shadow:0 2px 6px rgba(0,0,0,.25); }
+    @media (max-width: 420px) { .header-instalar span { display:none; } .header-instalar { padding:6px 8px; font-size:15px; } }
+    .login-instalar { margin-top:18px; background:#ff7a1a; color:#fff; border-radius:12px; padding:13px 22px; font-size:15px; box-shadow:0 4px 14px rgba(0,0,0,.3); }
+    .config-instalar { width:100%; background:#1a2e1a; color:#fff; border-radius:10px; padding:12px; font-size:14px; }
+    body.app-instalado .btn-instalar-app, body.app-instalado #pwa-install-banner { display:none !important; }
+    .instalar-ajuda-overlay { position:fixed; left:0; right:0; top:0; height:100vh; height:100dvh; background:rgba(0,0,0,.6); z-index:9999999; display:flex; align-items:center; justify-content:center; padding:16px; box-sizing:border-box; }
+    .instalar-ajuda-caixa { background:#fff; border-radius:18px; padding:22px 20px; width:100%; max-width:380px; box-sizing:border-box; }
 </style>
 </head>
 <body>
 
 <!-- TELA DE LOGIN -->
 <div id="tela-login">
-  <div class="login-logo">🏗️</div>
+  <div class="login-logo"><img src="logo.png" alt="Santa Marta Telhas e Acabamentos" onerror="this.parentNode.textContent='🏗️'" /></div>
   <div class="login-titulo">Estoque de Pisos</div>
-  <div class="login-sub">Gerenciamento de inventário de pisos</div>
+  <div class="login-sub">Santa Marta Telhas e Acabamentos</div>
 
   <div class="login-card">
     <div class="login-card-titulo">Entrar na sua conta</div>
@@ -1469,6 +1464,7 @@ PASSOS PARA RODAR NO GITHUB PAGES:
       Manter conectado
     </label>
   </div>
+  <button class="btn-instalar-app login-instalar" onclick="instalarApp()">📲 Instalar app no celular</button>
 </div>
 
 <!-- APP PRINCIPAL -->
@@ -1478,10 +1474,13 @@ PASSOS PARA RODAR NO GITHUB PAGES:
 <div class="header">
   <div class="header-top">
     <div>
-      <h1>🏗️ Estoque de Pisos</h1>
+      <h1 class="header-marca"><img src="logo-emblema.png" alt="" class="header-logo" onerror="this.remove()" />Estoque de Pisos</h1>
       <p id="subtitulo-header">Gerenciamento de inventário</p>
     </div>
-    <div id="header-user"></div>
+    <div style="display:flex;align-items:center;gap:8px">
+      <button class="btn-instalar-app header-instalar" onclick="instalarApp()" title="Instalar app">📲<span> Instalar</span></button>
+      <div id="header-user"></div>
+    </div>
   </div>
   <div class="tabs">
     <div class="tab ativo" onclick="irPara('cadastrar')">
@@ -1768,6 +1767,15 @@ PASSOS PARA RODAR NO GITHUB PAGES:
 <div class="pagina" id="pag-config">
   <div style="padding:16px">
 
+    <div class="card" id="config-app-card" style="margin-top:0;margin-bottom:12px">
+      <div class="card-titulo">📲 Aplicativo</div>
+      <div style="display:flex;align-items:center;gap:12px">
+        <img src="icon-192.png" alt="" style="width:56px;height:56px;border-radius:14px;box-shadow:0 2px 8px rgba(0,0,0,.15)" onerror="this.remove()" />
+        <div style="flex:1;font-size:13px;color:var(--texto-suave)" id="config-app-status">Instale o app na tela inicial do celular ou do computador.</div>
+      </div>
+      <button class="btn-instalar-app config-instalar" onclick="instalarApp()" style="margin-top:12px">📲 Instalar app</button>
+    </div>
+
     <div class="card">
       <div class="card-titulo">👥 Usuários do Sistema</div>
       <p style="font-size:13px;color:var(--texto-suave);margin-bottom:14px">Gerencie os usuários do sistema. ⭐ = Mestre (Lorran, Lucas, João Paulo).</p>
@@ -2046,20 +2054,16 @@ PASSOS PARA RODAR NO GITHUB PAGES:
 
 <!-- PWA INSTALL BANNER -->
 <div id="pwa-install-banner" style="display:none;position:fixed;bottom:80px;left:16px;right:16px;background:#1a2e1a;color:#fff;border-radius:14px;padding:14px 16px;align-items:center;gap:12px;box-shadow:0 4px 20px rgba(0,0,0,0.3);z-index:9999">
-  <span style="font-size:24px">📲</span>
+  <img src="icon-192.png" alt="" style="width:40px;height:40px;border-radius:10px;background:#fff" onerror="this.outerHTML='<span style=&quot;font-size:24px&quot;>📲</span>'" />
   <div style="flex:1">
-    <div style="font-weight:700;font-size:14px">Instalar como App</div>
+    <div style="font-weight:700;font-size:14px">Instalar o app Estoque SM</div>
     <div style="font-size:12px;opacity:0.8">Acesse mais rápido na tela inicial</div>
   </div>
   <button onclick="instalarApp()" style="background:#5a9e5a;color:#fff;border:none;border-radius:8px;padding:8px 14px;font-weight:700;font-size:13px;cursor:pointer">Instalar</button>
-  <button onclick="document.getElementById('pwa-install-banner').style.display='none'" style="background:transparent;color:#fff;border:none;font-size:20px;cursor:pointer;padding:0 4px">✕</button>
+  <button onclick="fecharBannerInstalar()" style="background:transparent;color:#fff;border:none;font-size:20px;cursor:pointer;padding:0 4px">✕</button>
 </div>
 
-<!-- SERVICE WORKER REGISTER -->
 <script>
-if ('serviceWorker' in navigator) {
-  navigator.serviceWorker.register('sw.js').catch(() => {});
-}
 
 // ===================== DADOS =====================
 const CHAVE = 'estoque_pisos_v2';
@@ -6580,6 +6584,8 @@ atualizarSelectResponsavel(); // popula o select de responsável ao carregar
 aplicarPermissoes(); // esconde abas/ações conforme o usuário ativo
 </script>
 
+
+
 </div><!-- fim app-root -->
 
 <!-- FIREBASE AUTH + FIRESTORE -->
@@ -6975,49 +6981,91 @@ window.fazerLogout = async function() {
 };
 </script>
 
-<!-- ===================== PWA: SERVICE WORKER EMBUTIDO ===================== -->
+<!-- ===================== PWA: APP INSTALÁVEL ===================== -->
 <script>
-if ('serviceWorker' in navigator) {
-  // Service worker embutido como blob — funciona sem servidor
-  const swCode = `
-    const CACHE = 'estoque-pisos-v1';
-    self.addEventListener('install', e => {
-      self.skipWaiting();
-    });
-    self.addEventListener('activate', e => {
-      self.clients.claim();
-    });
-    self.addEventListener('fetch', e => {
-      e.respondWith(fetch(e.request).catch(() => caches.match(e.request)));
-    });
-  `;
-  const blob = new Blob([swCode], { type: 'application/javascript' });
-  const swUrl = URL.createObjectURL(blob);
-  navigator.serviceWorker.register(swUrl).catch(() => {});
+// Service worker de verdade (arquivo sw.js ao lado do index.html) — necessário para o "Instalar app"
+if ('serviceWorker' in navigator && /^https?:$/.test(location.protocol)) {
+  window.addEventListener('load', () => { navigator.serviceWorker.register('./sw.js').catch(e => console.warn('SW:', e)); });
 }
 
-// Banner de instalação PWA
 let deferredPrompt = null;
+function appEstaInstalado() {
+  return window.matchMedia('(display-mode: standalone)').matches || window.matchMedia('(display-mode: fullscreen)').matches || window.navigator.standalone === true;
+}
+function ehIOS() { return /iphone|ipad|ipod/i.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1); }
+
+function atualizarBotoesInstalar() {
+  const instalado = appEstaInstalado();
+  document.body.classList.toggle('app-instalado', instalado);
+  const st = document.getElementById('config-app-status');
+  if (st) st.innerHTML = instalado
+    ? '✅ <b>App instalado</b> — você está usando o aplicativo.'
+    : (deferredPrompt ? 'Pronto para instalar: toque em <b>Instalar app</b>.' : 'Instale o app na tela inicial do celular ou do computador.');
+}
+
 window.addEventListener('beforeinstallprompt', e => {
   e.preventDefault();
   deferredPrompt = e;
-  // Mostra botão de instalar se ainda não instalado
+  atualizarBotoesInstalar();
+  // Banner flutuante (uma vez por sessão, se não foi fechado)
+  let fechado = false; try { fechado = sessionStorage.getItem('pwa-banner-fechado') === '1'; } catch (err) {}
   const banner = document.getElementById('pwa-install-banner');
-  if (banner) banner.style.display = 'flex';
+  if (banner && !fechado) banner.style.display = 'flex';
 });
 
 window.addEventListener('appinstalled', () => {
   const banner = document.getElementById('pwa-install-banner');
   if (banner) banner.style.display = 'none';
   deferredPrompt = null;
+  atualizarBotoesInstalar();
+  if (typeof toast === 'function') toast('✅ App instalado! Procure "Estoque SM" na tela inicial.');
 });
 
+function fecharBannerInstalar() {
+  const banner = document.getElementById('pwa-install-banner');
+  if (banner) banner.style.display = 'none';
+  try { sessionStorage.setItem('pwa-banner-fechado', '1'); } catch (e) {}
+}
+
 function instalarApp() {
+  if (appEstaInstalado()) { if (typeof toast === 'function') toast('✅ O app já está instalado.'); return; }
   if (deferredPrompt) {
     deferredPrompt.prompt();
-    deferredPrompt.userChoice.then(() => { deferredPrompt = null; });
+    deferredPrompt.userChoice.then(r => {
+      deferredPrompt = null;
+      fecharBannerInstalar();
+      atualizarBotoesInstalar();
+      if (r && r.outcome === 'accepted' && typeof toast === 'function') toast('📲 Instalando...');
+    });
+    return;
   }
+  mostrarInstrucoesInstalar();
 }
+
+function mostrarInstrucoesInstalar() {
+  document.getElementById('instalar-ajuda')?.remove();
+  const ios = ehIOS();
+  const passos = ios
+    ? ['Abra este site no <b>Safari</b>', 'Toque em <b>Compartilhar</b> <span style="font-size:18px">⎋</span> (quadrado com seta, embaixo)', 'Escolha <b>Adicionar à Tela de Início</b>', 'Toque em <b>Adicionar</b>']
+    : ['Abra este site no <b>Google Chrome</b>', 'Toque no menu <b>⋮</b> (três pontinhos, em cima à direita)', 'Escolha <b>Instalar app</b> ou <b>Adicionar à tela inicial</b>', 'Confirme em <b>Instalar</b>'];
+  const ov = document.createElement('div');
+  ov.id = 'instalar-ajuda';
+  ov.className = 'instalar-ajuda-overlay';
+  const abertoEm = Date.now();
+  ov.onclick = e => { if (e.target === ov && Date.now() - abertoEm > 500) ov.remove(); };
+  ov.innerHTML = `<div class="instalar-ajuda-caixa">
+    <img src="icon-192.png" alt="" style="width:72px;height:72px;border-radius:18px;box-shadow:0 2px 10px rgba(0,0,0,.2);margin:0 auto 10px;display:block" onerror="this.remove()" />
+    <div style="font-size:18px;font-weight:800;color:#1a2e1a;text-align:center">Instalar Estoque SM</div>
+    <div style="font-size:13px;color:#666;text-align:center;margin:4px 0 14px">${ios ? 'No iPhone a instalação é feita pelo Safari:' : 'Siga os passos no seu celular:'}</div>
+    <ol style="margin:0 0 16px 20px;padding:0;font-size:14px;line-height:1.9;color:#222">${passos.map(p => `<li>${p}</li>`).join('')}</ol>
+    <button onclick="document.getElementById('instalar-ajuda').remove()" style="width:100%;padding:13px;border:none;border-radius:12px;background:#1a2e1a;color:#fff;font-weight:700;font-size:15px;cursor:pointer">Entendi</button>
+  </div>`;
+  document.body.appendChild(ov);
+}
+
+window.matchMedia('(display-mode: standalone)').addEventListener?.('change', atualizarBotoesInstalar);
+document.addEventListener('DOMContentLoaded', atualizarBotoesInstalar);
+atualizarBotoesInstalar();
 </script>
 
 </body>
