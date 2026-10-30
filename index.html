@@ -1373,7 +1373,19 @@ PASSOS PARA RODAR NO GITHUB PAGES:
     /* ===== MAPA DO PÁTIO ===== */
     .mapa-fonte-btn { padding:7px 12px; border-radius:20px; border:1.5px solid #d0c9bb; background:#fff; font-size:12px; font-weight:700; color:var(--texto); cursor:pointer; }
     .mapa-fonte-btn.ativo { background:var(--verde-escuro); color:#fff; border-color:var(--verde-escuro); }
-    .mapa-scroll { overflow:auto; margin-top:12px; background:#fff; border-radius:12px; box-shadow:0 2px 12px rgba(0,0,0,0.08); padding:12px; -webkit-overflow-scrolling:touch; }
+    .mapa-scroll { position:relative; overflow:hidden; margin-top:12px; background:#fff; border-radius:12px; box-shadow:0 2px 12px rgba(0,0,0,0.08);
+      height:62vh; height:62dvh; min-height:340px; touch-action:none; user-select:none; -webkit-user-select:none; cursor:grab; overscroll-behavior:contain; }
+    .mapa-scroll:active { cursor:grabbing; }
+    .mapa-scroll #mapa-patio { position:absolute; left:0; top:0; transform-origin:0 0; padding:12px; }
+    .mapa-scroll #mapa-patio.animando { transition:transform .22s ease-out; }
+    .mapa-scroll.tela-cheia { position:fixed; inset:0; z-index:9990; margin:0; border-radius:0; height:100vh; height:100dvh; min-height:0; background:#f7f5f0; }
+    body.mapa-tela-cheia-ativa { overflow:hidden; }
+    .mapa-scroll.tela-cheia .mapa-ctrl { bottom:max(16px, env(safe-area-inset-bottom)); right:14px; }
+    .mapa-ctrl { position:absolute; right:10px; bottom:10px; display:flex; flex-direction:column; gap:8px; z-index:2; }
+    .mapa-ctrl button { width:46px; height:46px; border-radius:50%; border:none; background:rgba(26,46,26,.92); color:#fff; font-size:22px; font-weight:700; line-height:1; font-family:system-ui, sans-serif;
+      box-shadow:0 2px 8px rgba(0,0,0,.25); cursor:pointer; display:flex; align-items:center; justify-content:center; touch-action:manipulation; }
+    .mapa-ctrl button:active { transform:scale(.92); }
+    .mapa-cel { -webkit-tap-highlight-color:transparent; }
     .mapa-grid { --cel:62px; display:grid; grid-auto-rows:auto; gap:4px; width:max-content; }
     .mapa-cel { height:calc(var(--cel) * 0.9); border:2px solid; border-radius:6px; position:relative; cursor:pointer; overflow:hidden; display:flex; flex-direction:column; align-items:center; justify-content:flex-start; padding:3px 2px; box-sizing:border-box; transition:transform .1s, opacity .15s; }
     .mapa-cel:active { transform:scale(.95); }
@@ -1866,22 +1878,26 @@ PASSOS PARA RODAR NO GITHUB PAGES:
   <div style="padding:16px">
     <div class="card" style="margin-top:0">
       <div class="card-titulo">🗺️ Pátio 04</div>
-      <input type="search" id="mapa-busca" placeholder="🔍 Buscar piso, lote ou endereço..." oninput="renderMapa()" style="width:100%;box-sizing:border-box;padding:11px 14px;font-size:14px;border-radius:10px;border:1.5px solid #d0c9bb;background:#fff;margin-bottom:10px" />
+      <input type="search" id="mapa-busca" placeholder="🔍 Buscar piso, lote ou endereço..." oninput="buscarNoMapa()" style="width:100%;box-sizing:border-box;padding:11px 14px;font-size:14px;border-radius:10px;border:1.5px solid #d0c9bb;background:#fff;margin-bottom:10px" />
       <div style="display:flex;flex-wrap:wrap;gap:6px;align-items:center">
         <button class="mapa-fonte-btn ativo" data-fonte="todos" onclick="setMapaFonte('todos')">Todos</button>
         <button class="mapa-fonte-btn" data-fonte="conferencia" onclick="setMapaFonte('conferencia')">📋 Conferência</button>
         <button class="mapa-fonte-btn" data-fonte="estoque" onclick="setMapaFonte('estoque')">📦 Estoque</button>
         <span style="flex:1"></span>
         <button class="mapa-fonte-btn" id="btn-editar-mapa" onclick="abrirEditorMapa()">✏️ Apartamentos</button>
-        <button class="mapa-fonte-btn" onclick="zoomMapa(-0.15)" aria-label="Diminuir">➖</button>
-        <button class="mapa-fonte-btn" onclick="zoomMapa(0.15)" aria-label="Aumentar">➕</button>
       </div>
       <div id="mapa-resumo" style="font-size:13px;margin-top:10px;line-height:1.6"></div>
     </div>
-    <div class="mapa-scroll">
+    <div class="mapa-scroll" id="mapa-viewport">
       <div id="mapa-patio" class="mapa-grid"></div>
+      <div class="mapa-ctrl">
+        <button onclick="zoomMapaBotao(1.35)" aria-label="Aumentar zoom">+</button>
+        <button onclick="zoomMapaBotao(1/1.35)" aria-label="Diminuir zoom">−</button>
+        <button onclick="ajustarMapa(true)" aria-label="Ver mapa inteiro" title="Ver mapa inteiro">⤢</button>
+        <button onclick="alternarTelaCheiaMapa()" id="btn-tela-cheia-mapa" aria-label="Tela cheia" title="Tela cheia">⛶</button>
+      </div>
     </div>
-    <p style="font-size:11px;color:#888;text-align:center;margin-top:8px">Toque num apartamento para ver os pisos. Endereço: pátio.rua.apt.andar.vaga (ex: 04.44.03.00.01)</p>
+    <p style="font-size:11px;color:#888;text-align:center;margin-top:8px">🤏 Dois dedos para zoom · ☝️ arraste para mover · toque no apartamento para ver os pisos<br>Endereço: pátio.rua.apt.andar.vaga (ex: 04.44.03.00.01)</p>
   </div>
 </div>
 
@@ -2356,6 +2372,7 @@ function atualizarPreviewMetragem() {
 
 // ===================== NAVEGAÇÃO =====================
 function irPara(pag) {
+  if (pag !== 'mapa' && document.getElementById('mapa-viewport')?.classList.contains('tela-cheia')) alternarTelaCheiaMapa();
   if (!paginaPermitida(pag)) { toast('🔒 Você não tem acesso a esta aba.', true); return; }
   document.querySelectorAll('.pagina').forEach(p => p.classList.remove('ativa'));
   document.querySelectorAll('.tab').forEach(t => t.classList.remove('ativo'));
@@ -2374,7 +2391,7 @@ function irPara(pag) {
   if (pag === 'conferencia' || pag === 'quebras') posicionarFormConf(pag);
   if (pag === 'conferencia') renderConferencia();
   if (pag === 'quebras') renderQuebras();
-  if (pag === 'mapa') renderMapa();
+  if (pag === 'mapa') { renderMapa(); if (!mapaView.ajustadoVisivel) { mapaView.ajustadoVisivel = true; requestAnimationFrame(() => ajustarMapa(false, false)); } }
 }
 
 // ===================== FORMULÁRIO =====================
@@ -5274,13 +5291,12 @@ function salvarEditorMapa() {
   cfg.mapaFileiras = fileiras;
   salvarConfigApp(cfg);
   document.getElementById('mapa-folha')?.remove();
-  mapaCel = null;
+  mapaView.chave = '';
   renderMapa();
   toast('✅ Mapa atualizado em todos os aparelhos!');
 }
 
 let mapaFonte = 'todos';   // 'todos' | 'conferencia' | 'estoque'
-let mapaCel = null; // tamanho do quadrado em px (null = ajusta à tela)
 let _mapaItensPorVaga = {};
 
 function escMapa(t) {
@@ -5323,19 +5339,194 @@ function coletarItensMapa() {
 }
 
 function setMapaFonte(f) { mapaFonte = f; renderMapa(); }
-function celAutoMapa(colunas) {
-  colunas = colunas || parseFloat(document.getElementById('mapa-patio')?.dataset.cols) || 21.1;
-  const box = document.querySelector('.mapa-scroll');
-  const largura = (box ? box.clientWidth : window.innerWidth) - 24;
-  return Math.max(46, Math.min(72, Math.floor((largura - Math.ceil(colunas) * 4) / colunas)));
+// ---------- Navegação do mapa: arrastar, pinça (2 dedos), roda do mouse ----------
+const MAPA_CEL_BASE = 58;
+const mapaView = { x: 0, y: 0, s: 1, iniciado: false, chave: '' };
+
+function _mapaEls() { return { vp: document.getElementById('mapa-viewport'), el: document.getElementById('mapa-patio') }; }
+function aplicarTransformMapa() {
+  const { el } = _mapaEls();
+  if (el) el.style.transform = `translate(${mapaView.x}px, ${mapaView.y}px) scale(${mapaView.s})`;
 }
-function zoomMapa(delta) {
-  const atual = mapaCel || celAutoMapa();
-  mapaCel = Math.min(110, Math.max(34, Math.round(atual * (1 + delta))));
+function limitarMapa() {
+  const { vp, el } = _mapaEls();
+  if (!vp || !el) return;
+  const vw = vp.clientWidth, vh = vp.clientHeight;
+  const w = el.offsetWidth * mapaView.s, h = el.offsetHeight * mapaView.s;
+  const folga = 60;
+  const lim = (v, tam, view) => tam <= view
+    ? Math.min(Math.max(v, 0), view - tam)
+    : Math.min(Math.max(v, view - tam - folga), folga);
+  mapaView.x = lim(mapaView.x, w, vw);
+  mapaView.y = lim(mapaView.y, h, vh);
+}
+function zoomMapaEm(px, py, fator) {
+  const ns = Math.min(3, Math.max(0.2, mapaView.s * fator));
+  mapaView.x = px - (px - mapaView.x) * (ns / mapaView.s);
+  mapaView.y = py - (py - mapaView.y) * (ns / mapaView.s);
+  mapaView.s = ns;
+  limitarMapa(); aplicarTransformMapa();
+}
+function zoomMapaBotao(fator) {
+  const { vp } = _mapaEls();
+  if (!vp) return;
+  const el = _mapaEls().el;
+  el.classList.add('animando');
+  zoomMapaEm(vp.clientWidth / 2, vp.clientHeight / 2, fator);
+  setTimeout(() => el.classList.remove('animando'), 220);
+}
+// inteiro = true → mostra o mapa todo; false → no celular abre num tamanho legível (lado esquerdo), dá para arrastar
+function ajustarMapa(animar, inteiro = true) {
+  const { vp, el } = _mapaEls();
+  if (!vp || !el || !vp.clientWidth) return;
+  const vw = vp.clientWidth, vh = vp.clientHeight;
+  const w = el.offsetWidth, h = el.offsetHeight;
+  const sTudo = Math.max(0.2, Math.min(1.5, Math.min((vw - 16) / w, (vh - 16) / h)));
+  if (!inteiro && sTudo < 0.5) {
+    mapaView.s = Math.min(0.75, Math.max(0.5, (vh - 16) / h));
+    mapaView.x = 0;
+    mapaView.y = 0;
+    limitarMapa();
+  } else {
+    mapaView.s = sTudo;
+    mapaView.x = (vw - w * mapaView.s) / 2;
+    mapaView.y = (vh - h * mapaView.s) / 2;
+  }
+  if (animar) { el.classList.add('animando'); setTimeout(() => el.classList.remove('animando'), 220); }
+  aplicarTransformMapa();
+}
+// Centraliza e aproxima num elemento (ex: resultado da busca)
+function focarNoMapa(alvo) {
+  const { vp, el } = _mapaEls();
+  if (!vp || !el || !alvo) return;
+  const s = Math.min(1.6, Math.max(mapaView.s, 1));
+  const cx = alvo.offsetLeft + alvo.offsetWidth / 2, cy = alvo.offsetTop + alvo.offsetHeight / 2;
+  mapaView.s = s;
+  mapaView.x = vp.clientWidth / 2 - cx * s;
+  mapaView.y = vp.clientHeight / 2 - cy * s;
+  el.classList.add('animando'); setTimeout(() => el.classList.remove('animando'), 260);
+  limitarMapa(); aplicarTransformMapa();
+}
+let _buscaMapaTimer = null;
+function buscarNoMapa() {
   renderMapa();
+  clearTimeout(_buscaMapaTimer);
+  _buscaMapaTimer = setTimeout(() => {
+    const busca = (document.getElementById('mapa-busca')?.value || '').trim();
+    if (!busca) return;
+    const achada = document.querySelector('#mapa-patio .mapa-cel.achada');
+    if (achada) focarNoMapa(achada);
+  }, 450);
+}
+function alternarTelaCheiaMapa() {
+  const { vp } = _mapaEls();
+  if (!vp) return;
+  const ligar = !vp.classList.contains('tela-cheia');
+  // Move para o <body> (algum container do app impede position:fixed de cobrir a tela toda)
+  if (ligar) {
+    if (!document.getElementById('mapa-viewport-lugar')) {
+      const marca = document.createElement('div');
+      marca.id = 'mapa-viewport-lugar';
+      vp.parentNode.insertBefore(marca, vp);
+    }
+    document.body.appendChild(vp);
+  } else {
+    const marca = document.getElementById('mapa-viewport-lugar');
+    if (marca) { marca.parentNode.insertBefore(vp, marca); marca.remove(); }
+  }
+  vp.classList.toggle('tela-cheia', ligar);
+  document.body.classList.toggle('mapa-tela-cheia-ativa', ligar);
+  const btn = document.getElementById('btn-tela-cheia-mapa');
+  if (btn) btn.textContent = ligar ? '✕' : '⛶';
+  requestAnimationFrame(() => ajustarMapa(false));
+}
+
+function iniciarGestosMapa() {
+  const { vp } = _mapaEls();
+  if (!vp || vp._gestos) return;
+  vp._gestos = true;
+  const pts = new Map();
+  let ini = null, arrastou = false;
+  const rel = e => { const r = vp.getBoundingClientRect(); return { x: e.clientX - r.left, y: e.clientY - r.top }; };
+  const comecar = () => {
+    const lista = [...pts.values()];
+    if (lista.length === 1) ini = { tipo: 1, p: lista[0], x: mapaView.x, y: mapaView.y };
+    else if (lista.length >= 2) {
+      const [a, b] = lista;
+      ini = { tipo: 2, d: Math.hypot(a.x - b.x, a.y - b.y) || 1, m: { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 }, x: mapaView.x, y: mapaView.y, s: mapaView.s };
+    } else ini = null;
+  };
+  vp.addEventListener('pointerdown', e => {
+    if (e.target.closest('.mapa-ctrl')) return;
+    if (e.pointerType === 'mouse' && e.button !== 0) return;
+    if (e.isPrimary) pts.clear(); // novo gesto: descarta toques antigos que não terminaram
+    if (!pts.size) arrastou = false;
+    pts.set(e.pointerId, rel(e));
+    comecar();
+  });
+  const mover = e => {
+    if (!pts.has(e.pointerId)) return;
+    pts.set(e.pointerId, rel(e));
+    if (!ini) return;
+    const lista = [...pts.values()];
+    if (ini.tipo === 1 && lista.length === 1) {
+      const dx = lista[0].x - ini.p.x, dy = lista[0].y - ini.p.y;
+      if (!arrastou && Math.hypot(dx, dy) < 6) return;
+      arrastou = true;
+      mapaView.x = ini.x + dx; mapaView.y = ini.y + dy;
+    } else if (ini.tipo === 2 && lista.length >= 2) {
+      arrastou = true;
+      const [a, b] = lista;
+      const d = Math.hypot(a.x - b.x, a.y - b.y) || 1;
+      const m = { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 };
+      const ns = Math.min(3, Math.max(0.2, ini.s * d / ini.d));
+      // o ponto do mapa que estava sob os dedos acompanha o meio dos dedos
+      const cx = (ini.m.x - ini.x) / ini.s, cy = (ini.m.y - ini.y) / ini.s;
+      mapaView.s = ns;
+      mapaView.x = m.x - cx * ns;
+      mapaView.y = m.y - cy * ns;
+    }
+    limitarMapa(); aplicarTransformMapa();
+  };
+  let tapManual = 0;
+  const soltar = e => {
+    if (!pts.has(e.pointerId)) return;
+    pts.delete(e.pointerId);
+    // Toque simples no celular: abre o apartamento direto (não depende do "click" do navegador)
+    if (e.type === 'pointerup' && !pts.size && !arrastou && e.pointerType !== 'mouse') {
+      const alvo = document.elementFromPoint(e.clientX, e.clientY)?.closest('.mapa-cel');
+      if (alvo && vp.contains(alvo)) { tapManual = Date.now(); alvo.click(); }
+    }
+    comecar(); // 2 → 1 dedo continua arrastando sem pular
+  };
+  window.addEventListener('pointermove', mover, { passive: true });
+  window.addEventListener('pointerup', soltar);
+  window.addEventListener('pointercancel', soltar);
+  // não abre o apartamento se o toque foi para arrastar/zoom
+  vp.addEventListener('click', e => {
+    if (e.target.closest('.mapa-ctrl')) return;
+    // bloqueia o click nativo se foi arrasto/zoom, ou se o toque já foi tratado acima (evita abrir 2x)
+    if (e.isTrusted && (arrastou || Date.now() - tapManual < 700)) { e.stopPropagation(); e.preventDefault(); arrastou = false; }
+  }, true);
+  vp.addEventListener('wheel', e => {
+    e.preventDefault();
+    const p = rel(e);
+    zoomMapaEm(p.x, p.y, e.deltaY < 0 ? 1.12 : 1 / 1.12);
+  }, { passive: false });
+  // duplo toque/clique aproxima
+  vp.addEventListener('dblclick', e => {
+    if (e.target.closest('.mapa-ctrl')) return;
+    const p = rel(e);
+    _mapaEls().el.classList.add('animando');
+    zoomMapaEm(p.x, p.y, 1.8);
+    setTimeout(() => _mapaEls().el.classList.remove('animando'), 220);
+  });
 }
 window.addEventListener('resize', () => {
-  if (!mapaCel && document.getElementById('pag-mapa')?.classList.contains('ativa')) renderMapa();
+  if (document.getElementById('pag-mapa')?.classList.contains('ativa')) { limitarMapa(); aplicarTransformMapa(); }
+});
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape' && document.getElementById('mapa-viewport')?.classList.contains('tela-cheia') && !document.getElementById('mapa-folha')) alternarTelaCheiaMapa();
 });
 
 function renderMapa() {
@@ -5420,8 +5611,15 @@ function renderMapa() {
 
   el.style.gridTemplateColumns = `repeat(${L}, var(--cel)) calc(var(--cel) * 1.1) repeat(${R}, var(--cel))`;
   el.dataset.cols = L + R + 1.1;
-  el.style.setProperty('--cel', (mapaCel || celAutoMapa(L + R + 1.1)) + 'px');
+  el.style.setProperty('--cel', MAPA_CEL_BASE + 'px');
   el.innerHTML = html;
+  iniciarGestosMapa();
+  // Ajusta à tela na 1ª vez ou quando o desenho muda de tamanho; senão mantém zoom/posição
+  const chave = `${L}x${R}`;
+  if (!mapaView.iniciado || mapaView.chave !== chave) {
+    mapaView.iniciado = true; mapaView.chave = chave;
+    requestAnimationFrame(() => ajustarMapa(false, false));
+  } else { limitarMapa(); aplicarTransformMapa(); }
 
   const resumo = document.getElementById('mapa-resumo');
   if (resumo) {
