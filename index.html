@@ -1387,6 +1387,13 @@ PASSOS PARA RODAR NO GITHUB PAGES:
     .mapa-rua span { font-size:calc(var(--cel) * 0.17); font-weight:500; opacity:.9; }
     .mapa-banner { height:calc(var(--cel) * 0.65); border-radius:6px; background:#cd8b5e; color:#1a1a1a; font-size:calc(var(--cel) * 0.24); display:flex; align-items:center; justify-content:center; font-weight:600; }
     .mapa-rampa { background:#bdbec0; border-radius:6px; display:flex; align-items:center; justify-content:center; font-size:calc(var(--cel) * 0.2); color:#333; font-weight:600; grid-column:11; }
+    .mapa-cel.multi { background:#fff; padding:2px 3px 3px; }
+    .mapa-cel.multi .mapa-num { font-size:calc(var(--cel) * 0.22); }
+    .mapa-vagas { display:flex; gap:3px; flex:1; width:100%; min-height:0; }
+    .mapa-vaga { flex:1; min-width:0; border:1.5px dashed; border-radius:4px; display:flex; flex-direction:column; align-items:center; justify-content:center; position:relative; overflow:hidden; padding:1px; }
+    .mapa-vaga.ocup { border-style:solid; }
+    .mapa-vn { font-size:calc(var(--cel) * 0.14); font-weight:700; opacity:.85; line-height:1.1; }
+    .mapa-vaga .mapa-nome { -webkit-line-clamp:1; margin-top:0; }
     .mapa-item { border:1px solid #eee; border-radius:10px; padding:10px 12px; margin-bottom:8px; background:#fafaf7; }
 </style>
 </head>
@@ -5187,19 +5194,26 @@ const MAPA_BLOCOS = [
   { rua: 44, lado: 'dir', linha: 1 }, { rua: 43, lado: 'dir', linha: 4 }
 ];
 
-function interpretarAptsMapa(txt) {
-  const out = [];
-  String(txt || '').split(/[,;\s]+/).filter(Boolean).forEach(parte => {
-    const m = parte.match(/^(\d+)\s*-\s*(\d+)$/);
+// Retorna [{apt, vagas}] — "3x2" = apt 3 com 2 vagas (ocupa 2 espaços); "8-20x2" = todos com 2 vagas
+function interpretarAptsMapaDet(txt) {
+  const out = [], vistos = new Set();
+  const add = (apt, vagas) => { if (!vistos.has(apt)) { vistos.add(apt); out.push({ apt, vagas }); } };
+  String(txt || '').toLowerCase().replace(/\s*([x×*-])\s*/g, '$1').split(/[,;\s]+/).filter(Boolean).forEach(parte => {
+    if (/^_+$/.test(parte)) { for (let k = 0; k < parte.length; k++) out.push({ apt: null, vagas: 1, vazio: true }); return; }
+    const mv = parte.match(/^(.+?)[x×*](\d+)$/);
+    const vagas = mv ? Math.min(6, Math.max(1, parseInt(mv[2]))) : 1;
+    const base = mv ? mv[1] : parte;
+    const m = base.match(/^(\d+)-(\d+)$/);
     if (m) {
       const ini = parseInt(m[1]), fim = parseInt(m[2]);
       const passo = ini <= fim ? 2 : -2;
       if (Math.abs(fim - ini) > 400) return;
-      for (let n = ini; passo > 0 ? n <= fim : n >= fim; n += passo) out.push(n);
-    } else if (/^\d+$/.test(parte)) out.push(parseInt(parte));
+      for (let n = ini; passo > 0 ? n <= fim : n >= fim; n += passo) add(n, vagas);
+    } else if (/^\d+$/.test(base)) add(parseInt(base), vagas);
   });
-  return [...new Set(out)];
+  return out;
 }
+function interpretarAptsMapa(txt) { return interpretarAptsMapaDet(txt).filter(x => !x.vazio).map(x => x.apt); }
 function obterTextosMapa() {
   const salvo = carregarConfigApp().mapaFileiras || {};
   const r = {};
@@ -5208,7 +5222,10 @@ function obterTextosMapa() {
 }
 function obterFileirasMapa() {
   const textos = obterTextosMapa();
-  return MAPA_FILEIRAS.map(f => ({ ...f, apts: interpretarAptsMapa(textos[f.id]) }));
+  return MAPA_FILEIRAS.map(f => {
+    const det = interpretarAptsMapaDet(textos[f.id]);
+    return { ...f, det, apts: det.filter(x => !x.vazio).map(x => x.apt), largura: det.reduce((t, x) => t + x.vagas, 0) };
+  });
 }
 function posicoesMapa() {
   const set = new Set();
@@ -5222,7 +5239,8 @@ function abrirEditorMapa() {
   abrirFolhaMapa('✏️ Apartamentos do mapa', `
     <p style="font-size:12px;color:var(--texto-suave);margin-bottom:12px;line-height:1.5">
       Digite os apartamentos de cada fileira na ordem em que aparecem no galpão (da esquerda para a direita).<br>
-      <b>8-64</b> = 8, 10, 12 … 64 · <b>20-2</b> = 20, 18 … 2 · pode juntar: <b>8-20, 24, 30-40</b> · vazio = sem fileira
+      <b>8-64</b> = 8, 10, 12 … 64 · <b>20-2</b> = 20, 18 … 2 · pode juntar: <b>8-20, 24, 30-40</b> · vazio = sem fileira<br>
+      <b>3x2</b> = apt 3 com 2 vagas (ocupa 2 espaços, ex: <b>21-5, 3x2</b>) · <b>8-20x2</b> = todos com 2 vagas · <b>_</b> = espaço vazio (ex: <b>_, 21-5</b>)
     </p>
     ${MAPA_FILEIRAS.map(f => `
       <div class="campo-grupo" style="margin-bottom:10px">
@@ -5240,8 +5258,10 @@ function previaFileiraMapa(id) {
   const el = document.getElementById('mapa_p_' + id);
   const v = document.getElementById('mapa_f_' + id)?.value || '';
   if (!el) return;
-  const apts = interpretarAptsMapa(v);
-  el.textContent = apts.length ? `${apts.length} apt.: ${apts.slice(0, 8).join(', ')}${apts.length > 8 ? ' … ' + apts[apts.length - 1] : ''}` : (v.trim() ? '⚠️ Não entendi — use números, ex: 8-64' : 'Sem apartamentos');
+  const det = interpretarAptsMapaDet(v).filter(x => !x.vazio);
+  const fmt = x => x.vagas > 1 ? `${x.apt} (${x.vagas} vagas)` : String(x.apt);
+  const apts = det;
+  el.textContent = det.length ? `${det.length} apt.: ${det.slice(0, 8).map(fmt).join(', ')}${det.length > 8 ? ' … ' + fmt(det[det.length - 1]) : ''}` : (v.trim() ? '⚠️ Não entendi — use números, ex: 8-64' : 'Sem apartamentos');
 }
 function restaurarMapaPadrao() {
   MAPA_FILEIRAS.forEach(f => { const i = document.getElementById('mapa_f_' + f.id); if (i) { i.value = MAPA_PADRAO[f.id]; previaFileiraMapa(f.id); } });
@@ -5336,11 +5356,30 @@ function renderMapa() {
 
   const confere = i => !busca || [i.nome, i.marca, i.lote, i.codigo, i.endereco].some(v => String(v || '').toLowerCase().includes(busca));
 
-  const celula = (rua, apt, posStyle = '') => {
+  const celula = (rua, apt, posStyle = '', vagas = 1) => {
     const lista = mapa[`${rua}-${apt}`] || [];
     const c = MAPA_RUAS[rua];
     const achou = busca && lista.some(confere);
     const apagado = busca && !achou;
+    if (vagas > 1) {
+      // Apartamento com várias vagas: um espaço por vaga (01, 02...)
+      const porVaga = Array.from({ length: vagas }, () => []);
+      lista.forEach(i => {
+        const v = parseInt(i.vaga);
+        porVaga[(v >= 1 ? Math.min(v, vagas) : 1) - 1].push(i);
+      });
+      const partes = porVaga.map((itens, k) => {
+        const nomes = [...new Set(itens.map(i => i.nome))];
+        const vn = String(k + 1).padStart(2, '0');
+        return itens.length
+          ? `<div class="mapa-vaga ocup" style="background:${c.cor};border-color:${c.cor};color:${c.texto}" title="${escMapa(nomes.join(', '))}">
+              <span class="mapa-vn">V${vn}</span><span class="mapa-nome">${escMapa(nomes[0])}</span>
+              ${itens.length > 1 ? `<span class="mapa-badge">${itens.length}</span>` : ''}</div>`
+          : `<div class="mapa-vaga" style="border-color:${c.cor}"><span class="mapa-vn">V${vn}</span></div>`;
+      }).join('');
+      return `<div class="mapa-cel multi${achou ? ' achada' : ''}${apagado ? ' apagada' : ''}" style="${posStyle}border-color:${c.cor};color:${c.cor}" onclick="abrirVagaMapa(${rua},${apt})">
+        <div class="mapa-num">${apt}</div><div class="mapa-vagas">${partes}</div></div>`;
+    }
     if (!lista.length) {
       return `<div class="mapa-cel vazia${apagado ? ' apagada' : ''}" style="${posStyle}border-color:${c.cor};color:${c.cor}" onclick="abrirVagaMapa(${rua},${apt})">
         <div class="mapa-num">${apt}</div></div>`;
@@ -5355,8 +5394,8 @@ function renderMapa() {
 
   // Posicionamento explícito: cada fileira começa na borda esquerda do seu lado, na ordem digitada
   const fileiras = obterFileirasMapa();
-  const L = Math.max(4, ...fileiras.filter(f => f.lado === 'esq').map(f => f.apts.length));
-  const R = Math.max(4, ...fileiras.filter(f => f.lado === 'dir').map(f => f.apts.length));
+  const L = Math.max(4, ...fileiras.filter(f => f.lado === 'esq').map(f => f.largura));
+  const R = Math.max(4, ...fileiras.filter(f => f.lado === 'dir').map(f => f.largura));
   const colRampa = L + 1;
   const pos = (linha, colIni, span) => `grid-row:${linha + 1};grid-column:${colIni} / span ${span};`;
 
@@ -5366,9 +5405,8 @@ function renderMapa() {
       if (f.id === 'r41a') html += `<div class="mapa-banner" style="${pos(f.linha, 1, L)}">Área de pallets de carregamento</div>`;
       return;
     }
-    const n = f.apts.length;
-    const inicio = f.lado === 'esq' ? 1 : (colRampa + 1);
-    f.apts.forEach((a, i) => { html += celula(f.rua, a, pos(f.linha, inicio + i, 1)); });
+    let col = f.lado === 'esq' ? 1 : (colRampa + 1);
+    f.det.forEach(x => { if (!x.vazio) html += celula(f.rua, x.apt, pos(f.linha, col, x.vagas), x.vagas); col += x.vagas; });
   });
   MAPA_BLOCOS.forEach(b => {
     const c = MAPA_RUAS[b.rua];
