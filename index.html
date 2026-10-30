@@ -1438,6 +1438,10 @@ PASSOS PARA RODAR NO GITHUB PAGES:
     .mover-vaga-btn { padding:10px; border-radius:10px; border:1.5px solid #d0c9bb; background:#fff; cursor:pointer; display:flex; flex-direction:column; align-items:flex-start; gap:2px; text-align:left; font-size:14px; color:var(--texto); }
     .mover-vaga-btn small { font-size:11px; color:var(--texto-suave); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; max-width:100%; }
     .mover-vaga-btn.ativo { border-color:#2e7d32; background:#eaf7ec; box-shadow:0 0 0 2px #2e7d32 inset; }
+
+    .mapa-btn-add { width:100%; margin:4px 0 10px; padding:12px; border-radius:12px; border:none; background:#2e7d32; color:#fff; font-weight:700; font-size:15px; cursor:pointer; }
+    @keyframes campoPisca { 0%,100% { box-shadow:0 0 0 0 rgba(255,212,0,0); } 50% { box-shadow:0 0 0 4px rgba(255,212,0,.8); } }
+    .campo-destaque { animation:campoPisca .8s ease-in-out 3; border-color:#e0b800 !important; background:#fffbe0 !important; }
 </style>
 </head>
 <body>
@@ -5761,11 +5765,47 @@ function abrirVagaMapa(rua, apt) {
     .sort((a, b) => (parseInt(a.andar) || 0) - (parseInt(b.andar) || 0) || (parseInt(a.vaga) || 0) - (parseInt(b.vaga) || 0));
   const pad = n => String(n).padStart(2, '0');
   const titulo = `📍 Rua ${rua} · Apt ${pad(apt)}`;
+  const btnAdd = podeEditar('conferencia')
+    ? `<button class="mapa-btn-add" onclick="adicionarPisoNoApt(${rua}, ${apt})">➕ Adicionar piso aqui</button>` : '';
   if (!lista.length) {
-    abrirFolhaMapa(titulo, `<p style="color:var(--texto-suave);font-size:14px;text-align:center;padding:16px 0">Vazio — nenhum item com endereço <b>04.${rua}.${pad(apt)}</b></p>`);
+    abrirFolhaMapa(titulo, `<p style="color:var(--texto-suave);font-size:14px;text-align:center;padding:16px 0">Vazio — nenhum item com endereço <b>04.${rua}.${pad(apt)}</b></p>` + btnAdd);
     return;
   }
-  abrirFolhaMapa(titulo, lista.map(htmlItemMapa).join(''));
+  abrirFolhaMapa(titulo, btnAdd + lista.map(htmlItemMapa).join(''));
+}
+
+// Abre a Conferência com o endereço do apartamento já preenchido (na 1ª vaga livre)
+function adicionarPisoNoApt(rua, apt) {
+  if (!exigirEdicao('conferencia')) return;
+  if (!paginaPermitida('conferencia')) { toast('🔒 Você não tem acesso à aba Conferência.', true); return; }
+  const vagas = vagasDoAptMapa(rua, apt);
+  const ocupadas = new Set((_mapaItensPorVaga[`${rua}-${apt}`] || []).map(i => parseInt(i.vaga) || 1));
+  let vaga = 1;
+  if (vagas > 1) { for (let v = 1; v <= vagas; v++) { if (!ocupadas.has(v)) { vaga = v; break; } } }
+  const endereco = `${_pad2(MAPA_PATIO)}.${_pad2(rua)}.${_pad2(apt)}.00.${_pad2(vaga)}`;
+
+  document.getElementById('mapa-folha')?.remove();
+  if (document.getElementById('mapa-viewport')?.classList.contains('tela-cheia')) alternarTelaCheiaMapa();
+  irPara('conferencia');
+  // garante tipo "Piso" (o formulário é recriado ao trocar de tipo)
+  const btnPiso = document.querySelector('#conf-tipo-grid .conf-tipo-btn');
+  if (confTipoAtual !== 'piso') selecionarTipoConf('piso', btnPiso);
+  setTimeout(() => {
+    const campoEnd = document.getElementById('conf_endereco');
+    if (campoEnd) {
+      campoEnd.value = endereco;
+      campoEnd.classList.add('campo-destaque');
+      setTimeout(() => campoEnd.classList.remove('campo-destaque'), 2500);
+    }
+    // rola até o formulário descontando o cabeçalho fixo, para o campo Nome ficar visível
+    const card = document.getElementById('conf-form-card');
+    if (card) {
+      const alturaHeader = document.querySelector('.header')?.offsetHeight || 0;
+      window.scrollTo({ top: card.getBoundingClientRect().top + window.scrollY - alturaHeader - 8, behavior: 'smooth' });
+    }
+    setTimeout(() => document.getElementById('conf_nome')?.focus({ preventScroll: true }), 450);
+    toast(`📍 ${endereco} preenchido`);
+  }, 80);
 }
 
 
