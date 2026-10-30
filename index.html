@@ -1407,6 +1407,23 @@ PASSOS PARA RODAR NO GITHUB PAGES:
     .mapa-vn { font-size:calc(var(--cel) * 0.14); font-weight:700; opacity:.85; line-height:1.1; }
     .mapa-vaga .mapa-nome { -webkit-line-clamp:1; margin-top:0; }
     .mapa-item { border:1px solid #eee; border-radius:10px; padding:10px 12px; margin-bottom:8px; background:#fafaf7; }
+
+    /* ===== MOVIMENTAÇÕES: seleção / copiar ===== */
+    .mov-periodo-btn { padding:7px 12px; border-radius:20px; border:1.5px solid #d0c9bb; background:#fff; font-size:12px; font-weight:700; color:var(--texto); cursor:pointer; }
+    .mov-periodo-btn.ativo { background:var(--verde-escuro); color:#fff; border-color:var(--verde-escuro); }
+    .mov-sel-barra { display:flex; align-items:center; gap:10px; margin-bottom:12px; flex-wrap:wrap; }
+    .mov-check-todos { display:flex !important; align-items:center; gap:8px; font-size:13px !important; font-weight:600 !important; text-transform:none !important; letter-spacing:normal !important; color:var(--texto) !important; margin:0 !important; cursor:pointer; flex:1; }
+    .mov-check-todos input, .mov-check { -webkit-appearance:checkbox !important; appearance:auto !important; width:22px !important; height:22px !important; min-width:22px; padding:0 !important; margin:0 !important; border:none !important; box-shadow:none !important; accent-color:#2e7d32; cursor:pointer; flex:0 0 auto; }
+    .mov-check { margin-top:2px !important; }
+    .mov-btn-copiar-sel { padding:10px 14px; border-radius:10px; border:none; background:#25a244; color:#fff; font-weight:700; font-size:13px; cursor:pointer; }
+    .mov-btn-copiar-sel:disabled { background:#cfd8cf; color:#fff; cursor:not-allowed; }
+    .mov-item.selecionada { background:#f0faf0; box-shadow:0 0 0 2px #5a9e5a inset, 0 1px 6px rgba(0,0,0,0.08); }
+    .mov-acoes { display:flex; gap:8px; margin-top:10px; flex-wrap:wrap; }
+    .mov-btn-copiar, .mov-btn-mapa { padding:7px 12px; border-radius:8px; font-size:12px; font-weight:700; cursor:pointer; }
+    .mov-btn-copiar { border:1.5px solid #25a244; background:#eafaf0; color:#1a7a34; }
+    .mov-btn-mapa { border:1.5px solid #8f8cc9; background:#f1f0fb; color:#4a4790; }
+    @keyframes mapaPulsar { 0%,100% { box-shadow:0 0 0 0 rgba(255,212,0,.9); } 50% { box-shadow:0 0 0 8px rgba(255,212,0,.35); } }
+    .mapa-cel.pulsar { animation:mapaPulsar .8s ease-in-out 3; z-index:2; }
 </style>
 </head>
 <body>
@@ -1686,11 +1703,32 @@ PASSOS PARA RODAR NO GITHUB PAGES:
 <div class="pagina" id="pag-movimentacoes">
   <div style="margin-top: 16px;">
     <div class="mov-filtro-barra">
-      <input type="search" id="busca-mov" placeholder="🔍 Buscar piso ou local..." oninput="renderMovimentacoes()" />
+      <input type="search" id="busca-mov" placeholder="🔍 Buscar piso, lote ou endereço..." oninput="renderMovimentacoes()" />
       <button class="btn-limpar-mov" onclick="limparMovimentacoes()">🗑️ Limpar</button>
     </div>
-    <button class="btn exportar-btn" style="margin-bottom:14px" onclick="exportarMovimentacoesXLS()">📤 Exportar CSV (.csv)</button>
+
+    <div class="card" style="margin-top:0;margin-bottom:12px;padding:14px">
+      <div style="font-size:12px;font-weight:700;color:var(--texto-suave);margin-bottom:8px;text-transform:uppercase;letter-spacing:.5px">📅 Filtrar por data</div>
+      <div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px">
+        <button class="mov-periodo-btn" data-p="hoje" onclick="setPeriodoMov('hoje')">Hoje</button>
+        <button class="mov-periodo-btn" data-p="ontem" onclick="setPeriodoMov('ontem')">Ontem</button>
+        <button class="mov-periodo-btn" data-p="7" onclick="setPeriodoMov('7')">7 dias</button>
+        <button class="mov-periodo-btn" data-p="30" onclick="setPeriodoMov('30')">30 dias</button>
+        <button class="mov-periodo-btn ativo" data-p="todos" onclick="setPeriodoMov('todos')">Todas</button>
+      </div>
+      <div class="linha-2" style="margin-bottom:0">
+        <div class="campo-grupo"><label>De</label><input type="date" id="mov-de" onchange="setPeriodoMov('custom')" /></div>
+        <div class="campo-grupo"><label>Até</label><input type="date" id="mov-ate" onchange="setPeriodoMov('custom')" /></div>
+      </div>
+    </div>
+
+    <div class="mov-sel-barra">
+      <label class="mov-check-todos"><input type="checkbox" id="mov-sel-todos" onchange="selecionarTodasMov(this.checked)" /> <span id="mov-sel-label">Selecionar todas</span></label>
+      <button class="mov-btn-copiar-sel" id="mov-btn-copiar-sel" onclick="copiarSelecionadasMov()" disabled>📋 Copiar selecionadas</button>
+    </div>
+
     <div id="lista-movimentacoes"></div>
+    <button class="btn exportar-btn" style="margin-top:6px;margin-bottom:14px" onclick="exportarMovimentacoesXLS()">📤 Exportar CSV (.csv)</button>
   </div>
 </div>
 
@@ -2713,17 +2751,7 @@ function salvar() {
 
       const temLocalAntes = localAntes.patio || localAntes.rua || localAntes.apartamento || (localAntes.nivel !== '' && localAntes.nivel !== undefined);
 
-      if (mudouLocal && temLocalAntes) {
-        registrarMovimentacao({
-          pisoId: editId,
-          pisoNome: anterior.nome,
-          lote: anterior.lote,
-          bitola: anterior.bitola,
-          tonalidade: anterior.tonalidade,
-          origem: localAntes,
-          destino: localDepois
-        });
-      }
+      // (Movimentações agora são registradas só pela aba Conferência — mudança de endereço)
 
       const agora = new Date().toLocaleString('pt-BR');
       const historicoAnterior = anterior.historico || [];
@@ -3729,6 +3757,8 @@ function salvarMovimentacoes(movs) {
 }
 
 function fmtLocal(l) {
+  if (l == null) return '(sem local)';
+  if (typeof l === 'string') return l || '(sem local)';
   const partes = [];
   if (l.patio) partes.push(`Pátio ${l.patio}`);
   if (l.rua) partes.push(`Rua ${l.rua}`);
@@ -3737,10 +3767,12 @@ function fmtLocal(l) {
   return partes.length ? partes.join(' • ') : '(sem local)';
 }
 
-function registrarMovimentacao({ pisoId, pisoNome, lote, bitola, tonalidade, origem, destino }) {
+function registrarMovimentacao({ pisoId, pisoNome, lote, bitola, tonalidade, origem, destino, extra }) {
   const movs = carregarMovimentacoes();
   movs.unshift({
-    id: Date.now().toString(),
+    ...(extra || {}),
+    ts: Date.now(),
+    id: `${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
     pisoId,
     pisoNome,
     lote: lote || '',
@@ -4347,6 +4379,7 @@ function salvarEditConf(id) {
 
   const item = lista[idx];
   const campos = CONF_CAMPOS[item.tipo] || [];
+  const enderecoAntes = (item.endereco || '').trim();
 
   campos.forEach(c => {
     const el = document.getElementById(`cedit_${c.id}`);
@@ -4378,9 +4411,22 @@ function salvarEditConf(id) {
   item.editadoEm = new Date().toLocaleString('pt-BR');
   lista[idx] = item;
   salvarConferencia(lista);
+
+  // Endereço mudou → vai para a aba Movimentações
+  const enderecoDepois = (item.endereco || '').trim();
+  let movimentou = false;
+  if (enderecoAntes && enderecoDepois && enderecoAntes !== enderecoDepois) {
+    registrarMovimentacao({
+      pisoId: item.id, pisoNome: item.nome, lote: item.lote, bitola: item.bitola, tonalidade: item.tonalidade,
+      origem: enderecoAntes, destino: enderecoDepois,
+      extra: { fonte: 'conferencia', confId: item.id, tipo: item.tipo, marca: item.marca || '', tamanho: item.tamanho || '', responsavel: window._usuarioAtivo || item.responsavel || '' }
+    });
+    movimentou = true;
+  }
+
   fecharEditConf();
   renderConferencia();
-  toast('✅ Item atualizado!');
+  toast(movimentou ? '🔄 Endereço alterado — registrado em Movimentações!' : '✅ Item atualizado!');
 }
 
 function excluirItemConferencia(id) {
@@ -5304,8 +5350,11 @@ function escMapa(t) {
 }
 
 // Junta os itens com endereço no Pátio 04 (Conferência + Estoque)
+let _movsPorConf = {};
 function coletarItensMapa() {
   const itens = [];
+  _movsPorConf = {};
+  carregarMovimentacoes().forEach(m => { if (m.confId && !_movsPorConf[m.confId]) _movsPorConf[m.confId] = m; }); // mais recente primeiro
   if (mapaFonte !== 'estoque') {
     carregarConferencia().forEach(i => {
       const m = String(i.endereco || '').match(/^(\d+)\.(\d+)\.(\d+)(?:\.(\d+))?(?:\.(\d+))?/);
@@ -5317,7 +5366,8 @@ function coletarItensMapa() {
         andar: m[4] !== undefined ? m[4] : '', vaga: m[5] !== undefined ? m[5] : '',
         pallets: i.pallets, caixas: i.totalCaixas ?? i.totalPecas ?? i.totalSacos ?? i.quantidade,
         unidade: i.totalCaixas !== undefined ? 'cx' : (i.totalSacos !== undefined ? 'sc' : 'pç'),
-        status: i.noSistema ? 'No Sistema' : 'Não no Sistema', endereco: i.endereco
+        status: i.noSistema ? 'No Sistema' : 'Não no Sistema', endereco: i.endereco,
+        ultimaMov: _movsPorConf[i.id] || null
       });
     });
   }
@@ -5568,15 +5618,15 @@ function renderMapa() {
               ${itens.length > 1 ? `<span class="mapa-badge">${itens.length}</span>` : ''}</div>`
           : `<div class="mapa-vaga" style="border-color:${c.cor}"><span class="mapa-vn">V${vn}</span></div>`;
       }).join('');
-      return `<div class="mapa-cel multi${achou ? ' achada' : ''}${apagado ? ' apagada' : ''}" style="${posStyle}border-color:${c.cor};color:${c.cor}" onclick="abrirVagaMapa(${rua},${apt})">
+      return `<div class="mapa-cel multi${achou ? ' achada' : ''}${apagado ? ' apagada' : ''}" style="${posStyle}border-color:${c.cor};color:${c.cor}" data-k="${rua}-${apt}" onclick="abrirVagaMapa(${rua},${apt})">
         <div class="mapa-num">${apt}</div><div class="mapa-vagas">${partes}</div></div>`;
     }
     if (!lista.length) {
-      return `<div class="mapa-cel vazia${apagado ? ' apagada' : ''}" style="${posStyle}border-color:${c.cor};color:${c.cor}" onclick="abrirVagaMapa(${rua},${apt})">
+      return `<div class="mapa-cel vazia${apagado ? ' apagada' : ''}" style="${posStyle}border-color:${c.cor};color:${c.cor}" data-k="${rua}-${apt}" onclick="abrirVagaMapa(${rua},${apt})">
         <div class="mapa-num">${apt}</div></div>`;
     }
     const nomes = [...new Set(lista.map(i => i.nome))];
-    return `<div class="mapa-cel ocupada${achou ? ' achada' : ''}${apagado ? ' apagada' : ''}" style="${posStyle}background:${c.cor};border-color:${c.cor};color:${c.texto}" onclick="abrirVagaMapa(${rua},${apt})" title="${escMapa(nomes.join(', '))}">
+    return `<div class="mapa-cel ocupada${achou ? ' achada' : ''}${apagado ? ' apagada' : ''}" style="${posStyle}background:${c.cor};border-color:${c.cor};color:${c.texto}" data-k="${rua}-${apt}" onclick="abrirVagaMapa(${rua},${apt})" title="${escMapa(nomes.join(', '))}">
       <div class="mapa-num">${apt}</div>
       <div class="mapa-nome">${escMapa(nomes[0])}</div>
       ${lista.length > 1 ? `<div class="mapa-badge">${lista.length}</div>` : ''}
@@ -5646,6 +5696,7 @@ function htmlItemMapa(i) {
     <div style="font-size:12px;margin-top:3px">
       ${[i.marca, i.lote && 'Lote: ' + i.lote, i.tamanho, i.bitola && 'Bit: ' + i.bitola, i.tonalidade && 'Tom: ' + i.tonalidade].filter(Boolean).map(escMapa).join(' · ')}
     </div>
+    ${i.ultimaMov ? `<div style="font-size:11px;margin-top:4px;color:#1a5e20">🔄 Veio de <b>${escMapa(fmtLocal(i.ultimaMov.origem))}</b> em ${escMapa(i.ultimaMov.dataHora)}</div>` : ''}
     ${qtd.length || i.status ? `<div style="font-size:12px;margin-top:4px;font-weight:600">${qtd.join(' · ')}${i.status ? ` <span style="color:var(--texto-suave);font-weight:400">· ${escMapa(i.status)}</span>` : ''}</div>` : ''}
   </div>`;
 }
@@ -5997,48 +6048,167 @@ function renderGaleria() {
   });
 }
 
+let movPeriodo = 'todos';
+const movSelecionadas = new Set();
+
+function tsMov(m) { return m.ts || tsDataBR(m.dataHora); }
+function dataISO(d) { return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; }
+
+function setPeriodoMov(p) {
+  movPeriodo = p;
+  const de = document.getElementById('mov-de'), ate = document.getElementById('mov-ate');
+  const hoje = new Date();
+  const menos = n => { const d = new Date(); d.setDate(d.getDate() - n); return d; };
+  if (p === 'hoje') { de.value = dataISO(hoje); ate.value = dataISO(hoje); }
+  else if (p === 'ontem') { de.value = dataISO(menos(1)); ate.value = dataISO(menos(1)); }
+  else if (p === '7') { de.value = dataISO(menos(6)); ate.value = dataISO(hoje); }
+  else if (p === '30') { de.value = dataISO(menos(29)); ate.value = dataISO(hoje); }
+  else if (p === 'todos') { de.value = ''; ate.value = ''; }
+  document.querySelectorAll('.mov-periodo-btn').forEach(b => b.classList.toggle('ativo', b.dataset.p === p));
+  renderMovimentacoes();
+}
+
+function movsFiltradas() {
+  const busca = (document.getElementById('busca-mov')?.value || '').toLowerCase().trim();
+  const de = document.getElementById('mov-de')?.value;
+  const ate = document.getElementById('mov-ate')?.value;
+  const ini = de ? new Date(de + 'T00:00:00').getTime() : null;
+  const fim = ate ? new Date(ate + 'T23:59:59.999').getTime() : null;
+  return carregarMovimentacoes().filter(m => {
+    const t = tsMov(m);
+    if (ini !== null && t < ini) return false;
+    if (fim !== null && t > fim) return false;
+    if (!busca) return true;
+    return [m.pisoNome, m.lote, m.bitola, m.tonalidade, m.marca, fmtLocal(m.origem), fmtLocal(m.destino)]
+      .some(v => String(v || '').toLowerCase().includes(busca));
+  });
+}
+
+// Texto para WhatsApp: nome, lote, bitola e tonalidade
+function textoMovWhats(m) {
+  const partes = [`*${m.pisoNome || ''}*`];
+  if (m.lote) partes.push(`Lote: ${m.lote}`);
+  if (m.bitola) partes.push(`Bit: ${m.bitola}`);
+  if (m.tonalidade) partes.push(`Tom: ${m.tonalidade}`);
+  return partes.join(' | ');
+}
+
+async function copiarTexto(texto) {
+  try {
+    if (navigator.clipboard && window.isSecureContext) { await navigator.clipboard.writeText(texto); return true; }
+  } catch (e) {}
+  try {
+    const ta = document.createElement('textarea');
+    ta.value = texto; ta.setAttribute('readonly', ''); ta.style.cssText = 'position:fixed;top:-1000px;opacity:0';
+    document.body.appendChild(ta); ta.select(); ta.setSelectionRange(0, texto.length);
+    const ok = document.execCommand('copy'); ta.remove(); return ok;
+  } catch (e) { return false; }
+}
+
+function copiarMov(id) {
+  const m = carregarMovimentacoes().find(x => x.id === id);
+  if (!m) return;
+  copiarTexto(textoMovWhats(m)).then(ok => toast(ok ? '📋 Copiado! Cole no WhatsApp.' : '❌ Não foi possível copiar.', !ok));
+}
+
+function copiarSelecionadasMov() {
+  const movs = carregarMovimentacoes().filter(m => movSelecionadas.has(m.id));
+  if (!movs.length) { toast('⚠️ Selecione ao menos uma movimentação.', true); return; }
+  const texto = movs.map(textoMovWhats).join('\n');
+  copiarTexto(texto).then(ok => toast(ok ? `📋 ${movs.length} piso(s) copiado(s)! Cole no WhatsApp.` : '❌ Não foi possível copiar.', !ok));
+}
+
+function toggleSelMov(id, marcado) {
+  if (marcado) movSelecionadas.add(id); else movSelecionadas.delete(id);
+  document.querySelector(`.mov-item[data-id="${id}"]`)?.classList.toggle('selecionada', marcado);
+  atualizarBarraSelMov();
+}
+
+function selecionarTodasMov(marcar) {
+  movsFiltradas().forEach(m => { if (marcar) movSelecionadas.add(m.id); else movSelecionadas.delete(m.id); });
+  renderMovimentacoes();
+}
+
+function atualizarBarraSelMov() {
+  const visiveis = movsFiltradas();
+  const n = visiveis.filter(m => movSelecionadas.has(m.id)).length;
+  const btn = document.getElementById('mov-btn-copiar-sel');
+  if (btn) { btn.disabled = n === 0; btn.textContent = n ? `📋 Copiar ${n} selecionada(s)` : '📋 Copiar selecionadas'; }
+  const chk = document.getElementById('mov-sel-todos');
+  if (chk) { chk.checked = visiveis.length > 0 && n === visiveis.length; chk.indeterminate = n > 0 && n < visiveis.length; }
+  const lbl = document.getElementById('mov-sel-label');
+  if (lbl) lbl.textContent = `Selecionar todas (${visiveis.length})`;
+}
+
+// Endereço PP.RR.AA.NN.VV → texto legível
+function endLegivel(e) {
+  const m = String(e || '').match(/^(\d+)\.(\d+)\.(\d+)(?:\.(\d+))?(?:\.(\d+))?/);
+  if (!m) return '';
+  return [`Pátio ${m[1]}`, `Rua ${m[2]}`, `Apt ${m[3]}`, m[4] !== undefined ? `Andar ${m[4]}` : '', m[5] !== undefined ? `Vaga ${m[5]}` : ''].filter(Boolean).join(' · ');
+}
+
+function verMovNoMapa(endereco) {
+  const m = String(endereco || '').match(/^(\d+)\.(\d+)\.(\d+)/);
+  if (!m || parseInt(m[1]) !== MAPA_PATIO) { toast('⚠️ Este endereço não está no mapa do Pátio 04.', true); return; }
+  if (!paginaPermitida('mapa')) { toast('🔒 Você não tem acesso ao mapa.', true); return; }
+  irPara('mapa');
+  setTimeout(() => {
+    const cel = document.querySelector(`#mapa-patio [data-k="${parseInt(m[2])}-${parseInt(m[3])}"]`);
+    if (!cel) { toast('⚠️ Apartamento não aparece no desenho do mapa.', true); return; }
+    focarNoMapa(cel);
+    cel.classList.add('pulsar'); setTimeout(() => cel.classList.remove('pulsar'), 2400);
+  }, 350);
+}
+
 function renderMovimentacoes() {
-  const busca = (document.getElementById('busca-mov').value || '').toLowerCase().trim();
-  let movs = carregarMovimentacoes();
-
-  if (busca) {
-    movs = movs.filter(m =>
-      m.pisoNome.toLowerCase().includes(busca) ||
-      fmtLocal(m.origem).toLowerCase().includes(busca) ||
-      fmtLocal(m.destino).toLowerCase().includes(busca)
-    );
-  }
-
+  const movs = movsFiltradas();
   const el = document.getElementById('lista-movimentacoes');
+  if (!el) return;
 
   if (movs.length === 0) {
+    const temFiltro = (document.getElementById('busca-mov')?.value || '').trim() || document.getElementById('mov-de')?.value || document.getElementById('mov-ate')?.value;
     el.innerHTML = `
       <div class="lista-vazia">
         <div class="emoji">🔄</div>
-        <p>${busca ? 'Nenhuma movimentação encontrada.' : 'Nenhuma movimentação registrada ainda.<br>Edite a localização de um piso para registrar.'}</p>
+        <p>${temFiltro ? 'Nenhuma movimentação neste filtro.' : 'Nenhuma movimentação registrada ainda.<br>Altere o endereço de um item na aba Conferência para registrar.'}</p>
       </div>`;
+    atualizarBarraSelMov();
     return;
   }
 
   el.innerHTML = movs.map(m => {
     const infos = [];
-    if (m.lote) infos.push(`Lote: ${m.lote}`);
-    if (m.bitola) infos.push(`Bitola: ${m.bitola}`);
-    if (m.tonalidade) infos.push(`Tom: ${m.tonalidade}`);
+    if (m.lote) infos.push(`Lote: ${escMapa(m.lote)}`);
+    if (m.bitola) infos.push(`Bit: ${escMapa(m.bitola)}`);
+    if (m.tonalidade) infos.push(`Tom: ${escMapa(m.tonalidade)}`);
+    const sel = movSelecionadas.has(m.id);
+    const destTexto = typeof m.destino === 'string';
+    const local = (l) => typeof l === 'string'
+      ? `<b>${escMapa(l)}</b>${endLegivel(l) ? `<br><span style="font-weight:400;font-size:11px">${endLegivel(l)}</span>` : ''}`
+      : escMapa(fmtLocal(l));
     return `
-    <div class="mov-item">
-      <div class="mov-piso">📦 ${m.pisoNome}</div>
-      ${infos.length ? `<div class="mov-data" style="margin-bottom:6px;color:#555">${infos.join(' • ')}</div>` : ''}
-      <div class="mov-rota">
-        <div class="mov-local origem">${fmtLocal(m.origem)}</div>
-        <div class="mov-seta">➜</div>
-        <div class="mov-local destino">${fmtLocal(m.destino)}</div>
+    <div class="mov-item${sel ? ' selecionada' : ''}" data-id="${m.id}">
+      <div style="display:flex;gap:10px;align-items:flex-start">
+        <input type="checkbox" class="mov-check" ${sel ? 'checked' : ''} onchange="toggleSelMov('${m.id}', this.checked)" aria-label="Selecionar" />
+        <div style="flex:1;min-width:0">
+          <div class="mov-piso">📦 ${escMapa(m.pisoNome)}</div>
+          ${infos.length ? `<div class="mov-data" style="margin-bottom:6px;color:#555">${infos.join(' • ')}</div>` : ''}
+          <div class="mov-rota">
+            <div class="mov-local origem">${local(m.origem)}</div>
+            <div class="mov-seta">➜</div>
+            <div class="mov-local destino">${local(m.destino)}</div>
+          </div>
+          <div class="mov-data">🕐 ${escMapa(m.dataHora)}${m.responsavel ? ` · 👤 ${escMapa(m.responsavel)}` : ''}${m.fonte === 'conferencia' ? ' · 📋 Conferência' : ''}</div>
+          <div class="mov-acoes">
+            <button class="mov-btn-copiar" onclick="copiarMov('${m.id}')">📋 Copiar</button>
+            ${destTexto ? `<button class="mov-btn-mapa" onclick="verMovNoMapa('${escMapa(m.destino)}')">🗺️ Ver no mapa</button>` : ''}
+          </div>
+        </div>
       </div>
-      <div class="mov-data">🕐 ${m.dataHora}</div>
     </div>
   `}).join('');
+  atualizarBarraSelMov();
 }
-
 function limparMovimentacoes() {
   if (!exigirEdicao('movimentacoes')) return;
   if (!confirm('Apagar todo o histórico de movimentações?')) return;
@@ -6048,14 +6218,16 @@ function limparMovimentacoes() {
 }
 
 function exportarMovimentacoesXLS() {
-  const movs = carregarMovimentacoes();
+  const movs = movsFiltradas();
   if (movs.length === 0) { toast('⚠️ Nenhuma movimentação para exportar.', true); return; }
   const sep = ';';
-  const header = ['Piso','Lote','Bitola','Tonalidade','Origem Pátio','Origem Rua','Origem Apt','Origem Nível','Destino Pátio','Destino Rua','Destino Apt','Destino Nível','Data/Hora'].join(sep);
+  const header = ['Piso','Lote','Bitola','Tonalidade','Origem Pátio','Origem Rua','Origem Apt','Origem Andar.Vaga','Destino Pátio','Destino Rua','Destino Apt','Destino Andar.Vaga','Data/Hora'].join(sep);
   const linhas = movs.map(m =>
     [m.pisoNome, m.lote||'', m.bitola||'', m.tonalidade||'',
-     m.origem.patio||'', m.origem.rua||'', m.origem.apartamento||'', m.origem.nivel!==undefined?m.origem.nivel:'',
-     m.destino.patio||'', m.destino.rua||'', m.destino.apartamento||'', m.destino.nivel!==undefined?m.destino.nivel:'',
+     ...[m.origem, m.destino].flatMap(l => {
+       if (typeof l === 'string') { const p = l.split('.'); return [p[0]||'', p[1]||'', p[2]||'', [p[3], p[4]].filter(x => x !== undefined).join('.')]; }
+       l = l || {}; return [l.patio||'', l.rua||'', l.apartamento||'', l.nivel!==undefined?l.nivel:''];
+     }),
      m.dataHora||'']
     .map(v => `"${String(v).replace(/"/g, '""')}"`)
     .join(sep)
@@ -6454,6 +6626,8 @@ onAuthStateChanged(auth, async user => {
       const movsLocais = carregarMovimentacoes();
       if (movsNuvem.length !== movsLocais.length) {
         salvarMovimentacoes(movsNuvem);
+        if (document.getElementById('pag-movimentacoes')?.classList.contains('ativa')) renderMovimentacoes();
+        if (document.getElementById('pag-mapa')?.classList.contains('ativa')) renderMapa();
         toast('🔄 Movimentações atualizadas');
       }
     }, e => console.error('onSnapshot movs:', e));
