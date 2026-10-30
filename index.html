@@ -5655,7 +5655,9 @@ function abrirFolhaMapa(titulo, corpo) {
   const ov = document.createElement('div');
   ov.id = 'mapa-folha';
   ov.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.55);z-index:99995;display:flex;align-items:flex-end;justify-content:center';
-  ov.onclick = e => { if (e.target === ov) ov.remove(); };
+  // Ignora o "click" que o celular dispara logo após o toque que abriu a janela (senão ela fecha na hora)
+  const abertoEm = Date.now();
+  ov.onclick = e => { if (e.target === ov && Date.now() - abertoEm > 500) ov.remove(); };
   ov.innerHTML = `<div style="background:#fff;border-radius:18px 18px 0 0;width:100%;max-width:560px;max-height:80vh;overflow:auto;padding:18px 16px 28px">
     <div style="width:40px;height:4px;background:#ddd;border-radius:2px;margin:0 auto 14px"></div>
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
