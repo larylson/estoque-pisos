@@ -5373,7 +5373,10 @@ let _movsPorConf = {};
 function coletarItensMapa() {
   const itens = [];
   _movsPorConf = {};
-  carregarMovimentacoes().forEach(m => { if (m.confId && !_movsPorConf[m.confId]) _movsPorConf[m.confId] = m; }); // mais recente primeiro
+  carregarMovimentacoes().forEach(m => {
+    if (m.confId && !_movsPorConf[m.confId]) _movsPorConf[m.confId] = m; // mais recente primeiro
+    if (m.estoqueId && !_movsPorConf['e:' + m.estoqueId]) _movsPorConf['e:' + m.estoqueId] = m;
+  });
   if (mapaFonte !== 'estoque') {
     carregarConferencia().forEach(i => {
       const m = String(i.endereco || '').match(/^(\d+)\.(\d+)\.(\d+)(?:\.(\d+))?(?:\.(\d+))?/);
@@ -5397,10 +5400,11 @@ function coletarItensMapa() {
       itens.push({
         fonte: 'estoque', id: d.id, tipo: 'piso', nome: d.nome, marca: d.marca, lote: d.lote,
         tamanho: d.tamanho, bitola: d.bitola, tonalidade: d.tonalidade,
-        rua: parseInt(d.rua), apt: parseInt(d.apartamento), andar: d.nivel ?? '', vaga: '',
+        rua: parseInt(d.rua), apt: parseInt(d.apartamento), andar: d.nivel ?? '', vaga: d.vaga ?? '',
         pallets: d.qtdPallets, caixas: d.caixas, unidade: 'cx',
         status: d.naoLocalizado ? 'Não está no local' : '',
-        endereco: `${pad(d.patio)}.${pad(d.rua)}.${pad(d.apartamento)}${d.nivel !== '' && d.nivel != null ? '.' + pad(d.nivel) : ''}`
+        endereco: enderecoEstoque(d),
+        ultimaMov: _movsPorConf['e:' + d.id] || null
       });
     });
   }
@@ -5719,7 +5723,7 @@ function htmlItemMapa(i) {
     </div>
     ${i.ultimaMov ? `<div style="font-size:11px;margin-top:4px;color:#1a5e20">🔄 Veio de <b>${escMapa(fmtLocal(i.ultimaMov.origem))}</b> em ${escMapa(i.ultimaMov.dataHora)}</div>` : ''}
     ${qtd.length || i.status ? `<div style="font-size:12px;margin-top:4px;font-weight:600">${qtd.join(' · ')}${i.status ? ` <span style="color:var(--texto-suave);font-weight:400">· ${escMapa(i.status)}</span>` : ''}</div>` : ''}
-    ${i.fonte === 'conferencia' && podeEditar('conferencia') ? `<button class="mapa-btn-mover" onclick="iniciarMoverMapa('${i.id}')">🔀 Mover</button>` : ''}
+    ${podeEditar(i.fonte === 'estoque' ? 'estoque' : 'conferencia') ? `<button class="mapa-btn-mover" onclick="iniciarMoverMapa('${i.fonte}','${i.id}')">🔀 Mover</button>` : ''}
   </div>`;
 }
 
@@ -5755,10 +5759,24 @@ function abrirVagaMapa(rua, apt) {
 
 
 // ===================== MOVER PISO PELO MAPA =====================
-var mapaMover = null; // { id, nome, origem }
+// Funciona para itens da Conferência (campo endereço) e do Estoque (pátio/rua/apt/nível/vaga)
+var mapaMover = null; // { fonte, id, nome, origem }
 const _pad2 = n => String(n).padStart(2, '0');
 
-function itemConfPorId(id) { return carregarConferencia().find(i => i.id === id); }
+function enderecoEstoque(d) {
+  const temNivel = d.nivel !== '' && d.nivel != null;
+  const temVaga = d.vaga !== '' && d.vaga != null;
+  return `${_pad2(d.patio)}.${_pad2(d.rua)}.${_pad2(d.apartamento)}` +
+    (temNivel || temVaga ? '.' + _pad2(temNivel ? d.nivel : 0) : '') + (temVaga ? '.' + _pad2(d.vaga) : '');
+}
+function areaMover(fonte) { return fonte === 'estoque' ? 'estoque' : 'conferencia'; }
+function itemMoverPorId(fonte, id) {
+  if (fonte === 'estoque') {
+    const d = carregar().find(x => String(x.id) === String(id));
+    return d ? { nome: d.nome, lote: d.lote, bitola: d.bitola, tonalidade: d.tonalidade, endereco: enderecoEstoque(d) } : null;
+  }
+  return carregarConferencia().find(i => i.id === id) || null;
+}
 
 function vagasDoAptMapa(rua, apt) {
   for (const f of obterFileirasMapa()) {
@@ -5769,36 +5787,36 @@ function vagasDoAptMapa(rua, apt) {
   return 1;
 }
 
-function iniciarMoverMapa(id) {
-  if (!exigirEdicao('conferencia')) return;
-  const item = itemConfPorId(id);
+function iniciarMoverMapa(fonte, id) {
+  if (!exigirEdicao(areaMover(fonte))) return;
+  const item = itemMoverPorId(fonte, id);
   if (!item) { toast('⚠️ Item não encontrado.', true); return; }
   abrirFolhaMapa(`🔀 Mover piso`, `
     <div class="mapa-item" style="background:#fff">
-      <b>${escMapa(item.nome)}</b>
+      <div style="display:flex;justify-content:space-between;gap:8px"><b>${escMapa(item.nome)}</b>
+        <span class="tag ${fonte === 'estoque' ? '' : 'azul'}" style="flex:0 0 auto">${fonte === 'estoque' ? '📦 Estoque' : '📋 Conferência'}</span></div>
       <div style="font-size:12px;color:var(--texto-suave);margin-top:3px">${[item.lote && 'Lote: ' + item.lote, item.bitola && 'Bit: ' + item.bitola, item.tonalidade && 'Tom: ' + item.tonalidade].filter(Boolean).map(escMapa).join(' · ')}</div>
       <div style="font-size:13px;margin-top:6px">Está em: <b>${escMapa(item.endereco || '—')}</b></div>
     </div>
-    <button class="mapa-mover-op" onclick="comecarEscolhaNoMapa('${id}')">👆 Escolher o destino no mapa<small>Toque no apartamento para onde ele vai</small></button>
+    <button class="mapa-mover-op" onclick="comecarEscolhaNoMapa('${fonte}','${id}')">👆 Escolher o destino no mapa<small>Toque no apartamento para onde ele vai</small></button>
     <div style="text-align:center;font-size:12px;color:var(--texto-suave);margin:10px 0">ou digite o endereço</div>
     <div style="display:flex;gap:8px">
       <input type="text" id="mover-endereco" placeholder="Ex: 04.44.03.00.01" inputmode="numeric" maxlength="14" autocomplete="off" oninput="aplicarMascaraEndereco(this)"
-        onkeydown="if(event.key==='Enter')confirmarMoverDigitado('${id}')" style="flex:1;padding:12px 14px;font-size:16px;border-radius:10px;border:1.5px solid #d0c9bb" />
-      <button onclick="confirmarMoverDigitado('${id}')" style="padding:0 18px;border-radius:10px;border:none;background:#1a2e1a;color:#fff;font-weight:700;font-size:14px;cursor:pointer">Mover</button>
+        onkeydown="if(event.key==='Enter')confirmarMoverDigitado('${fonte}','${id}')" style="flex:1;padding:12px 14px;font-size:16px;border-radius:10px;border:1.5px solid #d0c9bb" />
+      <button onclick="confirmarMoverDigitado('${fonte}','${id}')" style="padding:0 18px;border-radius:10px;border:none;background:#1a2e1a;color:#fff;font-weight:700;font-size:14px;cursor:pointer">Mover</button>
     </div>`);
 }
 
-function comecarEscolhaNoMapa(id) {
-  const item = itemConfPorId(id);
+function comecarEscolhaNoMapa(fonte, id) {
+  const item = itemMoverPorId(fonte, id);
   if (!item) return;
-  mapaMover = { id, nome: item.nome, origem: item.endereco || '' };
+  mapaMover = { fonte, id, nome: item.nome, origem: item.endereco || '' };
   document.getElementById('mapa-folha')?.remove();
   const b = document.getElementById('mapa-mover-banner');
   if (b) b.style.display = 'flex';
   const t = document.getElementById('mapa-mover-texto');
   if (t) t.innerHTML = `👆 Toque no destino de <b>${escMapa(item.nome)}</b>`;
   document.getElementById('mapa-viewport')?.classList.add('modo-mover');
-  // marca a origem
   const m = String(item.endereco || '').match(/^(\d+)\.(\d+)\.(\d+)/);
   document.querySelectorAll('#mapa-patio .mover-origem').forEach(e => e.classList.remove('mover-origem'));
   if (m) document.querySelector(`#mapa-patio [data-k="${parseInt(m[2])}-${parseInt(m[3])}"]`)?.classList.add('mover-origem');
@@ -5816,9 +5834,9 @@ function escolherDestinoMover(rua, apt) {
   if (!mapaMover) return;
   const vagas = vagasDoAptMapa(rua, apt);
   const ocup = (_mapaItensPorVaga[`${rua}-${apt}`] || []);
-  const nomesVaga = v => [...new Set(ocup.filter(i => (parseInt(i.vaga) || 1) === v && i.id !== mapaMover.id).map(i => i.nome))];
-  const qtdVagas = Math.max(vagas, 1);
-  const totalBotoes = Math.max(qtdVagas, 2);
+  const ehOMesmo = i => i.fonte === mapaMover.fonte && String(i.id) === String(mapaMover.id);
+  const nomesVaga = v => [...new Set(ocup.filter(i => (parseInt(i.vaga) || 1) === v && !ehOMesmo(i)).map(i => i.nome))];
+  const totalBotoes = Math.max(vagas, 2);
   let vagaPadrao = 1;
   for (let v = 1; v <= totalBotoes; v++) { if (!nomesVaga(v).length) { vagaPadrao = v; break; } }
   const botoesVaga = Array.from({ length: totalBotoes }, (_, k) => {
@@ -5845,32 +5863,55 @@ function confirmarMoverMapa(rua, apt) {
   const andar = Math.max(0, parseInt(document.getElementById('mover-andar')?.value) || 0);
   const vaga = parseInt(document.querySelector('.mover-vaga-btn.ativo')?.dataset.v) || 1;
   const endereco = `${_pad2(MAPA_PATIO)}.${_pad2(rua)}.${_pad2(apt)}.${_pad2(andar)}.${_pad2(vaga)}`;
-  moverItemConferencia(mapaMover.id, endereco);
+  moverItemMapa(mapaMover.fonte, mapaMover.id, endereco);
 }
 
-function confirmarMoverDigitado(id) {
+function confirmarMoverDigitado(fonte, id) {
   const v = (document.getElementById('mover-endereco')?.value || '').trim();
   if (!/^\d{2}\.\d{2}\.\d{2}(\.\d{2}){0,2}$/.test(v)) { toast('⚠️ Endereço incompleto. Ex: 04.44.03.00.01', true); return; }
-  moverItemConferencia(id, v);
+  moverItemMapa(fonte, id, v);
 }
 
-function moverItemConferencia(id, novoEndereco) {
-  if (!exigirEdicao('conferencia')) return;
-  const lista = carregarConferencia();
-  const idx = lista.findIndex(i => i.id === id);
-  if (idx < 0) { toast('⚠️ Item não encontrado.', true); return; }
-  const item = lista[idx];
-  const antes = (item.endereco || '').trim();
-  if (antes === novoEndereco) { toast('⚠️ O piso já está nesse endereço.', true); return; }
-  item.endereco = novoEndereco;
-  item.editadoEm = new Date().toLocaleString('pt-BR');
-  lista[idx] = item;
-  salvarConferencia(lista);
+function moverItemMapa(fonte, id, novoEndereco) {
+  if (!exigirEdicao(areaMover(fonte))) return;
+  const partes = novoEndereco.split('.');
+  let item, antes;
+  const agora = new Date().toLocaleString('pt-BR');
+
+  if (fonte === 'estoque') {
+    const dados = carregar();
+    const idx = dados.findIndex(x => String(x.id) === String(id));
+    if (idx < 0) { toast('⚠️ Item não encontrado.', true); return; }
+    item = dados[idx];
+    antes = enderecoEstoque(item);
+    const novo = {
+      patio: String(parseInt(partes[0])), rua: String(parseInt(partes[1])), apartamento: _pad2(parseInt(partes[2])),
+      nivel: partes[3] !== undefined ? String(parseInt(partes[3])) : '', vaga: partes[4] !== undefined ? _pad2(parseInt(partes[4])) : ''
+    };
+    if (enderecoEstoque(novo) === antes) { toast('⚠️ O piso já está nesse endereço.', true); return; }
+    const historico = [...(item.historico || []), { dataHora: agora, tipo: 'localizacao', responsavel: window._usuarioAtivo || '' }];
+    dados[idx] = { ...item, ...novo, dataAlteracao: agora, historico };
+    item = dados[idx];
+    salvarDados(dados);
+  } else {
+    const lista = carregarConferencia();
+    const idx = lista.findIndex(i => i.id === id);
+    if (idx < 0) { toast('⚠️ Item não encontrado.', true); return; }
+    item = lista[idx];
+    antes = (item.endereco || '').trim();
+    if (antes === novoEndereco) { toast('⚠️ O piso já está nesse endereço.', true); return; }
+    item.endereco = novoEndereco;
+    item.editadoEm = agora;
+    lista[idx] = item;
+    salvarConferencia(lista);
+  }
+
   if (antes) {
     registrarMovimentacao({
       pisoId: item.id, pisoNome: item.nome, lote: item.lote, bitola: item.bitola, tonalidade: item.tonalidade,
       origem: antes, destino: novoEndereco,
-      extra: { fonte: 'conferencia', confId: item.id, tipo: item.tipo, marca: item.marca || '', tamanho: item.tamanho || '', responsavel: window._usuarioAtivo || item.responsavel || '' }
+      extra: { fonte: fonte === 'estoque' ? 'estoque-mapa' : 'conferencia', confId: fonte === 'estoque' ? undefined : item.id, estoqueId: fonte === 'estoque' ? item.id : undefined,
+               tipo: item.tipo || 'piso', marca: item.marca || '', tamanho: item.tamanho || '', responsavel: window._usuarioAtivo || item.responsavel || '' }
     });
   }
   cancelarMoverMapa();
@@ -5885,6 +5926,8 @@ function moverItemConferencia(id, novoEndereco) {
   }
   toast(`🔀 ${item.nome} movido para ${novoEndereco}`);
 }
+// compatibilidade
+function moverItemConferencia(id, end) { moverItemMapa('conferencia', id, end); }
 
 function mostrarForaDoMapa() {
   const existentes = posicoesMapa();
@@ -6354,7 +6397,7 @@ function renderMovimentacoes() {
             <div class="mov-seta">➜</div>
             <div class="mov-local destino">${local(m.destino)}</div>
           </div>
-          <div class="mov-data">🕐 ${escMapa(m.dataHora)}${m.responsavel ? ` · 👤 ${escMapa(m.responsavel)}` : ''}${m.fonte === 'conferencia' ? ' · 📋 Conferência' : ''}</div>
+          <div class="mov-data">🕐 ${escMapa(m.dataHora)}${m.responsavel ? ` · 👤 ${escMapa(m.responsavel)}` : ''}${m.fonte === 'conferencia' ? ' · 📋 Conferência' : (m.fonte === 'estoque-mapa' ? ' · 📦 Estoque (mapa)' : '')}</div>
           <div class="mov-acoes">
             <button class="mov-btn-copiar" onclick="copiarMov('${m.id}')">📋 Copiar</button>
             ${destTexto ? `<button class="mov-btn-mapa" onclick="verMovNoMapa('${escMapa(m.destino)}')">🗺️ Ver no mapa</button>` : ''}
