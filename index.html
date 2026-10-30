@@ -1369,6 +1369,25 @@ PASSOS PARA RODAR NO GITHUB PAGES:
     body.ro-erros [data-edit-area="erros"], body.ro-erros [onclick^="excluirErro("] { display:none !important; }
     body.ro-conferencia [onclick^="toggleStatusConf("], body.ro-conferencia [onclick^="toggleReconferencia("],
     body.ro-quebras [onclick^="toggleStatusQuebra("], body.ro-erros [onclick^="toggleStatusErro("] { pointer-events:none; opacity:.85; }
+
+    /* ===== MAPA DO PÁTIO ===== */
+    .mapa-fonte-btn { padding:7px 12px; border-radius:20px; border:1.5px solid #d0c9bb; background:#fff; font-size:12px; font-weight:700; color:var(--texto); cursor:pointer; }
+    .mapa-fonte-btn.ativo { background:var(--verde-escuro); color:#fff; border-color:var(--verde-escuro); }
+    .mapa-scroll { overflow:auto; margin-top:12px; background:#fff; border-radius:12px; box-shadow:0 2px 12px rgba(0,0,0,0.08); padding:12px; -webkit-overflow-scrolling:touch; }
+    .mapa-grid { --cel:62px; display:grid; grid-auto-rows:auto; gap:4px; width:max-content; }
+    .mapa-cel { height:calc(var(--cel) * 0.9); border:2px solid; border-radius:6px; position:relative; cursor:pointer; overflow:hidden; display:flex; flex-direction:column; align-items:center; justify-content:flex-start; padding:3px 2px; box-sizing:border-box; transition:transform .1s, opacity .15s; }
+    .mapa-cel:active { transform:scale(.95); }
+    .mapa-cel.vazia { background:#fff; }
+    .mapa-num { font-size:calc(var(--cel) * 0.27); font-weight:800; line-height:1.1; }
+    .mapa-nome { font-size:calc(var(--cel) * 0.15); line-height:1.15; text-align:center; overflow:hidden; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; word-break:break-word; margin-top:1px; }
+    .mapa-badge { position:absolute; top:2px; right:2px; background:rgba(0,0,0,.35); color:#fff; border-radius:8px; font-size:calc(var(--cel) * 0.16); font-weight:800; padding:0 4px; line-height:1.4; }
+    .mapa-cel.apagada { opacity:.22; }
+    .mapa-cel.achada { box-shadow:0 0 0 3px #ffd400; z-index:1; }
+    .mapa-rua { height:calc(var(--cel) * 1.3); border-radius:6px; color:#fff; font-weight:700; font-size:calc(var(--cel) * 0.3); display:flex; flex-direction:column; align-items:center; justify-content:center; text-shadow:0 1px 2px rgba(0,0,0,.25); }
+    .mapa-rua span { font-size:calc(var(--cel) * 0.17); font-weight:500; opacity:.9; }
+    .mapa-banner { height:calc(var(--cel) * 0.65); border-radius:6px; background:#cd8b5e; color:#1a1a1a; font-size:calc(var(--cel) * 0.24); display:flex; align-items:center; justify-content:center; font-weight:600; }
+    .mapa-rampa { background:#bdbec0; border-radius:6px; display:flex; align-items:center; justify-content:center; font-size:calc(var(--cel) * 0.2); color:#333; font-weight:600; grid-column:11; }
+    .mapa-item { border:1px solid #eee; border-radius:10px; padding:10px 12px; margin-bottom:8px; background:#fafaf7; }
 </style>
 </head>
 <body>
@@ -1431,6 +1450,9 @@ PASSOS PARA RODAR NO GITHUB PAGES:
     </div>
     <div class="tab" onclick="irPara('quebras')">
       <span class="tab-icon">💔</span>Quebras
+    </div>
+    <div class="tab" onclick="irPara('mapa')">
+      <span class="tab-icon">🗺️</span>Mapa
     </div>
   </div>
 </div>
@@ -1829,6 +1851,30 @@ PASSOS PARA RODAR NO GITHUB PAGES:
       <button onclick="limparQuebras()" class="btn" style="flex:1;background:#fde8e8;color:#c0392b;font-weight:700">🗑️ Limpar Lista</button>
     </div>
 
+  </div>
+</div>
+
+<!-- ===================== PÁGINA: MAPA DO PÁTIO ===================== -->
+<div class="pagina" id="pag-mapa">
+  <div style="padding:16px">
+    <div class="card" style="margin-top:0">
+      <div class="card-titulo">🗺️ Pátio 04</div>
+      <input type="search" id="mapa-busca" placeholder="🔍 Buscar piso, lote ou endereço..." oninput="renderMapa()" style="width:100%;box-sizing:border-box;padding:11px 14px;font-size:14px;border-radius:10px;border:1.5px solid #d0c9bb;background:#fff;margin-bottom:10px" />
+      <div style="display:flex;flex-wrap:wrap;gap:6px;align-items:center">
+        <button class="mapa-fonte-btn ativo" data-fonte="todos" onclick="setMapaFonte('todos')">Todos</button>
+        <button class="mapa-fonte-btn" data-fonte="conferencia" onclick="setMapaFonte('conferencia')">📋 Conferência</button>
+        <button class="mapa-fonte-btn" data-fonte="estoque" onclick="setMapaFonte('estoque')">📦 Estoque</button>
+        <span style="flex:1"></span>
+        <button class="mapa-fonte-btn" id="btn-editar-mapa" onclick="abrirEditorMapa()">✏️ Apartamentos</button>
+        <button class="mapa-fonte-btn" onclick="zoomMapa(-0.15)" aria-label="Diminuir">➖</button>
+        <button class="mapa-fonte-btn" onclick="zoomMapa(0.15)" aria-label="Aumentar">➕</button>
+      </div>
+      <div id="mapa-resumo" style="font-size:13px;margin-top:10px;line-height:1.6"></div>
+    </div>
+    <div class="mapa-scroll">
+      <div id="mapa-patio" class="mapa-grid"></div>
+    </div>
+    <p style="font-size:11px;color:#888;text-align:center;margin-top:8px">Toque num apartamento para ver os pisos. Endereço: pátio.rua.apt.andar.vaga (ex: 04.44.03.00.01)</p>
   </div>
 </div>
 
@@ -2308,7 +2354,7 @@ function irPara(pag) {
   document.querySelectorAll('.tab').forEach(t => t.classList.remove('ativo'));
   document.getElementById('pag-' + pag).classList.add('ativa');
   const tabs = document.querySelectorAll('.tab');
-  const idx = { cadastrar: 0, estoque: 1, relatorio: 2, movimentacoes: 3, galeria: 4, config: 5, erros: 6, conferencia: 7, quebras: 8 };
+  const idx = { cadastrar: 0, estoque: 1, relatorio: 2, movimentacoes: 3, galeria: 4, config: 5, erros: 6, conferencia: 7, quebras: 8, mapa: 9 };
   const activeTab = tabs[idx[pag]];
   activeTab.classList.add('ativo');
   activeTab.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
@@ -2321,6 +2367,7 @@ function irPara(pag) {
   if (pag === 'conferencia' || pag === 'quebras') posicionarFormConf(pag);
   if (pag === 'conferencia') renderConferencia();
   if (pag === 'quebras') renderQuebras();
+  if (pag === 'mapa') renderMapa();
 }
 
 // ===================== FORMULÁRIO =====================
@@ -5112,6 +5159,294 @@ function mostrarModalSenha(acao, contexto, callbackSucesso) {
   });
 }
 
+// ===================== MAPA DO PÁTIO 04 =====================
+// Endereço: PP.RR.AA.NN.VV → pátio . rua . apartamento . andar . vaga  (ex: 04.44.03.00.01)
+const MAPA_PATIO = 4;
+const MAPA_RUAS = {
+  41: { cor: '#00a54f', claro: '#e3f6ea', texto: '#fff' },
+  42: { cor: '#e8202a', claro: '#fde6e7', texto: '#fff' },
+  43: { cor: '#7d6a62', claro: '#efebe9', texto: '#fff' },
+  44: { cor: '#8f8cc9', claro: '#eeedf8', texto: '#fff' }
+};
+const _seq = (ini, fim, passo) => { const r = []; for (let n = ini; passo > 0 ? n <= fim : n >= fim; n += passo) r.push(n); return r; };
+// Fileiras de apartamentos (editáveis pelos mestres). Texto: "8-64" = 8,10,...,64 ; "20-2" = decrescente ;
+// pode combinar: "8-20, 24, 30-40". A ordem digitada é a ordem na tela (esquerda → direita).
+const MAPA_FILEIRAS = [
+  { id: 'r41a', rua: 41, lado: 'esq', linha: 0, nome: 'Rua 41 — lado de cima' },
+  { id: 'r41b', rua: 41, lado: 'esq', linha: 2, nome: 'Rua 41 — lado de baixo' },
+  { id: 'r42a', rua: 42, lado: 'esq', linha: 3, nome: 'Rua 42 — lado de cima' },
+  { id: 'r42b', rua: 42, lado: 'esq', linha: 5, nome: 'Rua 42 — lado de baixo' },
+  { id: 'r44a', rua: 44, lado: 'dir', linha: 0, nome: 'Rua 44 — lado de cima' },
+  { id: 'r44b', rua: 44, lado: 'dir', linha: 2, nome: 'Rua 44 — lado de baixo' },
+  { id: 'r43a', rua: 43, lado: 'dir', linha: 3, nome: 'Rua 43 — lado de cima' },
+  { id: 'r43b', rua: 43, lado: 'dir', linha: 5, nome: 'Rua 43 — lado de baixo' }
+];
+const MAPA_PADRAO = { r41a: '', r41b: '8-26', r42a: '20-2', r42b: '21-3', r44a: '3-21', r44b: '2-20', r43a: '3-21', r43b: '2-20' };
+const MAPA_BLOCOS = [
+  { rua: 41, lado: 'esq', linha: 1 }, { rua: 42, lado: 'esq', linha: 4 },
+  { rua: 44, lado: 'dir', linha: 1 }, { rua: 43, lado: 'dir', linha: 4 }
+];
+
+function interpretarAptsMapa(txt) {
+  const out = [];
+  String(txt || '').split(/[,;\s]+/).filter(Boolean).forEach(parte => {
+    const m = parte.match(/^(\d+)\s*-\s*(\d+)$/);
+    if (m) {
+      const ini = parseInt(m[1]), fim = parseInt(m[2]);
+      const passo = ini <= fim ? 2 : -2;
+      if (Math.abs(fim - ini) > 400) return;
+      for (let n = ini; passo > 0 ? n <= fim : n >= fim; n += passo) out.push(n);
+    } else if (/^\d+$/.test(parte)) out.push(parseInt(parte));
+  });
+  return [...new Set(out)];
+}
+function obterTextosMapa() {
+  const salvo = carregarConfigApp().mapaFileiras || {};
+  const r = {};
+  MAPA_FILEIRAS.forEach(f => { r[f.id] = salvo[f.id] !== undefined ? salvo[f.id] : MAPA_PADRAO[f.id]; });
+  return r;
+}
+function obterFileirasMapa() {
+  const textos = obterTextosMapa();
+  return MAPA_FILEIRAS.map(f => ({ ...f, apts: interpretarAptsMapa(textos[f.id]) }));
+}
+function posicoesMapa() {
+  const set = new Set();
+  obterFileirasMapa().forEach(f => f.apts.forEach(a => set.add(`${f.rua}-${a}`)));
+  return set;
+}
+
+function abrirEditorMapa() {
+  if (!usuarioAtivoIsMestre()) { toast('🔒 Apenas mestres podem editar o mapa. Faça login na aba Config.', true); return; }
+  const t = obterTextosMapa();
+  abrirFolhaMapa('✏️ Apartamentos do mapa', `
+    <p style="font-size:12px;color:var(--texto-suave);margin-bottom:12px;line-height:1.5">
+      Digite os apartamentos de cada fileira na ordem em que aparecem no galpão (da esquerda para a direita).<br>
+      <b>8-64</b> = 8, 10, 12 … 64 · <b>20-2</b> = 20, 18 … 2 · pode juntar: <b>8-20, 24, 30-40</b> · vazio = sem fileira
+    </p>
+    ${MAPA_FILEIRAS.map(f => `
+      <div class="campo-grupo" style="margin-bottom:10px">
+        <label style="display:flex;align-items:center;gap:6px"><span style="width:12px;height:12px;border-radius:3px;background:${MAPA_RUAS[f.rua].cor};display:inline-block"></span>${f.nome}</label>
+        <input type="text" id="mapa_f_${f.id}" value="${escMapa(t[f.id])}" placeholder="${f.id === 'r41a' ? 'vazio = Área de pallets de carregamento' : 'Ex: 2-20'}" autocomplete="off" oninput="previaFileiraMapa('${f.id}')" />
+        <div id="mapa_p_${f.id}" style="font-size:11px;color:var(--texto-suave);margin-top:3px"></div>
+      </div>`).join('')}
+    <div style="display:flex;gap:10px;margin-top:6px">
+      <button onclick="restaurarMapaPadrao()" style="flex:1;padding:12px;border-radius:10px;border:1.5px solid #d0c9bb;background:#fff;font-size:13px;font-weight:600;cursor:pointer">↩️ Padrão</button>
+      <button onclick="salvarEditorMapa()" style="flex:2;padding:12px;border-radius:10px;border:none;background:#1a2e1a;color:#fff;font-size:14px;font-weight:700;cursor:pointer">💾 Salvar</button>
+    </div>`);
+  MAPA_FILEIRAS.forEach(f => previaFileiraMapa(f.id));
+}
+function previaFileiraMapa(id) {
+  const el = document.getElementById('mapa_p_' + id);
+  const v = document.getElementById('mapa_f_' + id)?.value || '';
+  if (!el) return;
+  const apts = interpretarAptsMapa(v);
+  el.textContent = apts.length ? `${apts.length} apt.: ${apts.slice(0, 8).join(', ')}${apts.length > 8 ? ' … ' + apts[apts.length - 1] : ''}` : (v.trim() ? '⚠️ Não entendi — use números, ex: 8-64' : 'Sem apartamentos');
+}
+function restaurarMapaPadrao() {
+  MAPA_FILEIRAS.forEach(f => { const i = document.getElementById('mapa_f_' + f.id); if (i) { i.value = MAPA_PADRAO[f.id]; previaFileiraMapa(f.id); } });
+}
+function salvarEditorMapa() {
+  if (!usuarioAtivoIsMestre()) { toast('🔒 Apenas mestres podem editar o mapa.', true); return; }
+  const fileiras = {};
+  MAPA_FILEIRAS.forEach(f => { fileiras[f.id] = (document.getElementById('mapa_f_' + f.id)?.value || '').trim(); });
+  const cfg = carregarConfigApp();
+  cfg.mapaFileiras = fileiras;
+  salvarConfigApp(cfg);
+  document.getElementById('mapa-folha')?.remove();
+  mapaCel = null;
+  renderMapa();
+  toast('✅ Mapa atualizado em todos os aparelhos!');
+}
+
+let mapaFonte = 'todos';   // 'todos' | 'conferencia' | 'estoque'
+let mapaCel = null; // tamanho do quadrado em px (null = ajusta à tela)
+let _mapaItensPorVaga = {};
+
+function escMapa(t) {
+  return String(t ?? '').replace(/[&<>"']/g, c => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c]));
+}
+
+// Junta os itens com endereço no Pátio 04 (Conferência + Estoque)
+function coletarItensMapa() {
+  const itens = [];
+  if (mapaFonte !== 'estoque') {
+    carregarConferencia().forEach(i => {
+      const m = String(i.endereco || '').match(/^(\d+)\.(\d+)\.(\d+)(?:\.(\d+))?(?:\.(\d+))?/);
+      if (!m || parseInt(m[1]) !== MAPA_PATIO) return;
+      itens.push({
+        fonte: 'conferencia', id: i.id, tipo: i.tipo, nome: i.nome, marca: i.marca, lote: i.lote,
+        tamanho: i.tamanho, bitola: i.bitola, tonalidade: i.tonalidade,
+        rua: parseInt(m[2]), apt: parseInt(m[3]),
+        andar: m[4] !== undefined ? m[4] : '', vaga: m[5] !== undefined ? m[5] : '',
+        pallets: i.pallets, caixas: i.totalCaixas ?? i.totalPecas ?? i.totalSacos ?? i.quantidade,
+        unidade: i.totalCaixas !== undefined ? 'cx' : (i.totalSacos !== undefined ? 'sc' : 'pç'),
+        status: i.noSistema ? 'No Sistema' : 'Não no Sistema', endereco: i.endereco
+      });
+    });
+  }
+  if (mapaFonte !== 'conferencia') {
+    carregar().forEach(d => {
+      if (parseInt(d.patio) !== MAPA_PATIO || !d.rua || !d.apartamento) return;
+      const pad = v => String(v).padStart(2, '0');
+      itens.push({
+        fonte: 'estoque', id: d.id, tipo: 'piso', nome: d.nome, marca: d.marca, lote: d.lote,
+        tamanho: d.tamanho, bitola: d.bitola, tonalidade: d.tonalidade,
+        rua: parseInt(d.rua), apt: parseInt(d.apartamento), andar: d.nivel ?? '', vaga: '',
+        pallets: d.qtdPallets, caixas: d.caixas, unidade: 'cx',
+        status: d.naoLocalizado ? 'Não está no local' : '',
+        endereco: `${pad(d.patio)}.${pad(d.rua)}.${pad(d.apartamento)}${d.nivel !== '' && d.nivel != null ? '.' + pad(d.nivel) : ''}`
+      });
+    });
+  }
+  return itens;
+}
+
+function setMapaFonte(f) { mapaFonte = f; renderMapa(); }
+function celAutoMapa(colunas) {
+  colunas = colunas || parseFloat(document.getElementById('mapa-patio')?.dataset.cols) || 21.1;
+  const box = document.querySelector('.mapa-scroll');
+  const largura = (box ? box.clientWidth : window.innerWidth) - 24;
+  return Math.max(46, Math.min(72, Math.floor((largura - Math.ceil(colunas) * 4) / colunas)));
+}
+function zoomMapa(delta) {
+  const atual = mapaCel || celAutoMapa();
+  mapaCel = Math.min(110, Math.max(34, Math.round(atual * (1 + delta))));
+  renderMapa();
+}
+window.addEventListener('resize', () => {
+  if (!mapaCel && document.getElementById('pag-mapa')?.classList.contains('ativa')) renderMapa();
+});
+
+function renderMapa() {
+  const el = document.getElementById('mapa-patio');
+  if (!el) return;
+  const busca = (document.getElementById('mapa-busca')?.value || '').toLowerCase().trim();
+  const itens = coletarItensMapa();
+
+  // Agrupa por rua-apt
+  const mapa = {};
+  itens.forEach(i => { const k = `${i.rua}-${i.apt}`; (mapa[k] = mapa[k] || []).push(i); });
+  _mapaItensPorVaga = mapa;
+
+  // Quais posições existem no desenho
+  const existentes = posicoesMapa();
+  const foraDoMapa = itens.filter(i => !existentes.has(`${i.rua}-${i.apt}`));
+  const ocupados = Object.keys(mapa).filter(k => existentes.has(k)).length;
+
+  const confere = i => !busca || [i.nome, i.marca, i.lote, i.codigo, i.endereco].some(v => String(v || '').toLowerCase().includes(busca));
+
+  const celula = (rua, apt, posStyle = '') => {
+    const lista = mapa[`${rua}-${apt}`] || [];
+    const c = MAPA_RUAS[rua];
+    const achou = busca && lista.some(confere);
+    const apagado = busca && !achou;
+    if (!lista.length) {
+      return `<div class="mapa-cel vazia${apagado ? ' apagada' : ''}" style="${posStyle}border-color:${c.cor};color:${c.cor}" onclick="abrirVagaMapa(${rua},${apt})">
+        <div class="mapa-num">${apt}</div></div>`;
+    }
+    const nomes = [...new Set(lista.map(i => i.nome))];
+    return `<div class="mapa-cel ocupada${achou ? ' achada' : ''}${apagado ? ' apagada' : ''}" style="${posStyle}background:${c.cor};border-color:${c.cor};color:${c.texto}" onclick="abrirVagaMapa(${rua},${apt})" title="${escMapa(nomes.join(', '))}">
+      <div class="mapa-num">${apt}</div>
+      <div class="mapa-nome">${escMapa(nomes[0])}</div>
+      ${lista.length > 1 ? `<div class="mapa-badge">${lista.length}</div>` : ''}
+    </div>`;
+  };
+
+  // Posicionamento explícito: cada fileira começa na borda esquerda do seu lado, na ordem digitada
+  const fileiras = obterFileirasMapa();
+  const L = Math.max(4, ...fileiras.filter(f => f.lado === 'esq').map(f => f.apts.length));
+  const R = Math.max(4, ...fileiras.filter(f => f.lado === 'dir').map(f => f.apts.length));
+  const colRampa = L + 1;
+  const pos = (linha, colIni, span) => `grid-row:${linha + 1};grid-column:${colIni} / span ${span};`;
+
+  let html = '';
+  fileiras.forEach(f => {
+    if (!f.apts.length) {
+      if (f.id === 'r41a') html += `<div class="mapa-banner" style="${pos(f.linha, 1, L)}">Área de pallets de carregamento</div>`;
+      return;
+    }
+    const n = f.apts.length;
+    const inicio = f.lado === 'esq' ? 1 : (colRampa + 1);
+    f.apts.forEach((a, i) => { html += celula(f.rua, a, pos(f.linha, inicio + i, 1)); });
+  });
+  MAPA_BLOCOS.forEach(b => {
+    const c = MAPA_RUAS[b.rua];
+    const qtd = Object.keys(mapa).filter(k => k.startsWith(b.rua + '-') && existentes.has(k)).length;
+    const ini = b.lado === 'esq' ? 1 : colRampa + 1;
+    html += `<div class="mapa-rua" style="${pos(b.linha, ini, b.lado === 'esq' ? L : R)}background:${c.cor}">Rua ${b.rua}<span>${qtd} apt. ocupado(s)</span></div>`;
+  });
+  html += `<div class="mapa-rampa" style="grid-row:4 / span 3;grid-column:${colRampa}">Rampa</div>`;
+  // garante altura mínima das linhas vazias
+  for (let r = 0; r < 6; r++) html += `<div style="grid-row:${r + 1};grid-column:${colRampa};min-height:4px"></div>`;
+
+  el.style.gridTemplateColumns = `repeat(${L}, var(--cel)) calc(var(--cel) * 1.1) repeat(${R}, var(--cel))`;
+  el.dataset.cols = L + R + 1.1;
+  el.style.setProperty('--cel', (mapaCel || celAutoMapa(L + R + 1.1)) + 'px');
+  el.innerHTML = html;
+
+  const resumo = document.getElementById('mapa-resumo');
+  if (resumo) {
+    resumo.innerHTML = `🗺️ <b>${ocupados}</b> apartamento(s) ocupado(s) · <b>${itens.length}</b> item(ns) no Pátio 04` +
+      (foraDoMapa.length ? `<br><a href="#" onclick="mostrarForaDoMapa();return false" style="color:#b35c00;font-weight:700">⚠️ ${foraDoMapa.length} item(ns) com endereço fora do desenho — ver</a>` : '');
+  }
+  document.querySelectorAll('.mapa-fonte-btn[data-fonte]').forEach(b => b.classList.toggle('ativo', b.dataset.fonte === mapaFonte));
+  const be = document.getElementById('btn-editar-mapa');
+  if (be) be.style.display = usuarioAtivoIsMestre() ? '' : 'none';
+}
+
+function htmlItemMapa(i) {
+  const qtd = [];
+  if (parseFloat(i.pallets) > 0) qtd.push(`🪵 ${i.pallets} pallets`);
+  if (parseFloat(i.caixas) > 0) qtd.push(`📦 ${i.caixas} ${i.unidade}`);
+  return `<div class="mapa-item">
+    <div style="display:flex;justify-content:space-between;gap:8px;align-items:flex-start">
+      <b>${escMapa(i.nome || '(sem nome)')}</b>
+      <span class="tag ${i.fonte === 'conferencia' ? 'azul' : ''}" style="flex:0 0 auto">${i.fonte === 'conferencia' ? '📋 Conferência' : '📦 Estoque'}</span>
+    </div>
+    <div style="font-size:12px;color:var(--texto-suave);margin-top:3px">
+      📍 ${escMapa(i.endereco)}${i.andar !== '' ? ` · Andar ${escMapa(i.andar)}` : ''}${i.vaga !== '' ? ` · Vaga ${escMapa(i.vaga)}` : ''}
+    </div>
+    <div style="font-size:12px;margin-top:3px">
+      ${[i.marca, i.lote && 'Lote: ' + i.lote, i.tamanho, i.bitola && 'Bit: ' + i.bitola, i.tonalidade && 'Tom: ' + i.tonalidade].filter(Boolean).map(escMapa).join(' · ')}
+    </div>
+    ${qtd.length || i.status ? `<div style="font-size:12px;margin-top:4px;font-weight:600">${qtd.join(' · ')}${i.status ? ` <span style="color:var(--texto-suave);font-weight:400">· ${escMapa(i.status)}</span>` : ''}</div>` : ''}
+  </div>`;
+}
+
+function abrirFolhaMapa(titulo, corpo) {
+  document.getElementById('mapa-folha')?.remove();
+  const ov = document.createElement('div');
+  ov.id = 'mapa-folha';
+  ov.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.55);z-index:99995;display:flex;align-items:flex-end;justify-content:center';
+  ov.onclick = e => { if (e.target === ov) ov.remove(); };
+  ov.innerHTML = `<div style="background:#fff;border-radius:18px 18px 0 0;width:100%;max-width:560px;max-height:80vh;overflow:auto;padding:18px 16px 28px">
+    <div style="width:40px;height:4px;background:#ddd;border-radius:2px;margin:0 auto 14px"></div>
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+      <div style="font-size:17px;font-weight:700;color:#1a2e1a">${titulo}</div>
+      <button onclick="document.getElementById('mapa-folha').remove()" style="background:#eee;border:none;border-radius:50%;width:30px;height:30px;font-size:15px;cursor:pointer">✕</button>
+    </div>${corpo}</div>`;
+  document.body.appendChild(ov);
+}
+
+function abrirVagaMapa(rua, apt) {
+  const lista = (_mapaItensPorVaga[`${rua}-${apt}`] || []).slice()
+    .sort((a, b) => (parseInt(a.andar) || 0) - (parseInt(b.andar) || 0) || (parseInt(a.vaga) || 0) - (parseInt(b.vaga) || 0));
+  const pad = n => String(n).padStart(2, '0');
+  const titulo = `📍 Rua ${rua} · Apt ${pad(apt)}`;
+  if (!lista.length) {
+    abrirFolhaMapa(titulo, `<p style="color:var(--texto-suave);font-size:14px;text-align:center;padding:16px 0">Vazio — nenhum item com endereço <b>04.${rua}.${pad(apt)}</b></p>`);
+    return;
+  }
+  abrirFolhaMapa(titulo, lista.map(htmlItemMapa).join(''));
+}
+
+function mostrarForaDoMapa() {
+  const existentes = posicoesMapa();
+  const fora = coletarItensMapa().filter(i => !existentes.has(`${i.rua}-${i.apt}`));
+  abrirFolhaMapa('⚠️ Fora do desenho', `<p style="font-size:12px;color:var(--texto-suave);margin-bottom:8px">Itens do Pátio 04 cuja rua/apartamento não aparece no mapa (confira se o endereço foi digitado certo).</p>` + fora.map(htmlItemMapa).join(''));
+}
+
 // ===================== CONTROLE DE ACESSO (permissões por usuário) =====================
 const CHAVE_PERMISSOES = 'estoque_permissoes_v1';
 const CHAVE_CONFIG_APP = 'estoque_config_app_v1';
@@ -5124,7 +5459,8 @@ const ABAS_PERMISSAO = [
   { id: 'galeria',       nome: '🖼️ Galeria',       idx: 4, editavel: false },
   { id: 'erros',         nome: '⚠️ Erros',         idx: 6, editavel: true  },
   { id: 'conferencia',   nome: '📋 Conferência',   idx: 7, editavel: true  },
-  { id: 'quebras',       nome: '💔 Quebras',       idx: 8, editavel: true  }
+  { id: 'quebras',       nome: '💔 Quebras',       idx: 8, editavel: true  },
+  { id: 'mapa',          nome: '🗺️ Mapa',          idx: 9, editavel: false }
 ];
 const IDX_ABA_CONFIG = 5;
 
@@ -5203,7 +5539,10 @@ function aplicarPermissoesDaNuvem(dados) {
     const n = JSON.stringify(dados.config || {});
     if (n !== JSON.stringify(carregarConfigApp())) { localStorage.setItem(CHAVE_CONFIG_APP, n); mudou = true; }
   }
-  if (mudou) aplicarPermissoes();
+  if (mudou) {
+    aplicarPermissoes();
+    if (document.getElementById('pag-mapa')?.classList.contains('ativa')) renderMapa();
+  }
   return mudou;
 }
 
@@ -5864,6 +6203,7 @@ onAuthStateChanged(auth, async user => {
         localStorage.setItem(CHAVE, JSON.stringify(Object.values(mapaLocal)));
         renderLista();
         atualizarSubtitulo();
+        if (document.getElementById('pag-mapa')?.classList.contains('ativa')) renderMapa();
         toast('🔄 Estoque atualizado em tempo real');
       }
     }, e => console.error('onSnapshot estoque:', e));
@@ -5949,6 +6289,7 @@ onAuthStateChanged(auth, async user => {
 
         localStorage.setItem(CHAVE_CONF, JSON.stringify(merged));
         renderConferencia();
+        if (document.getElementById('pag-mapa')?.classList.contains('ativa')) renderMapa();
         toast('🔄 Conferência sincronizada');
       }
     }, e => console.error('onSnapshot conferencia:', e));
