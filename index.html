@@ -1443,6 +1443,20 @@ PASSOS PARA RODAR NO GITHUB PAGES:
     body.app-instalado .btn-instalar-app, body.app-instalado #pwa-install-banner { display:none !important; }
     .instalar-ajuda-overlay { position:fixed; left:0; right:0; top:0; height:100vh; height:100dvh; background:rgba(0,0,0,.6); z-index:9999999; display:flex; align-items:center; justify-content:center; padding:16px; box-sizing:border-box; }
     .instalar-ajuda-caixa { background:#fff; border-radius:18px; padding:22px 20px; width:100%; max-width:380px; box-sizing:border-box; }
+
+    /* ===== ADM ===== */
+    .adm-toggle { display:flex !important; align-items:center; gap:6px; margin:0 !important; padding:8px 10px; border:1.5px solid #c9b6ef; border-radius:8px; background:#f6f1ff;
+      font-size:13px !important; font-weight:700 !important; color:#5b2a9a !important; text-transform:none !important; letter-spacing:normal !important; cursor:pointer; white-space:nowrap; }
+    .adm-toggle input { -webkit-appearance:checkbox !important; appearance:auto !important; width:18px !important; height:18px !important; margin:0 !important; padding:0 !important; accent-color:#6b3fb5; }
+    .tag-adm { display:inline-block; margin-left:6px; font-size:10px; font-weight:800; padding:2px 6px; border-radius:6px; background:#efe6ff; color:#5b2a9a; vertical-align:middle; }
+    .tag-adm.fixo { background:#fff4d6; color:#8a5a00; }
+
+    /* Lista de usuários: nome em cima, botões embaixo (cabe no celular) */
+    #lista-usuarios .usuario-item { flex-direction:column; align-items:stretch; gap:8px; }
+    #lista-usuarios .usuario-item > div:first-child { display:flex; align-items:center; flex-wrap:wrap; gap:4px; font-weight:600; }
+    #lista-usuarios .usuario-item > div:last-child { display:flex; flex-wrap:wrap; gap:6px !important; }
+    #lista-usuarios .usuario-item > div:last-child:empty { display:none; }
+    #lista-usuarios .usuario-item > div:last-child button { padding:7px 10px !important; font-size:12px !important; white-space:nowrap; }
 </style>
 </head>
 <body>
@@ -1778,9 +1792,10 @@ PASSOS PARA RODAR NO GITHUB PAGES:
 
     <div class="card">
       <div class="card-titulo">👥 Usuários do Sistema</div>
-      <p style="font-size:13px;color:var(--texto-suave);margin-bottom:14px">Gerencie os usuários do sistema. ⭐ = Mestre (Lorran, Lucas, João Paulo).</p>
-      <div id="config-add-usuario-wrap" style="display:flex;gap:8px;margin-bottom:12px">
-        <input type="text" id="input-novo-usuario" placeholder="Nome do usuário ex: Lorran" style="flex:1;padding:10px 14px;font-size:14px;border-radius:8px;border:1.5px solid #d0c9bb" maxlength="30" onkeydown="if(event.key==='Enter')adicionarUsuario()" />
+      <p style="font-size:13px;color:var(--texto-suave);margin-bottom:14px">Gerencie os usuários do sistema. ⭐ = Mestre fixo (Lorran, Lucas, João Paulo) · 🛡️ = ADM (acesso total) · 👤 = usuário comum (acessos definidos em 👁️).</p>
+      <div id="config-add-usuario-wrap" style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap;align-items:center">
+        <input type="text" id="input-novo-usuario" placeholder="Nome do usuário ex: Maria" style="flex:1 1 160px;min-width:0;padding:10px 14px;font-size:14px;border-radius:8px;border:1.5px solid #d0c9bb" maxlength="30" onkeydown="if(event.key==='Enter')adicionarUsuario()" />
+        <label class="adm-toggle" title="ADM tem acesso total"><input type="checkbox" id="input-novo-adm" /> 🛡️ ADM</label>
         <button onclick="adicionarUsuario()" style="background:var(--verde-escuro);color:#fff;border:none;border-radius:8px;padding:10px 16px;font-weight:700;font-size:14px;cursor:pointer">+ Add</button>
       </div>
       <div id="lista-usuarios"></div>
@@ -4576,7 +4591,7 @@ function excluirItemConferencia(id) {
 
 function limparConferencia() {
   if (!exigirEdicao('conferencia')) return;
-  if (!usuarioAtivoIsMestre()) { toast('🔒 Apenas mestres podem limpar toda a lista.', true); return; }
+  if (!usuarioAtivoIsMestre()) { toast('🔒 Apenas mestres/ADM podem limpar toda a lista.', true); return; }
   if (!confirm('Limpar toda a lista de conferência?')) return;
   salvarConferencia([]);
   renderConferencia();
@@ -4860,7 +4875,7 @@ function excluirQuebra(id) {
 
 function limparQuebras() {
   if (!exigirEdicao('quebras')) return;
-  if (!usuarioAtivoIsMestre()) { toast('🔒 Apenas mestres podem limpar toda a lista.', true); return; }
+  if (!usuarioAtivoIsMestre()) { toast('🔒 Apenas mestres/ADM podem limpar toda a lista.', true); return; }
   if (!confirm('Limpar toda a lista de quebras?')) return;
   salvarQuebras([]);
   renderQuebras();
@@ -5227,8 +5242,40 @@ function hashSenha(senha) {
   return String(h);
 }
 
-function isMestre(nome) {
+// Mestres fixos (Lorran, Lucas, João Paulo) + usuários marcados como ADM têm acesso total
+function isMestreFixo(nome) {
   return MESTRES.includes((nome || '').toLowerCase().trim());
+}
+function isAdm(nome) {
+  const n = (nome || '').toLowerCase().trim();
+  return !!n && carregarUsuarios().some(u => u.nome.toLowerCase().trim() === n && u.adm === true);
+}
+function isMestre(nome) {
+  return isMestreFixo(nome) || isAdm(nome);
+}
+function existeAdmComSenha() {
+  return MESTRES.some(n => temSenha(n)) || carregarUsuarios().some(u => u.adm === true && temSenha(u.nome));
+}
+function seloUsuario(nome) {
+  return isMestreFixo(nome) ? '⭐' : (isAdm(nome) ? '🛡️' : '👤');
+}
+function alternarAdm(nome) {
+  if (!usuarioAtivoIsMestre()) { toast('🔒 Apenas mestres/ADM podem mudar isso.', true); return; }
+  if (isMestreFixo(nome)) { toast('⭐ Mestres fixos são sempre ADM.'); return; }
+  const lista = carregarUsuarios();
+  const u = lista.find(x => x.nome === nome);
+  if (!u) return;
+  const virarAdm = !u.adm;
+  const proprio = (window._usuarioAtivo || '').toLowerCase() === nome.toLowerCase();
+  const msg = virarAdm
+    ? `Tornar "${nome}" ADM?\n\nADM tem acesso total: vê e edita todas as abas, cria usuários, define senhas e acessos.`
+    : `Tirar o ADM de "${nome}"?${proprio ? '\n\nAtenção: é você mesmo — você vai perder o acesso de ADM agora.' : ''}`;
+  if (!confirm(msg)) return;
+  if (virarAdm) u.adm = true; else delete u.adm;
+  salvarUsuarios(lista);
+  renderConfig();
+  aplicarPermissoes();
+  toast(virarAdm ? `🛡️ "${nome}" agora é ADM${temSenha(nome) ? '' : ' — defina uma senha para ele(a)'}` : `👤 "${nome}" não é mais ADM`);
 }
 
 function usuarioAtivoIsMestre() {
@@ -5252,7 +5299,7 @@ function salvarUsuarios(lista) {
 }
 
 function adicionarUsuario() {
-  if (!usuarioAtivoIsMestre()) { toast('🔒 Apenas mestres podem adicionar usuários.', true); return; }
+  if (!usuarioAtivoIsMestre()) { toast('🔒 Apenas mestres/ADM podem adicionar usuários.', true); return; }
   const input = document.getElementById('input-novo-usuario');
   const nome = (input?.value || '').trim();
   if (!nome) { toast('⚠️ Digite um nome.', true); return; }
@@ -5260,15 +5307,19 @@ function adicionarUsuario() {
   if (lista.some(u => u.nome.toLowerCase() === nome.toLowerCase())) {
     toast('⚠️ Usuário já existe.', true); return;
   }
-  lista.push({ nome });
+  const chkAdm = document.getElementById('input-novo-adm');
+  const adm = !!chkAdm?.checked;
+  lista.push(adm ? { nome, adm: true } : { nome });
   salvarUsuarios(lista);
   if (input) input.value = '';
+  if (chkAdm) chkAdm.checked = false;
   renderConfig();
-  toast(`✅ Usuário "${nome}" adicionado!`);
+  toast(adm ? `🛡️ ADM "${nome}" criado! Agora defina a senha dele(a) em 🔑.` : `✅ Usuário "${nome}" adicionado! Defina a senha em 🔑.`);
 }
 
 function removerUsuario(nome) {
-  if (!usuarioAtivoIsMestre()) { toast('🔒 Apenas mestres podem remover usuários.', true); return; }
+  if (!usuarioAtivoIsMestre()) { toast('🔒 Apenas mestres/ADM podem remover usuários.', true); return; }
+  if (isMestreFixo(nome) && !isMestreFixo(window._usuarioAtivo)) { toast('⭐ Só um mestre fixo pode remover outro mestre fixo.', true); return; }
   if (!confirm(`Remover "${nome}" da lista?`)) return;
   const lista = carregarUsuarios().filter(u => u.nome !== nome);
   salvarUsuarios(lista);
@@ -5280,7 +5331,7 @@ function removerUsuario(nome) {
 function definirSenhaUsuario(nome) {
   // Apenas mestres podem definir senha para qualquer usuário
   if (!usuarioAtivoIsMestre()) {
-    toast('🔒 Apenas usuários mestres podem definir senhas.', true); return;
+    toast('🔒 Apenas mestres/ADM podem definir senhas.', true); return;
   }
   const s1 = prompt(`Defina a senha de acesso para "${nome}":\n(mínimo 4 caracteres)\n\nDepois informe essa senha para ${nome} usar no login.`);
   if (s1 === null) return;
@@ -5306,7 +5357,7 @@ function mostrarModalSenha(acao, contexto, callbackSucesso) {
         <label>👤 Usuário</label>
         <select id="sm-usuario" style="width:100%;padding:11px 14px;font-size:14px;border-radius:8px;border:1.5px solid #d0c9bb;background:#fff">
           <option value="">— Selecionar —</option>
-          ${usuarios.map(u=>`<option value="${u.nome}">${u.nome}${isMestre(u.nome)?' ⭐':''}</option>`).join('')}
+          ${usuarios.map(u=>`<option value="${u.nome}">${u.nome}${isMestreFixo(u.nome)?' ⭐':(isAdm(u.nome)?' 🛡️ ADM':'')}</option>`).join('')}
         </select>
       </div>
       <div class="campo-grupo" style="margin-bottom:20px">
@@ -5325,7 +5376,7 @@ function mostrarModalSenha(acao, contexto, callbackSucesso) {
     if (!usuario) { toast('⚠️ Selecione um usuário.', true); return; }
     if (!temSenha(usuario)) {
       // Entrada sem senha só é permitida na 1ª configuração (nenhum mestre tem senha ainda)
-      if (isMestre(usuario) && senha === '' && !MESTRES.some(n => temSenha(n))) {
+      if (isMestreFixo(usuario) && senha === '' && !existeAdmComSenha()) {
         overlay.remove(); window._usuarioAtivo = usuario; aplicarPermissoes(); callbackSucesso(usuario); return;
       }
       toast('⚠️ Este usuário ainda não tem senha definida.', true); return;
@@ -5406,7 +5457,7 @@ function posicoesMapa() {
 }
 
 function abrirEditorMapa() {
-  if (!usuarioAtivoIsMestre()) { toast('🔒 Apenas mestres podem editar o mapa. Faça login na aba Config.', true); return; }
+  if (!usuarioAtivoIsMestre()) { toast('🔒 Apenas mestres/ADM podem editar o mapa. Faça login na aba Config.', true); return; }
   const t = obterTextosMapa();
   abrirFolhaMapa('✏️ Apartamentos do mapa', `
     <p style="font-size:12px;color:var(--texto-suave);margin-bottom:12px;line-height:1.5">
@@ -5439,7 +5490,7 @@ function restaurarMapaPadrao() {
   MAPA_FILEIRAS.forEach(f => { const i = document.getElementById('mapa_f_' + f.id); if (i) { i.value = MAPA_PADRAO[f.id]; previaFileiraMapa(f.id); } });
 }
 function salvarEditorMapa() {
-  if (!usuarioAtivoIsMestre()) { toast('🔒 Apenas mestres podem editar o mapa.', true); return; }
+  if (!usuarioAtivoIsMestre()) { toast('🔒 Apenas mestres/ADM podem editar o mapa.', true); return; }
   const fileiras = {};
   MAPA_FILEIRAS.forEach(f => { fileiras[f.id] = (document.getElementById('mapa_f_' + f.id)?.value || '').trim(); });
   const cfg = carregarConfigApp();
@@ -6161,10 +6212,10 @@ function aplicarPermissoesDaNuvem(dados) {
 }
 
 function alternarExigirLogin(el) {
-  if (!usuarioAtivoIsMestre()) { toast('🔒 Apenas mestres podem alterar isso.', true); el.checked = !el.checked; return; }
+  if (!usuarioAtivoIsMestre()) { toast('🔒 Apenas mestres/ADM podem alterar isso.', true); el.checked = !el.checked; return; }
   const cfg = carregarConfigApp();
   if (el.checked) {
-    if (!MESTRES.some(n => temSenha(n))) {
+    if (!existeAdmComSenha()) {
       toast('⚠️ Defina a senha de pelo menos um mestre antes de exigir login.', true);
       el.checked = false; return;
     }
@@ -6183,8 +6234,8 @@ function usuarioTemRestricao(nome) {
 }
 
 function abrirPermissoesUsuario(nome) {
-  if (!usuarioAtivoIsMestre()) { toast('🔒 Apenas mestres podem alterar acessos.', true); return; }
-  if (isMestre(nome)) { toast('⭐ Mestres sempre têm acesso total.'); return; }
+  if (!usuarioAtivoIsMestre()) { toast('🔒 Apenas mestres/ADM podem alterar acessos.', true); return; }
+  if (isMestre(nome)) { toast('🛡️ Mestres e ADM sempre têm acesso total.'); return; }
   const p = carregarPermissoes()[nome.toLowerCase()] || {};
   const ver = p.ver || {}, ed = p.editar || {};
   document.getElementById('perm-overlay')?.remove();
@@ -6238,7 +6289,7 @@ function liberarTudoPermissoes() {
 function salvarPermissoesUsuario() {
   const overlay = document.getElementById('perm-overlay');
   if (!overlay) return;
-  if (!usuarioAtivoIsMestre()) { toast('🔒 Apenas mestres podem alterar acessos.', true); return; }
+  if (!usuarioAtivoIsMestre()) { toast('🔒 Apenas mestres/ADM podem alterar acessos.', true); return; }
   const nome = overlay.dataset.nome;
   const ver = {}, editar = {};
   let restrito = false;
@@ -6285,11 +6336,13 @@ function renderConfig() {
       : lista.map(u => `
         <div class="usuario-item">
           <div>
-            <span>${isMestre(u.nome)?'⭐':'👤'} ${u.nome}</span>
+            <span>${seloUsuario(u.nome)} ${u.nome}</span>
+            ${isMestreFixo(u.nome) ? '<span class="tag-adm fixo">Mestre</span>' : (isAdm(u.nome) ? '<span class="tag-adm">ADM</span>' : '')}
             <span style="font-size:11px;color:${temSenha(u.nome)?'#1a6b32':'#c0392b'};margin-left:8px">${temSenha(u.nome)?'🔐':'⚠️ sem senha'}</span>
           </div>
           <div style="display:flex;gap:6px">
             ${ehMestre && !isMestre(u.nome)?`<button onclick="abrirPermissoesUsuario('${u.nome}')" style="background:${usuarioTemRestricao(u.nome)?'#fff3e0':'#eef3fb'};color:${usuarioTemRestricao(u.nome)?'#b35c00':'#1a4f8b'};border:none;border-radius:6px;padding:4px 8px;font-size:11px;font-weight:700;cursor:pointer">${usuarioTemRestricao(u.nome)?'🔒':'👁️'} Acessos</button>`:''}
+            ${ehMestre && !isMestreFixo(u.nome)?`<button onclick="alternarAdm('${u.nome}')" style="background:${isAdm(u.nome)?'#f3eefc':'#f6f1ff'};color:#5b2a9a;border:none;border-radius:6px;padding:4px 8px;font-size:11px;font-weight:700;cursor:pointer">${isAdm(u.nome)?'⬇️ Tirar ADM':'🛡️ Tornar ADM'}</button>`:''}
             ${ehMestre?`<button onclick="definirSenhaUsuario('${u.nome}')" style="background:#e8f5e9;color:#1a5e20;border:none;border-radius:6px;padding:4px 8px;font-size:11px;font-weight:700;cursor:pointer">${temSenha(u.nome)?'🔑 Alterar':'🔑 Definir'}</button>`:''}
             ${ehMestre?`<button onclick="removerUsuario('${u.nome}')" style="background:#fde8e8;color:#c0392b;border:none;border-radius:6px;padding:4px 8px;font-size:12px;font-weight:700;cursor:pointer">✕</button>`:''}
           </div>
@@ -6311,7 +6364,7 @@ function renderConfig() {
         <span style="font-size:24px">👤</span>
         <div>
           <div style="font-weight:700;color:var(--texto)">${window._usuarioEmail||'Não logado'}</div>
-          ${usuAtivo?`<div style="font-size:12px;color:#1a6b32;font-weight:600;margin-top:2px">✅ ${usuAtivo}${isMestre(usuAtivo)?' ⭐ Mestre':''}</div>`:`<div style="font-size:12px;color:#c0392b;margin-top:2px">⚠️ Nenhum usuário selecionado</div>`}
+          ${usuAtivo?`<div style="font-size:12px;color:#1a6b32;font-weight:600;margin-top:2px">✅ ${usuAtivo}${isMestreFixo(usuAtivo)?' ⭐ Mestre':(isAdm(usuAtivo)?' 🛡️ ADM':'')}</div>`:`<div style="font-size:12px;color:#c0392b;margin-top:2px">⚠️ Nenhum usuário selecionado</div>`}
         </div>
       </div>
       ${usuAtivo
