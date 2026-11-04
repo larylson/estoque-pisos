@@ -1348,7 +1348,7 @@ PASSOS PARA RODAR NO GITHUB PAGES:
     body.ro-movimentacoes .btn-limpar-mov,
     body.ro-conferencia [data-edit-area="conferencia"], body.ro-conferencia [onclick^="abrirEditConf("],
     body.ro-conferencia [onclick^="excluirItemConferencia("], body.ro-conferencia [onclick^="limparConferencia("],
-    body.ro-quebras [data-edit-area="quebras"], body.ro-quebras [onclick^="excluirQuebra("], body.ro-quebras [onclick^="limparQuebras("],
+    body.ro-quebras [data-edit-area="quebras"], body.ro-quebras [onclick^="abrirAddQuebraConf("], body.ro-quebras [onclick^="excluirQuebra("], body.ro-quebras [onclick^="limparQuebras("],
     body.ro-erros [data-edit-area="erros"], body.ro-erros [onclick^="excluirErro("] { display:none !important; }
     body.ro-conferencia [onclick^="toggleStatusConf("], body.ro-conferencia [onclick^="toggleReconferencia("],
     body.ro-quebras [onclick^="toggleStatusQuebra("], body.ro-erros [onclick^="toggleStatusErro("] { pointer-events:none; opacity:.85; }
@@ -1457,6 +1457,9 @@ PASSOS PARA RODAR NO GITHUB PAGES:
     #lista-usuarios .usuario-item > div:last-child { display:flex; flex-wrap:wrap; gap:6px !important; }
     #lista-usuarios .usuario-item > div:last-child:empty { display:none; }
     #lista-usuarios .usuario-item > div:last-child button { padding:7px 10px !important; font-size:12px !important; white-space:nowrap; }
+
+    .conf-btn-quebra { background:#fde8e8; color:#c0392b; border:1.5px solid #f5b7b1; border-radius:8px; padding:7px 12px; font-size:13px; font-weight:700; cursor:pointer; }
+    body.sem-quebras .conf-btn-quebra { display:none !important; }
 </style>
 </head>
 <body>
@@ -4275,6 +4278,138 @@ function salvarItemQuebra() {
 }
 function salvarItemComoAvaria() { salvarItemQuebra(); }
 
+
+// ===================== ADD QUEBRA A PARTIR DA CONFERÊNCIA =====================
+// Registra peças/caixas quebradas encontradas no local do piso → vai para a aba Quebras (pendente de retirar do estoque)
+function _areaPecaM2(tamanho) {
+  const m = String(tamanho || '').replace(',', '.').match(/(\d+(?:\.\d+)?)\s*[xX×]\s*(\d+(?:\.\d+)?)/);
+  if (!m) return 0;
+  let a = parseFloat(m[1]), b = parseFloat(m[2]);
+  if (a > 10) a /= 100; if (b > 10) b /= 100;
+  return a * b;
+}
+
+function resumoQuebrasDoItem(confId) {
+  const qs = carregarQuebras().filter(q => q.origemConfId === confId);
+  if (!qs.length) return '';
+  const cx = qs.reduce((t, q) => t + (parseFloat(q.totalCaixas) || 0), 0);
+  const pc = qs.reduce((t, q) => t + (parseFloat(q.tipo === 'piso' ? q.pecasAvulsas : (q.totalPecas || q.totalSacos || q.quantidade)) || 0), 0);
+  const partes = [];
+  if (cx) partes.push(`${cx} cx`);
+  if (pc) partes.push(`${pc} ${qs[0].tipo === 'argamassa' ? 'sc' : 'pç'}`);
+  return `<span class="tag" style="background:#fde8e8;color:#c0392b">💔 ${partes.join(' + ') || qs.length + ' quebra(s)'} quebrado(s)</span>`;
+}
+
+let _quebraConfFoto = null;
+function abrirAddQuebraConf(confId) {
+  if (!exigirEdicao('quebras')) return;
+  const item = carregarConferencia().find(i => i.id === confId);
+  if (!item) { toast('⚠️ Item não encontrado.', true); return; }
+  _quebraConfFoto = null;
+  const t = item.tipo;
+  const campo = (id, label, ph) => `<div class="campo-grupo"><label>${label}</label>
+    <input type="number" id="${id}" min="0" step="1" inputmode="numeric" placeholder="${ph}" oninput="previaQuebraConf('${confId}')"
+      style="padding:12px 14px;font-size:18px;font-weight:700;border-radius:10px;border:1.5px solid #f5b7b1;width:100%;box-sizing:border-box;text-align:center" /></div>`;
+  let campos;
+  if (t === 'piso') campos = `<div class="linha-2" style="margin-bottom:0">${campo('qb_caixas', '📦 Caixas quebradas', '0')}${campo('qb_pecas', '🔲 Peças quebradas', '0')}</div>`;
+  else if (t === 'argamassa') campos = campo('qb_pecas', '🪣 Sacos rasgados/avariados', '0');
+  else if (t === 'telha' || t === 'tijolo' || t === 'forro') campos = campo('qb_pecas', '🔲 Peças quebradas', '0');
+  else campos = campo('qb_pecas', `📦 Quantidade avariada (${escMapa(item.unidade || 'un')})`, '0');
+
+  abrirFolhaMapa('💔 Adicionar quebra', `
+    <div class="mapa-item" style="background:#fff;border-color:#f5b7b1">
+      <b>${escMapa(item.nome)}</b>
+      <div style="font-size:12px;color:var(--texto-suave);margin-top:3px">${[item.marca, item.lote && 'Lote: ' + item.lote, item.tamanho, item.bitola && 'Bit: ' + item.bitola, item.tonalidade && 'Tom: ' + item.tonalidade].filter(Boolean).map(escMapa).join(' · ')}</div>
+      ${item.endereco ? `<div style="font-size:12px;margin-top:3px">📍 ${escMapa(item.endereco)}</div>` : ''}
+      ${t === 'piso' && parseFloat(item.pecasPorCaixa) > 0 ? `<div style="font-size:12px;margin-top:3px;color:var(--texto-suave)">🔢 ${item.pecasPorCaixa} peças por caixa</div>` : ''}
+    </div>
+    <div style="margin-top:12px">${campos}</div>
+    <div id="qb_previa" style="font-size:13px;font-weight:700;color:#c0392b;margin:8px 0 2px;min-height:18px"></div>
+    <div class="campo-grupo" style="margin-top:8px">
+      <label>📝 Observação (opcional)</label>
+      <input type="text" id="qb_obs" placeholder="Ex: quina quebrada, caixa molhada..." autocomplete="off" style="padding:11px 14px;font-size:14px;border-radius:10px;border:1.5px solid #d0c9bb;width:100%;box-sizing:border-box" />
+    </div>
+    <div style="display:flex;gap:8px;margin-top:10px">
+      <button class="btn-foto" style="flex:1" onclick="document.getElementById('qb_foto_cam').click()">📷 Foto</button>
+      <button class="btn-foto" style="flex:1;background:#3a5a3a" onclick="document.getElementById('qb_foto_gal').click()">🖼️ Galeria</button>
+    </div>
+    <input type="file" id="qb_foto_cam" accept="image/*" capture="environment" style="display:none" onchange="quebraConfFoto(event)" />
+    <input type="file" id="qb_foto_gal" accept="image/*" style="display:none" onchange="quebraConfFoto(event)" />
+    <div id="qb_foto_prev"></div>
+    <button onclick="salvarQuebraDaConf('${confId}')" style="width:100%;margin-top:14px;padding:14px;border:none;border-radius:12px;background:#c0392b;color:#fff;font-weight:800;font-size:15px;cursor:pointer">💔 Enviar para Quebras</button>`);
+  setTimeout(() => document.getElementById(t === 'piso' ? 'qb_caixas' : 'qb_pecas')?.focus(), 350);
+}
+
+function previaQuebraConf(confId) {
+  const item = carregarConferencia().find(i => i.id === confId);
+  const el = document.getElementById('qb_previa');
+  if (!item || !el) return;
+  const cx = parseInt(document.getElementById('qb_caixas')?.value) || 0;
+  const pc = parseInt(document.getElementById('qb_pecas')?.value) || 0;
+  if (item.tipo === 'piso') {
+    const m2 = cx * (parseFloat(item.m2PorCaixa) || 0) + pc * _areaPecaM2(item.tamanho);
+    el.textContent = (cx || pc) ? `💔 ${cx} cx + ${pc} pç${m2 > 0 ? ` · 📐 ${m2.toFixed(4).replace('.', ',')} m²` : ''}` : '';
+  } else el.textContent = pc ? `💔 ${pc}` : '';
+}
+
+function quebraConfFoto(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = e => {
+    const img = new Image();
+    img.onload = () => {
+      const MAX = 800; let w = img.width, h = img.height;
+      if (w > MAX || h > MAX) { if (w > h) { h = Math.round(h * MAX / w); w = MAX; } else { w = Math.round(w * MAX / h); h = MAX; } }
+      const c = document.createElement('canvas'); c.width = w; c.height = h; c.getContext('2d').drawImage(img, 0, 0, w, h);
+      _quebraConfFoto = c.toDataURL('image/jpeg', 0.8);
+      const prev = document.getElementById('qb_foto_prev');
+      if (prev) prev.innerHTML = `<div style="position:relative;margin-top:8px"><img src="${_quebraConfFoto}" style="width:100%;max-height:160px;object-fit:cover;border-radius:10px" />
+        <button onclick="_quebraConfFoto=null;document.getElementById('qb_foto_prev').innerHTML=''" style="position:absolute;top:6px;right:6px;background:rgba(0,0,0,.6);color:#fff;border:none;border-radius:50%;width:26px;height:26px;cursor:pointer">✕</button></div>`;
+    };
+    img.src = e.target.result;
+  };
+  reader.readAsDataURL(file);
+  event.target.value = '';
+}
+
+function salvarQuebraDaConf(confId) {
+  if (!exigirEdicao('quebras')) return;
+  const item = carregarConferencia().find(i => i.id === confId);
+  if (!item) { toast('⚠️ Item não encontrado.', true); return; }
+  const cx = Math.max(0, parseInt(document.getElementById('qb_caixas')?.value) || 0);
+  const pc = Math.max(0, parseInt(document.getElementById('qb_pecas')?.value) || 0);
+  if (!cx && !pc) { toast('⚠️ Informe quantas peças/caixas estão quebradas.', true); return; }
+
+  const q = {
+    id: `${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
+    tipo: item.tipo, nome: item.nome, marca: item.marca || '', lote: item.lote || '', codigo: item.codigo || '',
+    tamanho: item.tamanho || '', bitola: item.bitola || '', tonalidade: item.tonalidade || '', endereco: item.endereco || '',
+    obs: (document.getElementById('qb_obs')?.value || '').trim(),
+    foto: _quebraConfFoto || null,
+    avaria: true, statusQuebra: 'pendente', origemConfId: item.id,
+    responsavel: window._usuarioAtivo || item.responsavel || '',
+    criadoEm: new Date().toLocaleString('pt-BR')
+  };
+  if (item.tipo === 'piso') {
+    q.m2PorCaixa = item.m2PorCaixa || ''; q.pecasPorCaixa = item.pecasPorCaixa || '';
+    q.caixasAvulsas = cx; q.pecasAvulsas = pc; q.totalCaixas = cx;
+    const m2 = cx * (parseFloat(item.m2PorCaixa) || 0) + pc * _areaPecaM2(item.tamanho);
+    if (m2 > 0) q.m2Total = m2;
+  } else if (item.tipo === 'argamassa') { q.sacasAvulsas = pc; q.totalSacos = pc; q.pesoSaco = item.pesoSaco || ''; if (parseFloat(item.pesoSaco) > 0) q.totalKg = pc * parseFloat(item.pesoSaco); }
+  else if (item.tipo === 'telha' || item.tipo === 'tijolo' || item.tipo === 'forro') { q.pecasAvulsas = pc; q.totalPecas = pc; }
+  else { q.quantidade = pc; q.unidade = item.unidade || 'un'; }
+
+  const lista = carregarQuebras();
+  lista.unshift(q);
+  salvarQuebras(lista);
+  _quebraConfFoto = null;
+  document.getElementById('mapa-folha')?.remove();
+  renderConferencia();
+  const qtd = item.tipo === 'piso' ? [cx && `${cx} cx`, pc && `${pc} pç`].filter(Boolean).join(' + ') : String(pc);
+  toast(`💔 ${qtd} de ${item.nome} enviado para Quebras`);
+}
+
 function carregarConferencia() {
   try { return JSON.parse(localStorage.getItem(CHAVE_CONF)) || []; }
   catch(e) { return []; }
@@ -4733,9 +4868,11 @@ function renderConferencia() {
           })()}
           ${totalTag}
           ${item.responsavel ? `<span class="tag azul">👤 ${item.responsavel}</span>` : ''}
+          ${resumoQuebrasDoItem(item.id)}
         </div>
         <div class="conf-acoes">
           <span style="font-size:11px;color:var(--texto-suave);flex:1">🕐 ${item.criadoEm}</span>
+          <button class="conf-btn-quebra" onclick="abrirAddQuebraConf('${item.id}')">💔 Quebra</button>
           <button class="conf-btn-editar" onclick="abrirEditConf('${item.id}')">✏️ Editar</button>
           <button class="conf-btn-excluir" onclick="excluirItemConferencia('${item.id}')">🗑️</button>
         </div>
@@ -4977,7 +5114,11 @@ function renderQuebras() {
           ${item.marca ? `🏷️ ${item.marca}` : ''}
           ${item.lote ? ` · Lote: ${item.lote}` : ''}
           ${item.tamanho ? ` · 📐 ${item.tamanho}` : ''}
+          ${item.bitola ? ` · Bit: ${item.bitola}` : ''}
+          ${item.tonalidade ? ` · Tom: ${item.tonalidade}` : ''}
+          ${item.endereco ? ` · 📍 ${item.endereco}` : ''}
           ${item.obs ? ` · ${item.obs}` : ''}
+          ${item.origemConfId ? `<br><span style="color:#8e44ad;font-weight:600">📋 Registrada na conferência</span>` : ''}
         </div>
         <div class="conf-item-tags">
           ${item.pallets > 0 ? `<span class="tag">🪵 ${item.pallets} pallets</span>` : ''}
@@ -6184,6 +6325,7 @@ function aplicarPermissoes() {
     if (t) t.style.display = podeVer(a.id) ? '' : 'none';
     document.body.classList.toggle('ro-' + a.id, a.editavel && podeVer(a.id) && !podeEditar(a.id));
   });
+  document.body.classList.toggle('sem-quebras', !podeVer('quebras'));
   // Se a aba aberta ficou bloqueada, vai para a primeira permitida
   const ativa = document.querySelector('.pagina.ativa');
   const pagAtiva = ativa ? ativa.id.replace('pag-', '') : null;
@@ -6988,7 +7130,7 @@ onAuthStateChanged(auth, async user => {
 
     const unsubErros = ouvirLista('erros', () => renderErros(), '🔄 Erros sincronizados');
     const unsubConf = ouvirLista('conferencia', () => { renderConferencia(); if (mapaAtivo()) renderMapa(); }, '🔄 Conferência sincronizada');
-    const unsubQuebras = ouvirLista('quebras', () => renderQuebras(), '🔄 Quebras sincronizadas');
+    const unsubQuebras = ouvirLista('quebras', () => { renderQuebras(); if (document.getElementById('pag-conferencia')?.classList.contains('ativa')) renderConferencia(); }, '🔄 Quebras sincronizadas');
 
     // Listener em tempo real — Fotos (adições e remoções em outros aparelhos)
     let _primeiraVezFotos = true;
