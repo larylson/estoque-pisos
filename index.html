@@ -1557,6 +1557,49 @@ PASSOS PARA RODAR NO GITHUB PAGES:
     html.tema-escuro .conf-status-btn.reconf-conferindo { color:#f2d570 !important; }
     /* "Manter conectado": caixinha marcada visível (nos dois temas) */
     .login-manter input { -webkit-appearance:checkbox !important; appearance:auto !important; padding:0 !important; border:none !important; box-shadow:none !important; flex:0 0 auto; }
+
+    /* ===== MAPA LIVRE (vários pátios) + EDITOR ===== */
+    .mapa-scroll #mapa-patio { display:block !important; }
+    .mapa-el { position:absolute; box-sizing:border-box; }
+    .mapa-rua2 { border-radius:6px; display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center; overflow:hidden; line-height:1.15; padding:2px; text-shadow:0 1px 2px rgba(0,0,0,.2); }
+    .mapa-rua2 b { font-weight:800; }
+    .mapa-rua2 span { font-size:.62em; font-weight:500; opacity:.9; }
+    .mapa-area { border-radius:6px; display:flex; align-items:center; justify-content:center; text-align:center; font-weight:600; overflow:hidden; padding:2px; line-height:1.15; }
+    .mapa-fil.vert .mapa-vagas { flex-direction:column; }
+    #mapa-patio.editando { background-image:linear-gradient(rgba(0,0,0,.06) 1px, transparent 1px), linear-gradient(90deg, rgba(0,0,0,.06) 1px, transparent 1px); background-size:22px 22px; }
+    html.tema-escuro #mapa-patio.editando { background-image:linear-gradient(rgba(255,255,255,.06) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,.06) 1px, transparent 1px); }
+    #mapa-patio.editando .mapa-el { cursor:pointer; }
+    #mapa-patio.editando .mapa-el.ed-sel { outline:3px dashed #ffb300; outline-offset:3px; z-index:5; cursor:move; box-shadow:0 0 0 6px rgba(255,179,0,.18); }
+    .ed-handle { position:absolute; right:-10px; bottom:-10px; width:24px; height:24px; background:#ffb300; border:2px solid #1a2e1a; border-radius:5px; cursor:nwse-resize; z-index:6; }
+    .ed-handle::after { content:'◢'; position:absolute; inset:0; display:flex; align-items:center; justify-content:center; font-size:12px; color:#1a2e1a; }
+    .ed-fil-vazia { position:absolute; inset:0; border:2px dashed #999; border-radius:6px; font-size:10px; color:#999; display:flex; align-items:center; justify-content:center; }
+    .mapa-scroll.modo-editor { box-shadow:0 0 0 3px #ffb300, 0 2px 12px rgba(0,0,0,0.08); }
+    .mapa-ed-barra { position:absolute; left:8px; right:8px; top:8px; z-index:4; background:rgba(26,46,26,.96); border-radius:12px; padding:6px; color:#fff; box-shadow:0 4px 14px rgba(0,0,0,.3); }
+    .ed-linha { display:flex; flex-wrap:wrap; gap:4px; align-items:center; }
+    .ed-linha + .ed-linha, .ed-linha + .ed-dica { margin-top:6px; padding-top:6px; border-top:1px solid rgba(255,255,255,.15); }
+    .mapa-ed-barra button { background:rgba(255,255,255,.15); color:#fff; border:none; border-radius:8px; padding:8px 9px; font-size:13px; font-weight:700; min-width:36px; cursor:pointer; touch-action:manipulation; }
+    .mapa-ed-barra button:disabled { opacity:.35; }
+    .mapa-ed-barra button:active { background:rgba(255,255,255,.3); }
+    .mapa-ed-barra .ed-salvar { background:#2e9d4a; }
+    .ed-nome { font-size:12px; font-weight:700; margin-right:2px; max-width:130px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+    .ed-dica { font-size:11px; opacity:.85; padding:2px; line-height:1.4; }
+    .ed-form .campo-grupo { margin-bottom:10px; }
+    .ed-cores { display:flex; flex-wrap:wrap; gap:6px; align-items:center; }
+    .ed-cor { width:28px; height:28px; border-radius:50%; border:2px solid rgba(0,0,0,.15); cursor:pointer; padding:0; }
+    .ed-cor.ativo { box-shadow:0 0 0 3px #1a2e1a; }
+    html.tema-escuro .ed-cor.ativo { box-shadow:0 0 0 3px #fff; }
+    #ed_cor { width:44px !important; height:32px !important; padding:0 !important; border-radius:6px; }
+    .mapa-scroll.modo-editor .mapa-mover-banner { display:none !important; }
+
+    /* barra do editor compacta (cabe no celular sem cobrir o mapa) */
+    .mapa-ed-barra { left:6px; right:6px; top:6px; padding:5px; }
+    .mapa-ed-barra .ed-linha { flex-wrap:nowrap; overflow-x:auto; -webkit-overflow-scrolling:touch; scrollbar-width:none; }
+    .mapa-ed-barra .ed-linha::-webkit-scrollbar { display:none; }
+    .mapa-ed-barra button { padding:7px 8px; font-size:12px; min-width:32px; flex:0 0 auto; white-space:nowrap; }
+    .ed-linha + .ed-linha, .ed-linha + .ed-dica { margin-top:4px; padding-top:4px; }
+    .ed-nome { max-width:96px; font-size:11px; flex:0 0 auto; }
+
+    html.tema-escuro .mapa-cel.vazia .mapa-num, html.tema-escuro .mapa-cel.multi > .mapa-num { color:#d6ddd3 !important; }
 </style>
 </head>
 <body>
@@ -2116,16 +2159,18 @@ PASSOS PARA RODAR NO GITHUB PAGES:
 <div class="pagina" id="pag-mapa">
   <div style="padding:16px">
     <div class="card" style="margin-top:0">
-      <div class="card-titulo">🗺️ Pátio 04</div>
+      <div class="card-titulo" id="mapa-titulo">🗺️ Pátio 04</div>
+      <div id="mapa-patios" style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px"></div>
       <input type="search" id="mapa-busca" placeholder="🔍 Buscar piso, lote ou endereço..." oninput="buscarNoMapa()" style="width:100%;box-sizing:border-box;padding:11px 14px;font-size:14px;border-radius:10px;border:1.5px solid #d0c9bb;background:#fff;margin-bottom:10px" />
       <div style="display:flex;flex-wrap:wrap;gap:6px;align-items:center">
         <span style="flex:1"></span>
-        <button class="mapa-fonte-btn" id="btn-editar-mapa" onclick="abrirEditorMapa()">✏️ Apartamentos</button>
+        <button class="mapa-fonte-btn" id="btn-editar-mapa" onclick="entrarEditorMapa()">✏️ Editar mapa</button>
       </div>
       <div id="mapa-resumo" style="font-size:13px;margin-top:10px;line-height:1.6"></div>
     </div>
     <div class="mapa-scroll" id="mapa-viewport">
       <div id="mapa-patio" class="mapa-grid"></div>
+      <div class="mapa-ed-barra" id="mapa-ed-barra" style="display:none"></div>
       <div class="mapa-mover-banner" id="mapa-mover-banner" style="display:none">
         <span id="mapa-mover-texto">👆 Toque no apartamento de destino</span>
         <button onclick="cancelarMoverMapa()">Cancelar</button>
@@ -2671,6 +2716,7 @@ function atualizarPreviewMetragem() {
 // ===================== NAVEGAÇÃO =====================
 function irPara(pag) {
   if (pag !== 'mapa' && typeof mapaMover !== 'undefined' && mapaMover) cancelarMoverMapa();
+  if (pag !== 'mapa' && typeof mapaEd !== 'undefined' && mapaEd.ativo) { if (mapaEd.alterado && !confirm('Sair do editor do mapa sem salvar?')) return; sairEditorMapa(true); }
   if (pag !== 'mapa' && document.getElementById('mapa-viewport')?.classList.contains('tela-cheia')) alternarTelaCheiaMapa();
   if (!paginaPermitida(pag)) {
     toast(abaDesligada(pag) ? '🔌 Esta aba está desligada (um ADM pode religar em Config).' : '🔒 Você não tem acesso a esta aba.', true);
@@ -5877,57 +5923,7 @@ function obterFileirasMapa() {
     return { ...f, det, apts: det.filter(x => !x.vazio).map(x => x.apt), largura: det.reduce((t, x) => t + x.vagas, 0) };
   });
 }
-function posicoesMapa() {
-  const set = new Set();
-  obterFileirasMapa().forEach(f => f.apts.forEach(a => set.add(`${f.rua}-${a}`)));
-  return set;
-}
 
-function abrirEditorMapa() {
-  if (!usuarioAtivoIsMestre()) { toast('🔒 Apenas mestres/ADM podem editar o mapa. Faça login na aba Config.', true); return; }
-  const t = obterTextosMapa();
-  abrirFolhaMapa('✏️ Apartamentos do mapa', `
-    <p style="font-size:12px;color:var(--texto-suave);margin-bottom:12px;line-height:1.5">
-      Digite os apartamentos de cada fileira na ordem em que aparecem no galpão (da esquerda para a direita).<br>
-      <b>8-64</b> = 8, 10, 12 … 64 · <b>20-2</b> = 20, 18 … 2 · pode juntar: <b>8-20, 24, 30-40</b> · vazio = sem fileira<br>
-      <b>3x2</b> = apt 3 com 2 vagas (ocupa 2 espaços, ex: <b>21-5, 3x2</b>) · <b>8-20x2</b> = todos com 2 vagas · <b>_</b> = espaço vazio (ex: <b>_, 21-5</b>)
-    </p>
-    ${MAPA_FILEIRAS.map(f => `
-      <div class="campo-grupo" style="margin-bottom:10px">
-        <label style="display:flex;align-items:center;gap:6px"><span style="width:12px;height:12px;border-radius:3px;background:${MAPA_RUAS[f.rua].cor};display:inline-block"></span>${f.nome}</label>
-        <input type="text" id="mapa_f_${f.id}" value="${escMapa(t[f.id])}" placeholder="${f.id === 'r41a' ? 'vazio = Área de pallets de carregamento' : 'Ex: 2-20'}" autocomplete="off" oninput="previaFileiraMapa('${f.id}')" />
-        <div id="mapa_p_${f.id}" style="font-size:11px;color:var(--texto-suave);margin-top:3px"></div>
-      </div>`).join('')}
-    <div style="display:flex;gap:10px;margin-top:6px">
-      <button onclick="restaurarMapaPadrao()" style="flex:1;padding:12px;border-radius:10px;border:1.5px solid #d0c9bb;background:#fff;font-size:13px;font-weight:600;cursor:pointer">↩️ Padrão</button>
-      <button onclick="salvarEditorMapa()" style="flex:2;padding:12px;border-radius:10px;border:none;background:#1a2e1a;color:#fff;font-size:14px;font-weight:700;cursor:pointer">💾 Salvar</button>
-    </div>`);
-  MAPA_FILEIRAS.forEach(f => previaFileiraMapa(f.id));
-}
-function previaFileiraMapa(id) {
-  const el = document.getElementById('mapa_p_' + id);
-  const v = document.getElementById('mapa_f_' + id)?.value || '';
-  if (!el) return;
-  const det = interpretarAptsMapaDet(v).filter(x => !x.vazio);
-  const fmt = x => x.vagas > 1 ? `${x.apt} (${x.vagas} vagas)` : String(x.apt);
-  const apts = det;
-  el.textContent = det.length ? `${det.length} apt.: ${det.slice(0, 8).map(fmt).join(', ')}${det.length > 8 ? ' … ' + fmt(det[det.length - 1]) : ''}` : (v.trim() ? '⚠️ Não entendi — use números, ex: 8-64' : 'Sem apartamentos');
-}
-function restaurarMapaPadrao() {
-  MAPA_FILEIRAS.forEach(f => { const i = document.getElementById('mapa_f_' + f.id); if (i) { i.value = MAPA_PADRAO[f.id]; previaFileiraMapa(f.id); } });
-}
-function salvarEditorMapa() {
-  if (!usuarioAtivoIsMestre()) { toast('🔒 Apenas mestres/ADM podem editar o mapa.', true); return; }
-  const fileiras = {};
-  MAPA_FILEIRAS.forEach(f => { fileiras[f.id] = (document.getElementById('mapa_f_' + f.id)?.value || '').trim(); });
-  const cfg = carregarConfigApp();
-  cfg.mapaFileiras = fileiras;
-  salvarConfigApp(cfg);
-  document.getElementById('mapa-folha')?.remove();
-  mapaView.chave = '';
-  renderMapa();
-  toast('✅ Mapa atualizado em todos os aparelhos!');
-}
 
 let mapaFonte = 'todos';   // 'todos' | 'conferencia' | 'estoque'
 let _mapaItensPorVaga = {};
@@ -5948,8 +5944,9 @@ function coletarItensMapa() {
   if (mapaFonte !== 'estoque') {
     carregarConferencia().forEach(i => {
       const m = String(i.endereco || '').match(/^(\d+)\.(\d+)\.(\d+)(?:\.(\d+))?(?:\.(\d+))?/);
-      if (!m || parseInt(m[1]) !== MAPA_PATIO) return;
+      if (!m) return;
       itens.push({
+        patio: parseInt(m[1]),
         fonte: 'conferencia', id: i.id, tipo: i.tipo, nome: i.nome, marca: i.marca, lote: i.lote,
         tamanho: i.tamanho, bitola: i.bitola, tonalidade: i.tonalidade,
         rua: parseInt(m[2]), apt: parseInt(m[3]),
@@ -6041,7 +6038,9 @@ function focarNoMapa(alvo) {
   const { vp, el } = _mapaEls();
   if (!vp || !el || !alvo) return;
   const s = Math.min(1.6, Math.max(mapaView.s, 1));
-  const cx = alvo.offsetLeft + alvo.offsetWidth / 2, cy = alvo.offsetTop + alvo.offsetHeight / 2;
+  let ox = 0, oy = 0, n = alvo;
+  while (n && n !== el) { ox += n.offsetLeft; oy += n.offsetTop; n = n.offsetParent; }
+  const cx = ox + alvo.offsetWidth / 2, cy = oy + alvo.offsetHeight / 2;
   mapaView.s = s;
   mapaView.x = vp.clientWidth / 2 - cx * s;
   mapaView.y = vp.clientHeight / 2 - cy * s;
@@ -6055,8 +6054,15 @@ function buscarNoMapa() {
   _buscaMapaTimer = setTimeout(() => {
     const busca = (document.getElementById('mapa-busca')?.value || '').trim();
     if (!busca) return;
-    const achada = document.querySelector('#mapa-patio .mapa-cel.achada');
-    if (achada) focarNoMapa(achada);
+    let achada = document.querySelector('#mapa-patio .mapa-cel.achada');
+    if (!achada && !mapaEd.ativo) {
+      // não achou neste pátio: procura nos outros pátios com desenho
+      const b = busca.toLowerCase();
+      const outro = coletarItensMapa().find(i => i.patio !== mapaPatioAtual && patiosComMapa().includes(i.patio) &&
+        [i.nome, i.marca, i.lote, i.endereco].some(v => String(v || '').toLowerCase().includes(b)) && posicoesMapa(i.patio).has(`${i.patio}-${i.rua}-${i.apt}`));
+      if (outro) { selecionarPatioMapa(outro.patio); toast(`🔎 Encontrado no Pátio ${_pad2(outro.patio)}`); achada = document.querySelector('#mapa-patio .mapa-cel.achada'); }
+    }
+    if (achada) setTimeout(() => focarNoMapa(achada), 60);
   }, 450);
 }
 function alternarTelaCheiaMapa() {
@@ -6098,15 +6104,18 @@ function iniciarGestosMapa() {
     } else ini = null;
   };
   vp.addEventListener('pointerdown', e => {
-    if (e.target.closest('.mapa-ctrl')) return;
+    if (e.target.closest('.mapa-ctrl, .mapa-ed-barra, .mapa-mover-banner')) return;
     if (e.pointerType === 'mouse' && e.button !== 0) return;
     if (e.isPrimary) pts.clear(); // novo gesto: descarta toques antigos que não terminaram
     if (!pts.size) arrastou = false;
+    if (pts.size >= 1 && _edDrag) edCancelarArraste(); // 2º dedo: vira pinça
     pts.set(e.pointerId, rel(e));
+    if (pts.size === 1 && edPointerDown(e)) { ini = null; return; } // editor arrastando uma peça
     comecar();
   });
   const mover = e => {
     if (!pts.has(e.pointerId)) return;
+    if (pts.size === 1 && edPointerMove(e)) return;
     pts.set(e.pointerId, rel(e));
     if (!ini) return;
     const lista = [...pts.values()];
@@ -6133,19 +6142,27 @@ function iniciarGestosMapa() {
   const soltar = e => {
     if (!pts.has(e.pointerId)) return;
     pts.delete(e.pointerId);
+    if (!pts.size && edPointerUp(e, arrastou)) { arrastou = true; comecar(); return; }
     // Toque simples no celular: abre o apartamento direto (não depende do "click" do navegador)
-    if (e.type === 'pointerup' && !pts.size && !arrastou && e.pointerType !== 'mouse') {
+    if (e.type === 'pointerup' && !pts.size && !arrastou && e.pointerType !== 'mouse' && !mapaEd.ativo) {
       const alvo = document.elementFromPoint(e.clientX, e.clientY)?.closest('.mapa-cel');
-      if (alvo && vp.contains(alvo)) { tapManual = Date.now(); alvo.click(); }
+      if (alvo && vp.contains(alvo)) { tapManual = Date.now(); window._tapManualMapa = tapManual; alvo.click(); }
     }
     comecar(); // 2 → 1 dedo continua arrastando sem pular
   };
+  // O "click" automático que o celular manda depois do toque não pode cair na janela que acabou de abrir
+  // (ex.: no botão "Adicionar piso aqui", que fica bem embaixo do dedo)
+  document.addEventListener('click', e => {
+    if (e.isTrusted && window._tapManualMapa && Date.now() - window._tapManualMapa < 700 && !vp.contains(e.target)) {
+      e.stopPropagation(); e.preventDefault(); window._tapManualMapa = 0;
+    }
+  }, true);
   window.addEventListener('pointermove', mover, { passive: true });
   window.addEventListener('pointerup', soltar);
   window.addEventListener('pointercancel', soltar);
   // não abre o apartamento se o toque foi para arrastar/zoom
   vp.addEventListener('click', e => {
-    if (e.target.closest('.mapa-ctrl')) return;
+    if (e.target.closest('.mapa-ctrl, .mapa-ed-barra, .mapa-mover-banner')) return;
     // bloqueia o click nativo se foi arrasto/zoom, ou se o toque já foi tratado acima (evita abrir 2x)
     if (e.isTrusted && (arrastou || Date.now() - tapManual < 700)) { e.stopPropagation(); e.preventDefault(); arrastou = false; }
   }, true);
@@ -6156,7 +6173,7 @@ function iniciarGestosMapa() {
   }, { passive: false });
   // duplo toque/clique aproxima
   vp.addEventListener('dblclick', e => {
-    if (e.target.closest('.mapa-ctrl')) return;
+    if (e.target.closest('.mapa-ctrl, .mapa-ed-barra, .mapa-mover-banner') || mapaEd.ativo) return;
     const p = rel(e);
     _mapaEls().el.classList.add('animando');
     zoomMapaEm(p.x, p.y, 1.8);
@@ -6171,107 +6188,428 @@ document.addEventListener('keydown', e => {
   if (e.key === 'Escape' && document.getElementById('mapa-viewport')?.classList.contains('tela-cheia') && !document.getElementById('mapa-folha')) alternarTelaCheiaMapa();
 });
 
+// ===================== MAPA LIVRE POR PÁTIO (desenho editável) =====================
+// Cada pátio é um desenho com 3 tipos de peça (unidades: 1 apt ≈ 28 x 26):
+//   { t:'rua',  rua:42, x,y,w,h, cor, rotulo? }                 → bloco colorido da rua
+//   { t:'fil',  rua:42, x,y, o:'h'|'v', apts:'20-2', cw,ch,gap }   → fileira de apartamentos
+//   { t:'area', texto:'Rampa', x,y,w,h, cor }                      → área livre (rampa, pallets...)
+// Fica salvo em config.mapasPatios[pátio] e sincroniza para todos os aparelhos.
+const MAPA_K = 2.2; // px por unidade (antes do zoom)
+var mapaPatioAtual = (() => { try { return parseInt(localStorage.getItem('estoque_mapa_patio')) || 4; } catch (e) { return 4; } })();
+const PALETA_MAPA = ['#00a54f', '#e8202a', '#7d6a62', '#8f8cc9', '#f0821e', '#a98a6b', '#f4a9a8', '#5b5a4a', '#a38e9b', '#6a3f86', '#3fa2ab', '#879b72', '#7d7d6d', '#1f6fb2', '#d4a017', '#cd8b5e', '#b9babc'];
+let _idEl = 0;
+const novoIdEl = () => 'e' + Date.now().toString(36) + (_idEl++).toString(36);
+
+function corInfo(hex) {
+  const h = String(hex || '#888').replace('#', '');
+  const n = h.length === 3 ? h.split('').map(c => c + c).join('') : h.padEnd(6, '0');
+  const r = parseInt(n.slice(0, 2), 16), g = parseInt(n.slice(2, 4), 16), b = parseInt(n.slice(4, 6), 16);
+  const lum = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
+  const escurecer = f => '#' + [r, g, b].map(v => Math.round(v * f).toString(16).padStart(2, '0')).join('');
+  return { cor: '#' + n, texto: lum > 0.62 ? '#1a1a1a' : '#fff', textoVazio: lum > 0.62 ? escurecer(0.55) : '#' + n };
+}
+
+// ----- desenho padrão do Pátio 04 (convertido das fileiras configuradas antes) -----
+function layoutPadraoP4() {
+  const f = obterFileirasMapa();
+  const L = Math.max(4, ...f.filter(x => x.lado === 'esq').map(x => x.largura));
+  const R = Math.max(4, ...f.filter(x => x.lado === 'dir').map(x => x.largura));
+  const textos = obterTextosMapa();
+  const yLinha = { 0: 0, 1: 28, 2: 66, 3: 94, 4: 122, 5: 160 };
+  const xDir = L * 30 + 36;
+  const cores = { 41: '#00a54f', 42: '#e8202a', 43: '#7d6a62', 44: '#8f8cc9' };
+  const els = [];
+  f.forEach(fl => {
+    if (!fl.apts.length && fl.id === 'r41a') { els.push({ id: novoIdEl(), t: 'area', texto: 'Área de pallets de carregamento', x: 0, y: 4, w: L * 30 - 2, h: 20, cor: '#cd8b5e' }); return; }
+    if (!String(textos[fl.id] || '').trim()) return;
+    els.push({ id: novoIdEl(), t: 'fil', rua: fl.rua, x: fl.lado === 'esq' ? 0 : xDir, y: yLinha[fl.linha], o: 'h', apts: textos[fl.id], cw: 28, ch: 26, gap: 2 });
+  });
+  [[41, 'esq', 1], [42, 'esq', 4], [44, 'dir', 1], [43, 'dir', 4]].forEach(([rua, lado, linha]) =>
+    els.push({ id: novoIdEl(), t: 'rua', rua, x: lado === 'esq' ? 0 : xDir, y: yLinha[linha], w: (lado === 'esq' ? L : R) * 30 - 2, h: 36, cor: cores[rua] }));
+  els.push({ id: novoIdEl(), t: 'area', texto: 'Rampa', x: L * 30 + 1, y: 94, w: 33, h: 92, cor: '#b9babc' });
+  return { elementos: els };
+}
+
+// ----- rascunho do Pátio 02 (feito a partir do desenho enviado — conferir no galpão) -----
+function layoutRascunhoP2() {
+  const ox = 70, oy = 105, els = [];
+  const rua = (n, x, y, w, h, cor, rotulo) => els.push({ id: novoIdEl(), t: 'rua', rua: n, x: x - ox, y: y - oy, w, h, cor, ...(rotulo ? { rotulo } : {}) });
+  const fil = (n, x, y, o, apts, cw = 27, ch = 27, gap = 2) => els.push({ id: novoIdEl(), t: 'fil', rua: n, x: x - ox, y: y - oy, o, apts, cw, ch, gap });
+  els.push({ id: novoIdEl(), t: 'area', texto: 'Rampa', x: 467 - ox, y: 110 - oy, w: 42, h: 205, cor: '#b9babc' });
+  // Rua 22 (em cima)
+  fil(22, 512, 115, 'h', '2-20', 26, 27, 2); rua(22, 512, 145, 276, 25, '#f0821e');
+  // Ruas 11, 12 e 13 (verticais)
+  fil(11, 110, 135, 'v', '1-11'); rua(11, 140, 135, 55, 173, '#f4a9a8'); fil(11, 197, 135, 'v', '2-12');
+  fil(12, 229, 135, 'v', '1-11'); rua(12, 258, 135, 55, 173, '#5b5a4a'); fil(12, 316, 135, 'v', '2-12');
+  fil(13, 348, 135, 'v', '1-11'); rua(13, 378, 135, 54, 173, '#a38e9b'); fil(13, 435, 135, 'v', '2-12');
+  // Rua 21 (dois blocos)
+  fil(21, 512, 172, 'v', '1-9'); fil(21, 512, 349, 'v', '11-19'); rua(21, 543, 175, 55, 315, '#a98a6b');
+  rua(21, 738, 172, 55, 316, '#a98a6b'); fil(21, 797, 143, 'v', '2-16, _, 18, 20', 26, 27, 2);
+  // Bloco cinza sem nome (conferir número da rua)
+  rua(0, 436, 349, 42, 143, '#7d7d6d', 'Rua ?'); fil(0, 483, 349, 'v', '1-9');
+  // Rua 22 (embaixo)
+  rua(22, 483, 496, 335, 25, '#f0821e'); fil(22, 485, 525, 'h', '1-23', 26, 27, 2);
+  // Ruas 2, 4 e 6
+  fil(2, 82, 381, 'v', '1-5', 26, 53, 2); rua(2, 113, 378, 54, 173, '#6a3f86'); fil(2, 170, 381, 'v', '2-6', 26, 53, 2);
+  fil(4, 199, 381, 'v', '1-5', 26, 53, 2); rua(4, 229, 378, 54, 173, '#3fa2ab'); fil(4, 288, 381, 'v', '2-6', 26, 53, 2);
+  fil(6, 317, 381, 'v', '1-5', 26, 53, 2); rua(6, 347, 378, 54, 173, '#879b72'); fil(6, 405, 381, 'v', '2-6', 26, 53, 2);
+  return { elementos: els, rascunho: true };
+}
+
+function mapasSalvos() { const m = carregarConfigApp().mapasPatios; return m && typeof m === 'object' ? m : {}; }
+function patiosComMapa() {
+  const set = new Set([2, 4, ...Object.keys(mapasSalvos()).map(Number)]);
+  return [...set].filter(p => p > 0 && mapasSalvos()[p] !== null).sort((a, b) => a - b);
+}
+const _cacheLayout = {};
+function obterLayoutPatio(p) {
+  if (mapaEd.ativo && mapaEd.patio === p) return { elementos: mapaEd.els };
+  const salvo = mapasSalvos()[p];
+  if (salvo && Array.isArray(salvo.elementos)) return salvo;
+  if (!_cacheLayout[p]) _cacheLayout[p] = p === 4 ? layoutPadraoP4() : (p === 2 ? layoutRascunhoP2() : { elementos: [] });
+  return _cacheLayout[p];
+}
+// Células de uma fileira: [{apt, vagas, dx, dy, w, h}] em unidades, relativas à fileira
+function celulasFileira(f) {
+  const det = interpretarAptsMapaDet(f.apts);
+  const cw = f.cw || 28, ch = f.ch || 26, gap = f.gap ?? 2;
+  let pos = 0; const out = [];
+  det.forEach(d => {
+    const n = d.vazio ? 1 : d.vagas;
+    const tam = (f.o === 'v' ? ch : cw) * n + gap * (n - 1);
+    if (!d.vazio) out.push(f.o === 'v' ? { apt: d.apt, vagas: d.vagas, dx: 0, dy: pos, w: cw, h: tam } : { apt: d.apt, vagas: d.vagas, dx: pos, dy: 0, w: tam, h: ch });
+    pos += tam + gap;
+  });
+  const comp = Math.max(0, pos - gap);
+  return { cels: out, w: f.o === 'v' ? cw : comp, h: f.o === 'v' ? comp : ch };
+}
+function tamanhoEl(el) {
+  if (el.t === 'fil') { const c = celulasFileira(el); return { w: Math.max(c.w, 10), h: Math.max(c.h, 10) }; }
+  return { w: el.w, h: el.h };
+}
+function posicoesMapa(p = mapaPatioAtual) {
+  const set = new Set();
+  obterLayoutPatio(p).elementos.filter(e => e.t === 'fil').forEach(f => celulasFileira(f).cels.forEach(c => set.add(`${p}-${f.rua}-${c.apt}`)));
+  return set;
+}
+function vagasDoAptMapa(rua, apt) {
+  for (const f of obterLayoutPatio(mapaPatioAtual).elementos) {
+    if (f.t !== 'fil' || f.rua !== rua) continue;
+    const c = celulasFileira(f).cels.find(x => x.apt === apt);
+    if (c) return c.vagas;
+  }
+  return 1;
+}
+function corDaRua(p, rua) {
+  const r = obterLayoutPatio(p).elementos.find(e => e.t === 'rua' && e.rua === rua);
+  if (r) return corInfo(r.cor);
+  return corInfo(PALETA_MAPA[Math.abs(rua) % PALETA_MAPA.length]);
+}
+function selecionarPatioMapa(p) {
+  if (mapaEd.ativo && mapaEd.patio !== p) { toast('💾 Salve ou saia do editor antes de trocar de pátio.', true); return; }
+  mapaPatioAtual = p;
+  try { localStorage.setItem('estoque_mapa_patio', String(p)); } catch (e) {}
+  mapaView.chave = '';
+  renderMapa();
+}
+function novoPatioMapa() {
+  if (!usuarioAtivoIsMestre()) { toast('🔒 Apenas mestres/ADM podem criar pátios.', true); return; }
+  const v = prompt('Número do novo pátio (ex: 3):');
+  if (v === null) return;
+  const p = parseInt(v);
+  if (!(p > 0 && p < 100)) { toast('⚠️ Número de pátio inválido.', true); return; }
+  if (patiosComMapa().includes(p)) { selecionarPatioMapa(p); return; }
+  const cfg = carregarConfigApp();
+  cfg.mapasPatios = { ...mapasSalvos(), [p]: { elementos: [] } };
+  salvarConfigApp(cfg);
+  selecionarPatioMapa(p);
+  entrarEditorMapa();
+  toast(`🆕 Pátio ${_pad2(p)} criado — adicione ruas e fileiras`);
+}
+
+// ===================== RENDER =====================
 function renderMapa() {
   const el = document.getElementById('mapa-patio');
   if (!el) return;
+  if (!patiosComMapa().includes(mapaPatioAtual)) mapaPatioAtual = patiosComMapa()[0] || 4;
+  const P = mapaPatioAtual;
   const busca = (document.getElementById('mapa-busca')?.value || '').toLowerCase().trim();
-  const itens = coletarItensMapa();
+  const todos = coletarItensMapa();
+  const itens = todos.filter(i => i.patio === P);
 
-  // Agrupa por rua-apt
   const mapa = {};
-  itens.forEach(i => { const k = `${i.rua}-${i.apt}`; (mapa[k] = mapa[k] || []).push(i); });
+  todos.forEach(i => { const k = `${i.patio}-${i.rua}-${i.apt}`; (mapa[k] = mapa[k] || []).push(i); });
   _mapaItensPorVaga = mapa;
 
-  // Quais posições existem no desenho
-  const existentes = posicoesMapa();
-  const foraDoMapa = itens.filter(i => !existentes.has(`${i.rua}-${i.apt}`));
+  const existentes = posicoesMapa(P);
+  const foraDoMapa = itens.filter(i => !existentes.has(`${P}-${i.rua}-${i.apt}`));
   const ocupados = Object.keys(mapa).filter(k => existentes.has(k)).length;
-
   const confere = i => !busca || [i.nome, i.marca, i.lote, i.codigo, i.endereco].some(v => String(v || '').toLowerCase().includes(busca));
 
   const celula = (rua, apt, posStyle = '', vagas = 1) => {
-    const lista = mapa[`${rua}-${apt}`] || [];
-    const c = MAPA_RUAS[rua];
+    const lista = mapa[`${P}-${rua}-${apt}`] || [];
+    const ci = corDaRua(P, rua);
+    const c = { cor: ci.cor, texto: ci.texto };
     const achou = busca && lista.some(confere);
     const apagado = busca && !achou;
+    const k = `${P}-${rua}-${apt}`;
     if (vagas > 1) {
-      // Apartamento com várias vagas: um espaço por vaga (01, 02...)
       const porVaga = Array.from({ length: vagas }, () => []);
-      lista.forEach(i => {
-        const v = parseInt(i.vaga);
-        porVaga[(v >= 1 ? Math.min(v, vagas) : 1) - 1].push(i);
-      });
-      const partes = porVaga.map((itens, k) => {
-        const nomes = [...new Set(itens.map(i => i.nome))];
-        const vn = String(k + 1).padStart(2, '0');
-        return itens.length
+      lista.forEach(i => { const v = parseInt(i.vaga); porVaga[(v >= 1 ? Math.min(v, vagas) : 1) - 1].push(i); });
+      const partes = porVaga.map((its, j) => {
+        const nomes = [...new Set(its.map(i => i.nome))];
+        const vn = String(j + 1).padStart(2, '0');
+        return its.length
           ? `<div class="mapa-vaga ocup" style="background:${c.cor};border-color:${c.cor};color:${c.texto}" title="${escMapa(nomes.join(', '))}">
-              <span class="mapa-vn">V${vn}</span><span class="mapa-nome">${escMapa(nomes[0])}</span>
-              ${itens.length > 1 ? `<span class="mapa-badge">${itens.length}</span>` : ''}</div>`
+              <span class="mapa-vn">V${vn}</span><span class="mapa-nome">${escMapa(nomes[0])}</span>${its.length > 1 ? `<span class="mapa-badge">${its.length}</span>` : ''}</div>`
           : `<div class="mapa-vaga" style="border-color:${c.cor}"><span class="mapa-vn">V${vn}</span></div>`;
       }).join('');
-      return `<div class="mapa-cel multi${achou ? ' achada' : ''}${apagado ? ' apagada' : ''}" style="${posStyle}border-color:${c.cor};color:${c.cor}" data-k="${rua}-${apt}" onclick="abrirVagaMapa(${rua},${apt})">
+      return `<div class="mapa-cel multi${achou ? ' achada' : ''}${apagado ? ' apagada' : ''}" style="${posStyle}border-color:${c.cor};color:${ci.textoVazio}" data-k="${k}" onclick="abrirVagaMapa(${rua},${apt})">
         <div class="mapa-num">${apt}</div><div class="mapa-vagas">${partes}</div></div>`;
     }
     if (!lista.length) {
-      return `<div class="mapa-cel vazia${apagado ? ' apagada' : ''}" style="${posStyle}border-color:${c.cor};color:${c.cor}" data-k="${rua}-${apt}" onclick="abrirVagaMapa(${rua},${apt})">
-        <div class="mapa-num">${apt}</div></div>`;
+      return `<div class="mapa-cel vazia${apagado ? ' apagada' : ''}" style="${posStyle}border-color:${c.cor};color:${ci.textoVazio}" data-k="${k}" onclick="abrirVagaMapa(${rua},${apt})"><div class="mapa-num">${apt}</div></div>`;
     }
     const nomes = [...new Set(lista.map(i => i.nome))];
-    return `<div class="mapa-cel ocupada${achou ? ' achada' : ''}${apagado ? ' apagada' : ''}" style="${posStyle}background:${c.cor};border-color:${c.cor};color:${c.texto}" data-k="${rua}-${apt}" onclick="abrirVagaMapa(${rua},${apt})" title="${escMapa(nomes.join(', '))}">
-      <div class="mapa-num">${apt}</div>
-      <div class="mapa-nome">${escMapa(nomes[0])}</div>
-      ${lista.length > 1 ? `<div class="mapa-badge">${lista.length}</div>` : ''}
-    </div>`;
+    return `<div class="mapa-cel ocupada${achou ? ' achada' : ''}${apagado ? ' apagada' : ''}" style="${posStyle}background:${c.cor};border-color:${c.cor};color:${c.texto}" data-k="${k}" onclick="abrirVagaMapa(${rua},${apt})" title="${escMapa(nomes.join(', '))}">
+      <div class="mapa-num">${apt}</div><div class="mapa-nome">${escMapa(nomes[0])}</div>${lista.length > 1 ? `<div class="mapa-badge">${lista.length}</div>` : ''}</div>`;
   };
 
-  // Posicionamento explícito: cada fileira começa na borda esquerda do seu lado, na ordem digitada
-  const fileiras = obterFileirasMapa();
-  const L = Math.max(4, ...fileiras.filter(f => f.lado === 'esq').map(f => f.largura));
-  const R = Math.max(4, ...fileiras.filter(f => f.lado === 'dir').map(f => f.largura));
-  const colRampa = L + 1;
-  const pos = (linha, colIni, span) => `grid-row:${linha + 1};grid-column:${colIni} / span ${span};`;
-
-  let html = '';
-  fileiras.forEach(f => {
-    if (!f.apts.length) {
-      if (f.id === 'r41a') html += `<div class="mapa-banner" style="${pos(f.linha, 1, L)}">Área de pallets de carregamento</div>`;
-      return;
+  const K = MAPA_K;
+  const layout = obterLayoutPatio(P);
+  let maxX = 40, maxY = 40, html = '';
+  // ruas e áreas primeiro (ficam por baixo), fileiras por cima
+  const ordem = [...layout.elementos].sort((a, b) => (a.t === 'fil') - (b.t === 'fil'));
+  ordem.forEach(e => {
+    const sel = mapaEd.ativo && mapaEd.sel === e.id ? ' ed-sel' : '';
+    const tam = tamanhoEl(e);
+    maxX = Math.max(maxX, e.x + tam.w); maxY = Math.max(maxY, e.y + tam.h);
+    const base = `left:${e.x * K}px;top:${e.y * K}px;width:${tam.w * K}px;height:${tam.h * K}px;`;
+    const handle = mapaEd.ativo && sel && e.t !== 'fil' ? '<div class="ed-handle" title="Arraste para mudar o tamanho"></div>' : '';
+    if (e.t === 'rua') {
+      const ci = corInfo(e.cor);
+      const qtd = Object.keys(mapa).filter(k => k.startsWith(`${P}-${e.rua}-`) && existentes.has(k)).length;
+      const fs = Math.max(10, Math.min(18, Math.min(e.w, e.h) * K * 0.32));
+      html += `<div class="mapa-el mapa-rua2${sel}" data-el="${e.id}" style="${base}background:${ci.cor};color:${ci.texto};font-size:${fs}px">
+        <b>${escMapa(e.rotulo || 'Rua ' + e.rua)}</b>${Math.min(e.w, e.h) * K > 40 ? `<span>${qtd} apt. ocupado(s)</span>` : ''}${handle}</div>`;
+    } else if (e.t === 'area') {
+      const ci = corInfo(e.cor);
+      const fs = Math.max(9, Math.min(15, Math.min(e.w, e.h) * K * 0.3));
+      html += `<div class="mapa-el mapa-area${sel}" data-el="${e.id}" style="${base}background:${ci.cor};color:${ci.texto};font-size:${fs}px"><span>${escMapa(e.texto || '')}</span>${handle}</div>`;
+    } else if (e.t === 'fil') {
+      const c = celulasFileira(e);
+      const cel = Math.round(Math.min(e.cw || 28, e.ch || 26) * K);
+      html += `<div class="mapa-el mapa-fil${e.o === 'v' ? ' vert' : ''}${sel}" data-el="${e.id}" style="${base}--cel:${cel}px">` +
+        c.cels.map(x => celula(e.rua, x.apt, `position:absolute;left:${x.dx * K}px;top:${x.dy * K}px;width:${x.w * K}px;height:${x.h * K}px;`, x.vagas)).join('') +
+        (mapaEd.ativo && !c.cels.length ? '<div class="ed-fil-vazia">fileira vazia</div>' : '') + '</div>';
     }
-    let col = f.lado === 'esq' ? 1 : (colRampa + 1);
-    f.det.forEach(x => { if (!x.vazio) html += celula(f.rua, x.apt, pos(f.linha, col, x.vagas), x.vagas); col += x.vagas; });
   });
-  MAPA_BLOCOS.forEach(b => {
-    const c = MAPA_RUAS[b.rua];
-    const qtd = Object.keys(mapa).filter(k => k.startsWith(b.rua + '-') && existentes.has(k)).length;
-    const ini = b.lado === 'esq' ? 1 : colRampa + 1;
-    html += `<div class="mapa-rua" style="${pos(b.linha, ini, b.lado === 'esq' ? L : R)}background:${c.cor}">Rua ${b.rua}<span>${qtd} apt. ocupado(s)</span></div>`;
-  });
-  html += `<div class="mapa-rampa" style="grid-row:4 / span 3;grid-column:${colRampa}">Rampa</div>`;
-  // garante altura mínima das linhas vazias
-  for (let r = 0; r < 6; r++) html += `<div style="grid-row:${r + 1};grid-column:${colRampa};min-height:4px"></div>`;
-
-  el.style.gridTemplateColumns = `repeat(${L}, var(--cel)) calc(var(--cel) * 1.1) repeat(${R}, var(--cel))`;
-  el.dataset.cols = L + R + 1.1;
-  el.style.setProperty('--cel', MAPA_CEL_BASE + 'px');
+  el.style.width = (maxX + 12) * K + 'px';
+  el.style.height = (maxY + 12) * K + 'px';
   el.innerHTML = html;
+  el.classList.toggle('editando', mapaEd.ativo);
   iniciarGestosMapa();
-  if (mapaMover) { const mo = String(mapaMover.origem).match(/^(\d+)\.(\d+)\.(\d+)/); if (mo) el.querySelector(`[data-k="${parseInt(mo[2])}-${parseInt(mo[3])}"]`)?.classList.add('mover-origem'); }
-  // Ajusta à tela na 1ª vez ou quando o desenho muda de tamanho; senão mantém zoom/posição
-  const chave = `${L}x${R}`;
-  if (!mapaView.iniciado || mapaView.chave !== chave) {
+  if (mapaMover) { const mo = String(mapaMover.origem).match(/^(\d+)\.(\d+)\.(\d+)/); if (mo) el.querySelector(`[data-k="${parseInt(mo[1])}-${parseInt(mo[2])}-${parseInt(mo[3])}"]`)?.classList.add('mover-origem'); }
+  const chave = `${P}:${Math.round(maxX)}x${Math.round(maxY)}`;
+  if (!mapaView.iniciado || (mapaView.chave !== chave && !mapaEd.ativo)) {
     mapaView.iniciado = true; mapaView.chave = chave;
     requestAnimationFrame(() => ajustarMapa(false, false));
-  } else { limitarMapa(); aplicarTransformMapa(); }
+  } else { mapaView.chave = chave; limitarMapa(); aplicarTransformMapa(); }
 
+  // seletor de pátios
+  const selP = document.getElementById('mapa-patios');
+  if (selP) {
+    const contagem = p => todos.filter(i => i.patio === p).length;
+    selP.innerHTML = patiosComMapa().map(p => `<button class="mapa-fonte-btn${p === P ? ' ativo' : ''}" onclick="selecionarPatioMapa(${p})">Pátio ${_pad2(p)} <small style="opacity:.75">${contagem(p)}</small></button>`).join('') +
+      (usuarioAtivoIsMestre() ? `<button class="mapa-fonte-btn" onclick="novoPatioMapa()" title="Novo pátio">➕</button>` : '');
+  }
+  const titulo = document.getElementById('mapa-titulo');
+  if (titulo) titulo.textContent = `🗺️ Pátio ${_pad2(P)}${layout.rascunho && !mapaEd.ativo ? ' (rascunho)' : ''}`;
+  const semDesenho = todos.filter(i => !patiosComMapa().includes(i.patio));
   const resumo = document.getElementById('mapa-resumo');
   if (resumo) {
-    resumo.innerHTML = `🗺️ <b>${ocupados}</b> apartamento(s) ocupado(s) · <b>${itens.length}</b> item(ns) no Pátio 04` +
-      (foraDoMapa.length ? `<br><a href="#" onclick="mostrarForaDoMapa();return false" style="color:#b35c00;font-weight:700">⚠️ ${foraDoMapa.length} item(ns) com endereço fora do desenho — ver</a>` : '');
+    resumo.innerHTML = `🗺️ <b>${ocupados}</b> apartamento(s) ocupado(s) · <b>${itens.length}</b> item(ns) no Pátio ${_pad2(P)}` +
+      (foraDoMapa.length ? `<br><a href="#" onclick="mostrarForaDoMapa();return false" style="color:#b35c00;font-weight:700">⚠️ ${foraDoMapa.length} item(ns) com endereço fora do desenho — ver</a>` : '') +
+      (semDesenho.length ? `<br><span style="color:var(--texto-suave)">ℹ️ ${semDesenho.length} item(ns) em pátios sem desenho (${[...new Set(semDesenho.map(i => _pad2(i.patio)))].join(', ')})</span>` : '') +
+      (layout.rascunho && !mapaEd.ativo ? `<br><span style="color:#b35c00">✏️ Desenho em rascunho — confira no galpão e ajuste em <b>Editar mapa</b>.</span>` : '');
   }
-  document.querySelectorAll('.mapa-fonte-btn[data-fonte]').forEach(b => b.classList.toggle('ativo', b.dataset.fonte === mapaFonte));
   const be = document.getElementById('btn-editar-mapa');
-  if (be) be.style.display = usuarioAtivoIsMestre() ? '' : 'none';
+  if (be) be.style.display = usuarioAtivoIsMestre() && !mapaEd.ativo ? '' : 'none';
+  renderBarraEditor();
+}
+
+// ===================== EDITOR =====================
+var mapaEd = { ativo: false, patio: null, els: [], sel: null, hist: [], alterado: false };
+function entrarEditorMapa() {
+  if (!usuarioAtivoIsMestre()) { toast('🔒 Apenas mestres/ADM podem editar o mapa.', true); return; }
+  if (mapaMover) cancelarMoverMapa();
+  const base = obterLayoutPatio(mapaPatioAtual);
+  mapaEd = { ativo: true, patio: mapaPatioAtual, els: JSON.parse(JSON.stringify(base.elementos || [])), sel: null, hist: [], alterado: false };
+  document.getElementById('mapa-viewport')?.classList.add('modo-editor');
+  renderMapa();
+  toast('✏️ Modo editor: toque numa peça para selecionar e arraste para mover');
+}
+function sairEditorMapa(semPerguntar) {
+  if (!semPerguntar && mapaEd.alterado && !confirm('Sair sem salvar? As mudanças no desenho serão perdidas.')) return;
+  mapaEd = { ativo: false, patio: null, els: [], sel: null, hist: [], alterado: false };
+  document.getElementById('mapa-viewport')?.classList.remove('modo-editor');
+  renderMapa();
+}
+function salvarEditorMapa() {
+  if (!usuarioAtivoIsMestre()) { toast('🔒 Apenas mestres/ADM podem salvar o mapa.', true); return; }
+  const cfg = carregarConfigApp();
+  cfg.mapasPatios = { ...mapasSalvos(), [mapaEd.patio]: { elementos: mapaEd.els } };
+  salvarConfigApp(cfg);
+  delete _cacheLayout[mapaEd.patio];
+  const p = mapaEd.patio;
+  sairEditorMapa(true);
+  toast(`✅ Desenho do Pátio ${_pad2(p)} salvo para todos os aparelhos`);
+}
+function edGuardar() { mapaEd.hist.push(JSON.stringify(mapaEd.els)); if (mapaEd.hist.length > 40) mapaEd.hist.shift(); mapaEd.alterado = true; }
+function edDesfazer() {
+  if (!mapaEd.hist.length) { toast('Nada para desfazer.'); return; }
+  mapaEd.els = JSON.parse(mapaEd.hist.pop());
+  if (!mapaEd.els.some(e => e.id === mapaEd.sel)) mapaEd.sel = null;
+  renderMapa();
+}
+const edSel = () => mapaEd.els.find(e => e.id === mapaEd.sel);
+function edCentroVisivel() {
+  const vp = document.getElementById('mapa-viewport');
+  const vw = vp?.clientWidth || 300, vh = vp?.clientHeight || 300;
+  return { x: Math.max(0, Math.round(((vw / 2 - mapaView.x) / mapaView.s) / MAPA_K)), y: Math.max(0, Math.round(((vh / 2 - mapaView.y) / mapaView.s) / MAPA_K)) };
+}
+function edAdicionar(tipo) {
+  edGuardar();
+  const c = edCentroVisivel();
+  let e;
+  if (tipo === 'rua') e = { id: novoIdEl(), t: 'rua', rua: 0, x: c.x, y: c.y, w: 120, h: 30, cor: PALETA_MAPA[mapaEd.els.filter(x => x.t === 'rua').length % PALETA_MAPA.length] };
+  else if (tipo === 'fil') e = { id: novoIdEl(), t: 'fil', rua: 0, x: c.x, y: c.y, o: 'h', apts: '2-10', cw: 28, ch: 26, gap: 2 };
+  else e = { id: novoIdEl(), t: 'area', texto: 'Área', x: c.x, y: c.y, w: 60, h: 30, cor: '#b9babc' };
+  mapaEd.els.push(e); mapaEd.sel = e.id;
+  renderMapa();
+  edEditarSelecionado();
+}
+function edMover(dx, dy) {
+  const e = edSel(); if (!e) return;
+  edGuardar(); e.x = Math.max(0, e.x + dx); e.y = Math.max(0, e.y + dy); renderMapa();
+}
+function edGirar() {
+  const e = edSel(); if (!e) return;
+  edGuardar();
+  if (e.t === 'fil') e.o = e.o === 'v' ? 'h' : 'v';
+  else { const w = e.w; e.w = e.h; e.h = w; }
+  renderMapa();
+}
+function edDuplicar() {
+  const e = edSel(); if (!e) return;
+  edGuardar();
+  const n = { ...JSON.parse(JSON.stringify(e)), id: novoIdEl(), x: e.x + 12, y: e.y + 12 };
+  mapaEd.els.push(n); mapaEd.sel = n.id; renderMapa();
+}
+function edApagar() {
+  const e = edSel(); if (!e) return;
+  if (!confirm('Apagar esta peça do desenho?')) return;
+  edGuardar(); mapaEd.els = mapaEd.els.filter(x => x.id !== e.id); mapaEd.sel = null; renderMapa();
+}
+function nomePecaEd(e) {
+  if (!e) return '';
+  return e.t === 'rua' ? `🟩 ${e.rotulo || 'Rua ' + e.rua}` : e.t === 'area' ? `⬜ ${e.texto || 'Área'}` : `🔢 Fileira · Rua ${e.rua}`;
+}
+function renderBarraEditor() {
+  const b = document.getElementById('mapa-ed-barra');
+  if (!b) return;
+  if (!mapaEd.ativo) { b.style.display = 'none'; return; }
+  const e = edSel();
+  b.style.display = 'block';
+  b.innerHTML = `<div class="ed-linha">
+      <button onclick="edAdicionar('rua')">＋ Rua</button>
+      <button onclick="edAdicionar('fil')">＋ Fileira</button>
+      <button onclick="edAdicionar('area')">＋ Área</button>
+      <button onclick="edDesfazer()" title="Desfazer" ${mapaEd.hist.length ? '' : 'disabled'}>↶</button>
+      <span style="flex:1;min-width:4px"></span>
+      <button class="ed-salvar" onclick="salvarEditorMapa()">💾 Salvar</button>
+      <button onclick="sairEditorMapa()">✖</button>
+    </div>` + (e ? `<div class="ed-linha">
+      <span class="ed-nome">${escMapa(nomePecaEd(e))}</span>
+      <button onclick="edMover(-1,0)">◀</button><button onclick="edMover(0,-1)">▲</button><button onclick="edMover(0,1)">▼</button><button onclick="edMover(1,0)">▶</button>
+      <button onclick="edEditarSelecionado()">✏️</button><button onclick="edGirar()" title="Girar">↻</button><button onclick="edDuplicar()" title="Duplicar">⧉</button><button onclick="edApagar()" title="Apagar">🗑️</button>
+    </div>` : `<div class="ed-dica">Toque numa rua, fileira ou área para selecionar. Arraste a peça selecionada para mover · ◢ no canto muda o tamanho.</div>`);
+}
+function edEditarSelecionado() {
+  const e = edSel(); if (!e) return;
+  const cores = PALETA_MAPA.map(c => `<button class="ed-cor${(e.cor || '').toLowerCase() === c ? ' ativo' : ''}" style="background:${c}" onclick="document.getElementById('ed_cor').value='${c}';document.querySelectorAll('.ed-cor').forEach(b=>b.classList.toggle('ativo',b===this))"></button>`).join('');
+  const num = (id, label, v, extra = '') => `<div class="campo-grupo"><label>${label}</label><input type="number" id="${id}" value="${v ?? ''}" inputmode="numeric" ${extra} /></div>`;
+  let corpo = '';
+  if (e.t === 'rua') corpo = `<div class="linha-2">${num('ed_rua', 'Número da rua', e.rua)}<div class="campo-grupo"><label>Nome (opcional)</label><input type="text" id="ed_rotulo" value="${escMapa(e.rotulo || '')}" placeholder="Rua ${e.rua}" /></div></div>
+      <div class="linha-2">${num('ed_w', 'Largura', e.w, 'min="4"')}${num('ed_h', 'Altura', e.h, 'min="4"')}</div>`;
+  else if (e.t === 'area') corpo = `<div class="campo-grupo"><label>Texto</label><input type="text" id="ed_texto" value="${escMapa(e.texto || '')}" /></div>
+      <div class="linha-2">${num('ed_w', 'Largura', e.w, 'min="4"')}${num('ed_h', 'Altura', e.h, 'min="4"')}</div>`;
+  else corpo = `<div class="linha-2">${num('ed_rua', 'Número da rua', e.rua)}<div class="campo-grupo"><label>Direção</label><select id="ed_o"><option value="h" ${e.o !== 'v' ? 'selected' : ''}>➡️ Horizontal</option><option value="v" ${e.o === 'v' ? 'selected' : ''}>⬇️ Vertical</option></select></div></div>
+      <div class="campo-grupo"><label>Apartamentos (na ordem do desenho)</label><input type="text" id="ed_apts" value="${escMapa(e.apts || '')}" oninput="(function(i){const d=interpretarAptsMapaDet(i.value).filter(x=>!x.vazio);document.getElementById('ed_previa').textContent=d.length?d.length+' apt.: '+d.slice(0,10).map(x=>x.vagas>1?x.apt+'('+x.vagas+' vagas)':x.apt).join(', ')+(d.length>10?' …':''):'Sem apartamentos'})(this)" />
+        <div id="ed_previa" style="font-size:11px;color:var(--texto-suave);margin-top:3px"></div>
+        <div style="font-size:11px;color:var(--texto-suave);margin-top:3px"><b>2-20</b> = 2,4…20 · <b>21-3</b> decrescente · <b>3x2</b> = 2 vagas · <b>_</b> = espaço vazio</div></div>
+      <div class="linha-2" style="grid-template-columns:1fr 1fr 1fr">${num('ed_cw', 'Larg. apt', e.cw || 28, 'min="8"')}${num('ed_ch', 'Alt. apt', e.ch || 26, 'min="8"')}${num('ed_gap', 'Espaço', e.gap ?? 2, 'min="0"')}</div>`;
+  if (e.t !== 'fil') corpo += `<div class="campo-grupo"><label>Cor</label><div class="ed-cores">${cores}<input type="color" id="ed_cor" value="${corInfo(e.cor).cor}" /></div></div>`;
+  abrirFolhaMapa(`✏️ ${escMapa(nomePecaEd(e))}`, `<div class="ed-form">${corpo}</div>
+    <div style="font-size:11px;color:var(--texto-suave);margin:6px 0 10px">Medidas em unidades do desenho (1 apartamento ≈ 28 × 26).</div>
+    <button onclick="edAplicarForm()" style="width:100%;padding:13px;border:none;border-radius:12px;background:#1a2e1a;color:#fff;font-weight:700;font-size:15px;cursor:pointer">✅ Aplicar</button>`);
+  document.getElementById('ed_apts')?.dispatchEvent(new Event('input'));
+}
+function edAplicarForm() {
+  const e = edSel(); if (!e) return;
+  edGuardar();
+  const v = id => document.getElementById(id)?.value;
+  const n = (id, min) => { const x = parseFloat(v(id)); return isNaN(x) ? undefined : Math.max(min, x); };
+  if (e.t === 'rua') { e.rua = parseInt(v('ed_rua')) || 0; e.rotulo = (v('ed_rotulo') || '').trim() || undefined; e.w = n('ed_w', 4) ?? e.w; e.h = n('ed_h', 4) ?? e.h; e.cor = v('ed_cor') || e.cor; }
+  else if (e.t === 'area') { e.texto = v('ed_texto') || ''; e.w = n('ed_w', 4) ?? e.w; e.h = n('ed_h', 4) ?? e.h; e.cor = v('ed_cor') || e.cor; }
+  else { e.rua = parseInt(v('ed_rua')) || 0; e.o = v('ed_o') === 'v' ? 'v' : 'h'; e.apts = (v('ed_apts') || '').trim(); e.cw = n('ed_cw', 8) ?? 28; e.ch = n('ed_ch', 8) ?? 26; e.gap = n('ed_gap', 0) ?? 2; }
+  if (e.rotulo === undefined) delete e.rotulo;
+  document.getElementById('mapa-folha')?.remove();
+  renderMapa();
+}
+// Arrastar peças no editor (chamado pelos gestos do mapa)
+let _edDrag = null;
+function edPointerDown(e) {
+  if (!mapaEd.ativo) return false;
+  const d = e.target.closest('[data-el]');
+  if (!d) { _edDrag = { vazio: true, cx: e.clientX, cy: e.clientY }; return false; }
+  const el = mapaEd.els.find(x => x.id === d.dataset.el);
+  if (!el) return false;
+  // só arrasta a peça já selecionada; tocar em outra apenas seleciona (evita mover sem querer ao navegar)
+  const handle = !!e.target.closest('.ed-handle');
+  _edDrag = { id: el.id, div: d, cx: e.clientX, cy: e.clientY, ox: el.x, oy: el.y, ow: el.w, oh: el.h, modo: handle ? 'resize' : 'move', moveu: false, antes: JSON.stringify(mapaEd.els), podeArrastar: mapaEd.sel === el.id };
+  return mapaEd.sel === el.id; // true = o editor cuida (não arrasta o mapa)
+}
+function edPointerMove(e) {
+  if (!_edDrag || _edDrag.vazio || !_edDrag.podeArrastar) return false;
+  const k = MAPA_K * mapaView.s;
+  const dx = Math.round((e.clientX - _edDrag.cx) / k), dy = Math.round((e.clientY - _edDrag.cy) / k);
+  if (!_edDrag.moveu && Math.hypot(e.clientX - _edDrag.cx, e.clientY - _edDrag.cy) < 5) return true;
+  _edDrag.moveu = true;
+  const el = mapaEd.els.find(x => x.id === _edDrag.id); if (!el) return true;
+  if (_edDrag.modo === 'resize') {
+    el.w = Math.max(4, _edDrag.ow + dx); el.h = Math.max(4, _edDrag.oh + dy);
+    _edDrag.div.style.width = el.w * MAPA_K + 'px'; _edDrag.div.style.height = el.h * MAPA_K + 'px';
+  } else {
+    el.x = Math.max(0, _edDrag.ox + dx); el.y = Math.max(0, _edDrag.oy + dy);
+    _edDrag.div.style.left = el.x * MAPA_K + 'px'; _edDrag.div.style.top = el.y * MAPA_K + 'px';
+  }
+  return true;
+}
+function edPointerUp(e, arrastouMapa) {
+  if (!_edDrag) return false;
+  const d = _edDrag; _edDrag = null;
+  if (d.vazio) {
+    if (!arrastouMapa && Math.hypot(e.clientX - d.cx, e.clientY - d.cy) < 6 && mapaEd.sel) { mapaEd.sel = null; renderMapa(); }
+    return false;
+  }
+  if (d.moveu) { mapaEd.hist.push(d.antes); mapaEd.alterado = true; renderMapa(); return true; }
+  if (!arrastouMapa) { mapaEd.sel = d.id; renderMapa(); }
+  return true;
+}
+function edCancelarArraste() {
+  if (_edDrag && !_edDrag.vazio && _edDrag.moveu) { mapaEd.els = JSON.parse(_edDrag.antes); renderMapa(); }
+  _edDrag = null;
 }
 
 function htmlItemMapa(i) {
@@ -6313,15 +6651,16 @@ function abrirFolhaMapa(titulo, corpo) {
 }
 
 function abrirVagaMapa(rua, apt) {
+  if (mapaEd.ativo) return; // no editor, tocar seleciona a peça
   if (mapaMover) { escolherDestinoMover(rua, apt); return; }
-  const lista = (_mapaItensPorVaga[`${rua}-${apt}`] || []).slice()
+  const lista = (_mapaItensPorVaga[`${mapaPatioAtual}-${rua}-${apt}`] || []).slice()
     .sort((a, b) => (parseInt(a.andar) || 0) - (parseInt(b.andar) || 0) || (parseInt(a.vaga) || 0) - (parseInt(b.vaga) || 0));
   const pad = n => String(n).padStart(2, '0');
-  const titulo = `📍 Rua ${rua} · Apt ${pad(apt)}`;
+  const titulo = `📍 Pátio ${pad(mapaPatioAtual)} · Rua ${pad(rua)} · Apt ${pad(apt)}`;
   const btnAdd = podeEditar('conferencia')
     ? `<button class="mapa-btn-add" onclick="adicionarPisoNoApt(${rua}, ${apt})">➕ Adicionar piso aqui</button>` : '';
   if (!lista.length) {
-    abrirFolhaMapa(titulo, btnAdd + `<p style="color:var(--texto-suave);font-size:14px;text-align:center;padding:12px 0 4px">Vazio — nenhum item com endereço <b>04.${rua}.${pad(apt)}</b></p>`);
+    abrirFolhaMapa(titulo, btnAdd + `<p style="color:var(--texto-suave);font-size:14px;text-align:center;padding:12px 0 4px">Vazio — nenhum item com endereço <b>${pad(mapaPatioAtual)}.${pad(rua)}.${pad(apt)}</b></p>`);
     return;
   }
   abrirFolhaMapa(titulo, btnAdd + lista.map(htmlItemMapa).join(''));
@@ -6332,10 +6671,10 @@ function adicionarPisoNoApt(rua, apt) {
   if (!exigirEdicao('conferencia')) return;
   if (!paginaPermitida('conferencia')) { toast('🔒 Você não tem acesso à aba Conferência.', true); return; }
   const vagas = vagasDoAptMapa(rua, apt);
-  const ocupadas = new Set((_mapaItensPorVaga[`${rua}-${apt}`] || []).map(i => parseInt(i.vaga) || 1));
+  const ocupadas = new Set((_mapaItensPorVaga[`${mapaPatioAtual}-${rua}-${apt}`] || []).map(i => parseInt(i.vaga) || 1));
   let vaga = 1;
   if (vagas > 1) { for (let v = 1; v <= vagas; v++) { if (!ocupadas.has(v)) { vaga = v; break; } } }
-  const endereco = `${_pad2(MAPA_PATIO)}.${_pad2(rua)}.${_pad2(apt)}.00.${_pad2(vaga)}`;
+  const endereco = `${_pad2(mapaPatioAtual)}.${_pad2(rua)}.${_pad2(apt)}.00.${_pad2(vaga)}`;
 
   document.getElementById('mapa-folha')?.remove();
   if (document.getElementById('mapa-viewport')?.classList.contains('tela-cheia')) alternarTelaCheiaMapa();
@@ -6382,14 +6721,6 @@ function itemMoverPorId(fonte, id) {
   return carregarConferencia().find(i => i.id === id) || null;
 }
 
-function vagasDoAptMapa(rua, apt) {
-  for (const f of obterFileirasMapa()) {
-    if (f.rua !== rua) continue;
-    const x = f.det.find(d => !d.vazio && d.apt === apt);
-    if (x) return x.vagas;
-  }
-  return 1;
-}
 
 function iniciarMoverMapa(fonte, id) {
   if (!exigirEdicao(areaMover(fonte))) return;
@@ -6423,7 +6754,7 @@ function comecarEscolhaNoMapa(fonte, id) {
   document.getElementById('mapa-viewport')?.classList.add('modo-mover');
   const m = String(item.endereco || '').match(/^(\d+)\.(\d+)\.(\d+)/);
   document.querySelectorAll('#mapa-patio .mover-origem').forEach(e => e.classList.remove('mover-origem'));
-  if (m) document.querySelector(`#mapa-patio [data-k="${parseInt(m[2])}-${parseInt(m[3])}"]`)?.classList.add('mover-origem');
+  if (m) document.querySelector(`#mapa-patio [data-k="${parseInt(m[1])}-${parseInt(m[2])}-${parseInt(m[3])}"]`)?.classList.add('mover-origem');
 }
 
 function cancelarMoverMapa() {
@@ -6437,7 +6768,7 @@ function cancelarMoverMapa() {
 function escolherDestinoMover(rua, apt) {
   if (!mapaMover) return;
   const vagas = vagasDoAptMapa(rua, apt);
-  const ocup = (_mapaItensPorVaga[`${rua}-${apt}`] || []);
+  const ocup = (_mapaItensPorVaga[`${mapaPatioAtual}-${rua}-${apt}`] || []);
   const ehOMesmo = i => i.fonte === mapaMover.fonte && String(i.id) === String(mapaMover.id);
   const nomesVaga = v => [...new Set(ocup.filter(i => (parseInt(i.vaga) || 1) === v && !ehOMesmo(i)).map(i => i.nome))];
   const totalBotoes = Math.max(vagas, 2);
@@ -6448,7 +6779,7 @@ function escolherDestinoMover(rua, apt) {
     return `<button class="mover-vaga-btn${v === vagaPadrao ? ' ativo' : ''}" data-v="${v}" onclick="document.querySelectorAll('.mover-vaga-btn').forEach(b=>b.classList.toggle('ativo', b===this))">
       <b>Vaga ${_pad2(v)}</b><small>${nomes.length ? '⚠️ ' + escMapa(nomes.join(', ')) : 'livre'}</small></button>`;
   }).join('');
-  abrirFolhaMapa(`📍 Mover para Rua ${rua} · Apt ${_pad2(apt)}`, `
+  abrirFolhaMapa(`📍 Mover para Pátio ${_pad2(mapaPatioAtual)} · Rua ${_pad2(rua)} · Apt ${_pad2(apt)}`, `
     <div style="font-size:13px;margin-bottom:12px"><b>${escMapa(mapaMover.nome)}</b><br><span style="color:var(--texto-suave)">De ${escMapa(mapaMover.origem || '—')}</span></div>
     <div class="campo-grupo" style="margin-bottom:12px">
       <label>Andar</label>
@@ -6466,7 +6797,7 @@ function confirmarMoverMapa(rua, apt) {
   if (!mapaMover) return;
   const andar = Math.max(0, parseInt(document.getElementById('mover-andar')?.value) || 0);
   const vaga = parseInt(document.querySelector('.mover-vaga-btn.ativo')?.dataset.v) || 1;
-  const endereco = `${_pad2(MAPA_PATIO)}.${_pad2(rua)}.${_pad2(apt)}.${_pad2(andar)}.${_pad2(vaga)}`;
+  const endereco = `${_pad2(mapaPatioAtual)}.${_pad2(rua)}.${_pad2(apt)}.${_pad2(andar)}.${_pad2(vaga)}`;
   moverItemMapa(mapaMover.fonte, mapaMover.id, endereco);
 }
 
@@ -6522,9 +6853,10 @@ function moverItemMapa(fonte, id, novoEndereco) {
   document.getElementById('mapa-folha')?.remove();
   renderMapa();
   const m = novoEndereco.match(/^(\d+)\.(\d+)\.(\d+)/);
-  if (m && parseInt(m[1]) === MAPA_PATIO) {
+  if (m && patiosComMapa().includes(parseInt(m[1]))) {
+    if (parseInt(m[1]) !== mapaPatioAtual) selecionarPatioMapa(parseInt(m[1]));
     setTimeout(() => {
-      const cel = document.querySelector(`#mapa-patio [data-k="${parseInt(m[2])}-${parseInt(m[3])}"]`);
+      const cel = document.querySelector(`#mapa-patio [data-k="${parseInt(m[1])}-${parseInt(m[2])}-${parseInt(m[3])}"]`);
       if (cel) { focarNoMapa(cel); cel.classList.add('pulsar'); setTimeout(() => cel.classList.remove('pulsar'), 2400); }
     }, 80);
   }
@@ -6534,9 +6866,9 @@ function moverItemMapa(fonte, id, novoEndereco) {
 function moverItemConferencia(id, end) { moverItemMapa('conferencia', id, end); }
 
 function mostrarForaDoMapa() {
-  const existentes = posicoesMapa();
-  const fora = coletarItensMapa().filter(i => !existentes.has(`${i.rua}-${i.apt}`));
-  abrirFolhaMapa('⚠️ Fora do desenho', `<p style="font-size:12px;color:var(--texto-suave);margin-bottom:8px">Itens do Pátio 04 cuja rua/apartamento não aparece no mapa (confira se o endereço foi digitado certo).</p>` + fora.map(htmlItemMapa).join(''));
+  const existentes = posicoesMapa(mapaPatioAtual);
+  const fora = coletarItensMapa().filter(i => i.patio === mapaPatioAtual && !existentes.has(`${i.patio}-${i.rua}-${i.apt}`));
+  abrirFolhaMapa('⚠️ Fora do desenho', `<p style="font-size:12px;color:var(--texto-suave);margin-bottom:8px">Itens do Pátio ${_pad2(mapaPatioAtual)} cuja rua/apartamento não aparece no mapa (confira se o endereço foi digitado certo).</p>` + fora.map(htmlItemMapa).join(''));
 }
 
 // ===================== CONTROLE DE ACESSO (permissões por usuário) =====================
@@ -6671,7 +7003,7 @@ function aplicarPermissoesDaNuvem(dados) {
   if (mudou) {
     aplicarPermissoes();
     renderOrdemAbas();
-    if (document.getElementById('pag-mapa')?.classList.contains('ativa')) renderMapa();
+    if (document.getElementById('pag-mapa')?.classList.contains('ativa') && !mapaEd.ativo) renderMapa();
   }
   return mudou;
 }
@@ -6999,11 +7331,13 @@ function endLegivel(e) {
 
 function verMovNoMapa(endereco) {
   const m = String(endereco || '').match(/^(\d+)\.(\d+)\.(\d+)/);
-  if (!m || parseInt(m[1]) !== MAPA_PATIO) { toast('⚠️ Este endereço não está no mapa do Pátio 04.', true); return; }
+  if (!m || !patiosComMapa().includes(parseInt(m[1]))) { toast(`⚠️ O Pátio ${m ? _pad2(parseInt(m[1])) : '?'} ainda não tem desenho no mapa.`, true); return; }
   if (!paginaPermitida('mapa')) { toast('🔒 Você não tem acesso ao mapa.', true); return; }
+  if (mapaEd.ativo) { toast('💾 Saia do editor do mapa primeiro.', true); return; }
+  mapaPatioAtual = parseInt(m[1]); mapaView.chave = '';
   irPara('mapa');
   setTimeout(() => {
-    const cel = document.querySelector(`#mapa-patio [data-k="${parseInt(m[2])}-${parseInt(m[3])}"]`);
+    const cel = document.querySelector(`#mapa-patio [data-k="${parseInt(m[1])}-${parseInt(m[2])}-${parseInt(m[3])}"]`);
     if (!cel) { toast('⚠️ Apartamento não aparece no desenho do mapa.', true); return; }
     focarNoMapa(cel);
     cel.classList.add('pulsar'); setTimeout(() => cel.classList.remove('pulsar'), 2400);
