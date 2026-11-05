@@ -1463,6 +1463,7 @@ PASSOS PARA RODAR NO GITHUB PAGES:
 
     .conf-grupo-titulo { grid-column:1 / -1; margin:14px 0 8px; padding:8px 12px; border-radius:10px; background:#1a2e1a; color:#fff; font-size:13px; font-weight:600; }
     .conf-grupo-titulo:first-child { margin-top:0; }
+    .conf-grupo-titulo.outros { background:#5a6b5a; }
 </style>
 </head>
 <body>
@@ -1886,8 +1887,8 @@ PASSOS PARA RODAR NO GITHUB PAGES:
     <div style="font-size:12px;font-weight:700;color:var(--texto-suave);margin-bottom:8px;text-transform:uppercase;letter-spacing:.5px">↕️ Ordenar por</div>
     <select id="conf-ordem" onchange="setOrdemConf(this.value)" style="width:100%;box-sizing:border-box;padding:11px 14px;font-size:14px;border-radius:10px;border:1.5px solid #d0c9bb;background:#fff;margin-bottom:12px">
       <option value="alteracao">🕐 Última alteração (mais recente primeiro)</option>
-      <option value="par">📍 Endereço — lado par, depois ímpar</option>
-      <option value="impar">📍 Endereço — lado ímpar, depois par</option>
+      <option value="par">📍 Endereço dos pisos — lado par, depois ímpar</option>
+      <option value="impar">📍 Endereço dos pisos — lado ímpar, depois par</option>
       <option value="cadastro">➕ Ordem de cadastro (mais novo primeiro)</option>
     </select>
 
@@ -4769,9 +4770,14 @@ function ordenarListaConf(lista) {
   const porAlteracao = (a, b) => tsAlteracaoConf(b) - tsAlteracaoConf(a);
   if (ordemConf === 'alteracao') return l.sort(porAlteracao);
   if (ordemConf === 'cadastro') return l.sort((a, b) => String(b.id).localeCompare(String(a.id)));
-  // Endereço: pátio → rua → lado (par/ímpar) → apartamento → andar → vaga
+  // Endereço (só PISOS): pátio → rua → lado (par/ímpar) → apartamento → andar → vaga.
+  // Os outros materiais não usam esse endereço: ficam depois, na ordem de cadastro (como era antes).
   const parPrimeiro = ordemConf === 'par';
+  const porCadastro = (a, b) => String(b.id).localeCompare(String(a.id));
   return l.sort((a, b) => {
+    const pa = a.tipo === 'piso', pb = b.tipo === 'piso';
+    if (pa !== pb) return pa ? -1 : 1;
+    if (!pa) return porCadastro(a, b);
     const ea = partesEnderecoConf(a.endereco), eb = partesEnderecoConf(b.endereco);
     if (!ea && !eb) return porAlteracao(a, b);
     if (!ea) return 1;
@@ -4868,13 +4874,16 @@ function renderConferencia() {
     // Cabeçalho "Rua 44 · lado par" quando ordenado por endereço
     let cabecalho = '';
     if (ordemConf === 'par' || ordemConf === 'impar') {
-      const e = partesEnderecoConf(item.endereco);
-      const g = e ? `${e[0]}-${e[1]}-${e[2] % 2 === 0 ? 'par' : 'impar'}` : 'sem';
+      const ehPiso = item.tipo === 'piso';
+      const e = ehPiso ? partesEnderecoConf(item.endereco) : null;
+      const g = !ehPiso ? 'outros' : (e ? `${e[0]}-${e[1]}-${e[2] % 2 === 0 ? 'par' : 'impar'}` : 'sem');
       if (g !== grupoAnterior) {
         grupoAnterior = g;
-        cabecalho = e
-          ? `<div class="conf-grupo-titulo">📍 Pátio ${String(e[0]).padStart(2, '0')} · Rua ${String(e[1]).padStart(2, '0')} · lado ${e[2] % 2 === 0 ? '<b>par</b>' : '<b>ímpar</b>'}</div>`
-          : `<div class="conf-grupo-titulo">❔ Sem endereço</div>`;
+        cabecalho = !ehPiso
+          ? `<div class="conf-grupo-titulo outros">📦 Outros materiais <span style="font-weight:400;opacity:.8">(ordem de cadastro)</span></div>`
+          : e
+            ? `<div class="conf-grupo-titulo">📍 Pátio ${String(e[0]).padStart(2, '0')} · Rua ${String(e[1]).padStart(2, '0')} · lado ${e[2] % 2 === 0 ? '<b>par</b>' : '<b>ímpar</b>'}</div>`
+            : `<div class="conf-grupo-titulo">❔ Pisos sem endereço</div>`;
       }
     }
     const tsAlt = tsAlteracaoConf(item);
