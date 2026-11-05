@@ -1460,6 +1460,9 @@ PASSOS PARA RODAR NO GITHUB PAGES:
 
     .conf-btn-quebra { background:#fde8e8; color:#c0392b; border:1.5px solid #f5b7b1; border-radius:8px; padding:7px 12px; font-size:13px; font-weight:700; cursor:pointer; }
     body.sem-quebras .conf-btn-quebra { display:none !important; }
+
+    .conf-grupo-titulo { grid-column:1 / -1; margin:14px 0 8px; padding:8px 12px; border-radius:10px; background:#1a2e1a; color:#fff; font-size:13px; font-weight:600; }
+    .conf-grupo-titulo:first-child { margin-top:0; }
 </style>
 </head>
 <body>
@@ -1878,6 +1881,15 @@ PASSOS PARA RODAR NO GITHUB PAGES:
 
     <!-- Busca por texto -->
     <input type="search" id="conf-busca-texto" placeholder="🔍 Buscar item na conferência..." oninput="renderConferencia()" style="width:100%;box-sizing:border-box;padding:11px 14px;font-size:14px;border-radius:10px;border:1.5px solid #d0c9bb;background:#fff;margin-bottom:12px" />
+
+    <!-- Ordem da lista -->
+    <div style="font-size:12px;font-weight:700;color:var(--texto-suave);margin-bottom:8px;text-transform:uppercase;letter-spacing:.5px">↕️ Ordenar por</div>
+    <select id="conf-ordem" onchange="setOrdemConf(this.value)" style="width:100%;box-sizing:border-box;padding:11px 14px;font-size:14px;border-radius:10px;border:1.5px solid #d0c9bb;background:#fff;margin-bottom:12px">
+      <option value="alteracao">🕐 Última alteração (mais recente primeiro)</option>
+      <option value="par">📍 Endereço — lado par, depois ímpar</option>
+      <option value="impar">📍 Endereço — lado ímpar, depois par</option>
+      <option value="cadastro">➕ Ordem de cadastro (mais novo primeiro)</option>
+    </select>
 
     <!-- Filtro por tipo de material -->
     <div style="font-size:12px;font-weight:700;color:var(--texto-suave);margin-bottom:8px;text-transform:uppercase;letter-spacing:.5px">Filtrar por tipo</div>
@@ -4735,8 +4747,47 @@ function limparConferencia() {
 
 const CONF_ICONS = { piso:'🏗️', argamassa:'🪣', telha:'🏠', tijolo:'🧱', forro:'🪵', miudezas:'📦', outro:'➕' };
 
+
+// ===================== ORDEM DA LISTA DA CONFERÊNCIA =====================
+let ordemConf = (() => { try { return localStorage.getItem('estoque_conf_ordem') || 'alteracao'; } catch (e) { return 'alteracao'; } })();
+function setOrdemConf(v) {
+  ordemConf = v;
+  try { localStorage.setItem('estoque_conf_ordem', v); } catch (e) {}
+  renderConferencia();
+}
+// "04.44.03.00.01" → [4, 44, 3, 0, 1]
+function partesEnderecoConf(end) {
+  const m = String(end || '').match(/^(\d+)\.(\d+)\.(\d+)(?:\.(\d+))?(?:\.(\d+))?/);
+  return m ? [parseInt(m[1]), parseInt(m[2]), parseInt(m[3]), parseInt(m[4] || 0), parseInt(m[5] || 0)] : null;
+}
+// Hora da última alteração (inclui status, endereço, quantidade...)
+function tsAlteracaoConf(i) {
+  return Math.max(i._ts || 0, tsDataBR(i.editadoEm) || 0, tsDataBR(i.criadoEm) || 0, parseInt(String(i.id)) || 0);
+}
+function ordenarListaConf(lista) {
+  const l = lista.slice();
+  const porAlteracao = (a, b) => tsAlteracaoConf(b) - tsAlteracaoConf(a);
+  if (ordemConf === 'alteracao') return l.sort(porAlteracao);
+  if (ordemConf === 'cadastro') return l.sort((a, b) => String(b.id).localeCompare(String(a.id)));
+  // Endereço: pátio → rua → lado (par/ímpar) → apartamento → andar → vaga
+  const parPrimeiro = ordemConf === 'par';
+  return l.sort((a, b) => {
+    const ea = partesEnderecoConf(a.endereco), eb = partesEnderecoConf(b.endereco);
+    if (!ea && !eb) return porAlteracao(a, b);
+    if (!ea) return 1;
+    if (!eb) return -1;
+    if (ea[0] !== eb[0]) return ea[0] - eb[0];
+    if (ea[1] !== eb[1]) return ea[1] - eb[1];
+    const la = ea[2] % 2 === 0 ? 0 : 1, lb = eb[2] % 2 === 0 ? 0 : 1;
+    if (la !== lb) return parPrimeiro ? la - lb : lb - la;
+    for (let k = 2; k < 5; k++) if (ea[k] !== eb[k]) return ea[k] - eb[k];
+    return porAlteracao(a, b);
+  });
+}
+
 function renderConferencia() {
-  renderFormConferencia();
+  // Só monta o formulário se ainda estiver vazio (antes ele era recriado a cada atualização e apagava o que estava sendo digitado)
+  if (!document.getElementById('conf-form-campos')?.innerHTML.trim()) renderFormConferencia();
   const lista = carregarConferencia();
 
   // Renderiza filtros por usuário
@@ -4787,8 +4838,11 @@ function renderConferencia() {
     );
   }
 
+  listaFiltrada = ordenarListaConf(listaFiltrada);
   const resumoEl = document.getElementById('conf-resumo');
   const listaEl = document.getElementById('conf-lista');
+  const selOrdem = document.getElementById('conf-ordem');
+  if (selOrdem && selOrdem.value !== ordemConf) selOrdem.value = ordemConf;
 
   // Resumo por tipo (da lista filtrada)
   const contagem = {};
@@ -4808,8 +4862,24 @@ function renderConferencia() {
     return;
   }
 
+  let grupoAnterior = null;
   listaEl.innerHTML = listaFiltrada.map(item => {
     const icon = CONF_ICONS[item.tipo] || '📦';
+    // Cabeçalho "Rua 44 · lado par" quando ordenado por endereço
+    let cabecalho = '';
+    if (ordemConf === 'par' || ordemConf === 'impar') {
+      const e = partesEnderecoConf(item.endereco);
+      const g = e ? `${e[0]}-${e[1]}-${e[2] % 2 === 0 ? 'par' : 'impar'}` : 'sem';
+      if (g !== grupoAnterior) {
+        grupoAnterior = g;
+        cabecalho = e
+          ? `<div class="conf-grupo-titulo">📍 Pátio ${String(e[0]).padStart(2, '0')} · Rua ${String(e[1]).padStart(2, '0')} · lado ${e[2] % 2 === 0 ? '<b>par</b>' : '<b>ímpar</b>'}</div>`
+          : `<div class="conf-grupo-titulo">❔ Sem endereço</div>`;
+      }
+    }
+    const tsAlt = tsAlteracaoConf(item);
+    const tsCriado = tsDataBR(item.criadoEm) || parseInt(String(item.id)) || 0;
+    const alteradoTxt = tsAlt && tsAlt - tsCriado > 60000 ? new Date(tsAlt).toLocaleString('pt-BR') : '';
     let totalTag = '';
     if (item.tipo === 'piso') {
       totalTag = `<span class="tag laranja">📦 ${item.totalCaixas||0} cx</span>`;
@@ -4830,7 +4900,7 @@ function renderConferencia() {
       totalTag = item.quantidade ? `<span class="tag laranja">📦 ${item.quantidade} ${item.unidade||'un'}</span>` : '';
     }
 
-    return `
+    return cabecalho + `
       <div class="conf-item${item.noSistema ? '' : ' nao-sistema'}">
         ${item.foto ? `<img src="${item.foto}" onclick="abrirLightbox([this.src],0)" style="width:100%;max-height:180px;object-fit:cover;border-radius:10px;margin-bottom:10px;cursor:pointer" />` : ''}
         <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px;gap:6px;flex-wrap:wrap">
@@ -4871,7 +4941,7 @@ function renderConferencia() {
           ${resumoQuebrasDoItem(item.id)}
         </div>
         <div class="conf-acoes">
-          <span style="font-size:11px;color:var(--texto-suave);flex:1">🕐 ${item.criadoEm}</span>
+          <span style="font-size:11px;color:var(--texto-suave);flex:1;line-height:1.5">🕐 ${item.criadoEm}${alteradoTxt ? `<br><span style="color:#b35c00;font-weight:700">✏️ Alterado: ${alteradoTxt}</span>` : ''}</span>
           <button class="conf-btn-quebra" onclick="abrirAddQuebraConf('${item.id}')">💔 Quebra</button>
           <button class="conf-btn-editar" onclick="abrirEditConf('${item.id}')">✏️ Editar</button>
           <button class="conf-btn-excluir" onclick="excluirItemConferencia('${item.id}')">🗑️</button>
