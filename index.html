@@ -1825,9 +1825,13 @@ PASSOS PARA RODAR NO GITHUB PAGES:
         <input type="checkbox" id="aba-ligada-estoque" onchange="alternarAbaDesligada('estoque', this)" />
         <span><b>📦 Estoque</b><br><small>Lista de pisos do Estoque antigo</small></span>
       </label>
-      <label class="perm-switch-linha">
+      <label class="perm-switch-linha" style="margin-bottom:10px !important">
         <input type="checkbox" id="aba-ligada-relatorio" onchange="alternarAbaDesligada('relatorio', this)" />
         <span><b>📊 Relatório</b><br><small>Resumo do Estoque antigo, backup e importar dados</small></span>
+      </label>
+      <label class="perm-switch-linha">
+        <input type="checkbox" id="aba-ligada-galeria" onchange="alternarAbaDesligada('galeria', this)" />
+        <span><b>🖼️ Galeria</b><br><small>Fotos dos pisos para mostrar ao cliente (fotos do Estoque antigo)</small></span>
       </label>
     </div>
 
@@ -2376,7 +2380,7 @@ function tsItem(i) {
   if (!i) return 0;
   return i._ts || tsDataBR(i.dataAlteracao || i.editadoEm || i.criadoEm || i.data) || 0;
 }
-function _semMeta(i) { const c = { ...i }; delete c._ts; delete c.foto; delete c.fotos; return JSON.stringify(c); }
+function _semMeta(i) { const c = { ...i }; delete c._ts; delete c.fotos; if (!(typeof c.foto === 'string' && c.foto.startsWith('http'))) delete c.foto; return JSON.stringify(c); }
 function carregarTomb(chave) { try { return JSON.parse(localStorage.getItem(chave + '__removidos')) || {}; } catch (e) { return {}; } }
 function salvarTomb(chave, t) { try { localStorage.setItem(chave + '__removidos', JSON.stringify(t || {})); } catch (e) {} }
 function lerListaLS(chave) { try { return JSON.parse(localStorage.getItem(chave)) || []; } catch (e) { return []; } }
@@ -4458,6 +4462,61 @@ function salvarQuebraDaConf(confId) {
   toast(`💔 ${qtd} de ${item.nome} enviado para Quebras`);
 }
 
+
+// ===================== FOTOS DA CONFERÊNCIA E DAS QUEBRAS NA NUVEM =====================
+// A foto fica no aparelho na hora (base64) e é enviada ao Cloudinary em segundo plano;
+// depois o item guarda só o link, que sincroniza para todos os aparelhos.
+async function uploadFotoSilenciosa(base64, pasta) {
+  try {
+    const fd = new FormData();
+    fd.append('file', base64);
+    fd.append('upload_preset', CLOUDINARY_PRESET);
+    fd.append('folder', `estoque-pisos/${window._usuarioUid || 'local'}/${pasta}`);
+    fd.append('public_id', `foto_${Date.now()}`);
+    const res = await fetch(`https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD}/image/upload`, { method: 'POST', body: fd });
+    if (!res.ok) return null;
+    const data = await res.json();
+    return data.secure_url || null;
+  } catch (e) { return null; }
+}
+let _envioFotosRodando = false, _envioFotosTimer = null;
+function agendarEnvioFotos(ms = 800) {
+  clearTimeout(_envioFotosTimer);
+  _envioFotosTimer = setTimeout(enviarFotosPendentes, ms);
+}
+function temFotoPendente() {
+  const pend = l => l.some(i => typeof i.foto === 'string' && i.foto.startsWith('data:'));
+  return pend(carregarConferencia()) || pend(carregarQuebras());
+}
+async function enviarFotosPendentes() {
+  if (_envioFotosRodando || !navigator.onLine) return;
+  _envioFotosRodando = true;
+  let enviadas = 0, falhas = 0;
+  try {
+    const fontes = [
+      { carregar: carregarConferencia, salvar: salvarConferencia, pasta: 'conferencia', render: () => { if (document.getElementById('pag-conferencia')?.classList.contains('ativa')) renderConferencia(); } },
+      { carregar: carregarQuebras,     salvar: salvarQuebras,     pasta: 'quebras',     render: () => { if (document.getElementById('pag-quebras')?.classList.contains('ativa')) renderQuebras(); } }
+    ];
+    for (const f of fontes) {
+      const pendentes = f.carregar().filter(i => typeof i.foto === 'string' && i.foto.startsWith('data:'));
+      for (const p of pendentes) {
+        const url = await uploadFotoSilenciosa(p.foto, `${f.pasta}/${p.id}`);
+        if (!url) { falhas++; continue; }
+        // relê a lista (pode ter mudado enquanto enviava) e troca só se a foto ainda é a mesma
+        const lista = f.carregar();
+        const it = lista.find(x => x.id === p.id);
+        if (it && it.foto === p.foto) { it.foto = url; f.salvar(lista); enviadas++; }
+      }
+      if (enviadas) f.render();
+    }
+  } finally {
+    _envioFotosRodando = false;
+  }
+  if (enviadas) toast(`☁️ ${enviadas} foto(s) enviada(s) — já aparecem nos outros aparelhos`);
+  if (falhas) agendarEnvioFotos(60000); // tenta de novo em 1 minuto
+}
+window.addEventListener('online', () => agendarEnvioFotos(1500));
+
 function carregarConferencia() {
   try { return JSON.parse(localStorage.getItem(CHAVE_CONF)) || []; }
   catch(e) { return []; }
@@ -4466,6 +4525,7 @@ function carregarConferencia() {
 function salvarConferencia(lista) {
   carimbarLista(CHAVE_CONF, lista);
   localStorage.setItem(CHAVE_CONF, JSON.stringify(lista));
+  if (lista.some(i => typeof i.foto === 'string' && i.foto.startsWith('data:'))) agendarEnvioFotos();
   if (window._usuarioUid) sincronizarConferenciaFirestore(window._usuarioUid);
 }
 
@@ -5060,6 +5120,7 @@ function carregarQuebras() {
 function salvarQuebras(lista) {
   carimbarLista(CHAVE_QUEBRAS, lista);
   localStorage.setItem(CHAVE_QUEBRAS, JSON.stringify(lista));
+  if (lista.some(i => typeof i.foto === 'string' && i.foto.startsWith('data:'))) agendarEnvioFotos();
   if (window._usuarioUid && window.sincronizarQuebrasFirestore) {
     window.sincronizarQuebrasFirestore(window._usuarioUid);
   }
@@ -6411,13 +6472,14 @@ function usuarioAtivoValido() {
 const ABAS_DESLIGAVEIS = [
   { id: 'cadastrar', nome: '➕ Cadastrar' },
   { id: 'estoque',   nome: '📦 Estoque' },
-  { id: 'relatorio', nome: '📊 Relatório' }
+  { id: 'relatorio', nome: '📊 Relatório' },
+  { id: 'galeria',   nome: '🖼️ Galeria' }
 ];
-const ABAS_DESLIGADAS_PADRAO = { cadastrar: true, estoque: true, relatorio: true };
+const ABAS_DESLIGADAS_PADRAO = { cadastrar: true, estoque: true, relatorio: true, galeria: true };
 function abasDesligadas() {
   const c = carregarConfigApp().abasDesligadas;
   // abas novas que ainda não foram configuradas usam o padrão (desligadas)
-  return c && typeof c === 'object' ? { ...ABAS_DESLIGADAS_PADRAO, ...c, relatorio: c.relatorio !== undefined ? c.relatorio : true } : ABAS_DESLIGADAS_PADRAO;
+  return c && typeof c === 'object' ? { ...ABAS_DESLIGADAS_PADRAO, ...c } : ABAS_DESLIGADAS_PADRAO;
 }
 function abaDesligada(area) { return !!abasDesligadas()[area]; }
 function alternarAbaDesligada(area, el) {
@@ -6982,8 +7044,8 @@ function refQuebras(uid) { return doc(db, 'usuarios', uid, 'dados', 'quebras'); 
 const ordemIdDesc = (a, b) => String(b.id).localeCompare(String(a.id));
 const SYNC_LISTAS = {
   estoque:     { ref: uid => refEstoque(uid),      chave: CHAVE,         campo: 'pisos', limpar: d => { const c = { ...d }; delete c.fotos; delete c.foto; return c; }, ordenar: null },
-  conferencia: { ref: uid => refConferencia(uid),  chave: CHAVE_CONF,    campo: 'lista', limpar: i => { const c = { ...i }; delete c.foto; return c; }, ordenar: ordemIdDesc },
-  quebras:     { ref: uid => refQuebras(uid),      chave: CHAVE_QUEBRAS, campo: 'lista', limpar: i => { const c = { ...i }; delete c.foto; return c; }, ordenar: ordemIdDesc },
+  conferencia: { ref: uid => refConferencia(uid),  chave: CHAVE_CONF,    campo: 'lista', limpar: i => { const c = { ...i }; if (!(typeof c.foto === 'string' && c.foto.startsWith('http'))) delete c.foto; return c; }, ordenar: ordemIdDesc },
+  quebras:     { ref: uid => refQuebras(uid),      chave: CHAVE_QUEBRAS, campo: 'lista', limpar: i => { const c = { ...i }; if (!(typeof c.foto === 'string' && c.foto.startsWith('http'))) delete c.foto; return c; }, ordenar: ordemIdDesc },
   erros:       { ref: uid => refErros(uid),        chave: CHAVE_ERROS,   campo: 'lista', limpar: e => ({ ...e }), ordenar: ordemIdDesc }
 };
 // Junta o que está no aparelho com os dados da nuvem; grava no aparelho se mudou. Retorna {mudouLocal, precisaEnviar, lista, tomb}
@@ -7207,6 +7269,8 @@ onAuthStateChanged(auth, async user => {
 
     // Carrega dados iniciais do Firestore
     await carregarDoFirestore(user.uid);
+    // Fotos da Conferência/Quebras que ainda estão só neste aparelho → nuvem
+    if (temFotoPendente()) agendarEnvioFotos(2000);
 
     // ===================== SYNC EM TEMPO REAL =====================
     // Cancela listeners anteriores se existirem
