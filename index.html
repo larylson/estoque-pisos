@@ -14,6 +14,11 @@
 
   <!-- App instalável (PWA): arquivos ao lado do index.html no GitHub -->
   <link rel="manifest" href="manifest.json" />
+  <script>
+    (function(){ try { var t = localStorage.getItem('estoque_tema') || 'auto';
+      if (t === 'escuro' || (t === 'auto' && window.matchMedia('(prefers-color-scheme: dark)').matches)) document.documentElement.classList.add('tema-escuro');
+    } catch (e) {} })();
+  </script>
   <link rel="icon" type="image/png" href="favicon.png" />
   <link rel="apple-touch-icon" href="apple-touch-icon.png" />
 
@@ -1464,6 +1469,94 @@ PASSOS PARA RODAR NO GITHUB PAGES:
     .conf-grupo-titulo { grid-column:1 / -1; margin:14px 0 8px; padding:8px 12px; border-radius:10px; background:#1a2e1a; color:#fff; font-size:13px; font-weight:600; }
     .conf-grupo-titulo:first-child { margin-top:0; }
     .conf-grupo-titulo.outros { background:#5a6b5a; }
+
+    /* ===================== MODO NOTURNO ===================== */
+    html.tema-escuro { color-scheme: dark; --bege:#0e130e; --bege-escuro:#263026; --texto:#e4eae1; --texto-suave:#9fb09b; --verde-suave:#24402a; --sombra:0 2px 12px rgba(0,0,0,.55); }
+    html.tema-escuro body, html.tema-escuro #app-root { background:#0e130e; color:#e4eae1; }
+    @media (min-width: 768px) { html.tema-escuro body { background:#0a0e0a; } }
+    html.tema-escuro .header { background:#0b120b; box-shadow:0 2px 10px rgba(0,0,0,.6); }
+    html.tema-escuro .tabs { background:#142014; }
+    html.tema-escuro .card, html.tema-escuro .item-piso, html.tema-escuro .modal, html.tema-escuro .resumo-card, html.tema-escuro .tabela-relatorio, html.tema-escuro .mov-item, html.tema-escuro .conf-item, html.tema-escuro .erro-card,
+    html.tema-escuro .quebra-item, html.tema-escuro .galeria-card, html.tema-escuro #conf-edit-inner, html.tema-escuro .erro-resumo-card, html.tema-escuro .login-card, html.tema-escuro .mapa-folha-caixa,
+    html.tema-escuro .instalar-ajuda-caixa, html.tema-escuro .conf-tipo-btn, html.tema-escuro .erro-filtro-btn, html.tema-escuro .quebra-filtro-btn:not(.ativo), html.tema-escuro .mapa-fonte-btn:not(.ativo),
+    html.tema-escuro .mov-periodo-btn:not(.ativo), html.tema-escuro .mapa-btn-mover, html.tema-escuro .mover-vaga-btn, html.tema-escuro .mapa-scroll { background:#182018 !important; color:#e4eae1; border-color:#334033; }
+    html.tema-escuro .modal-stat, html.tema-escuro .modal-info-item, html.tema-escuro .foto-card, html.tema-escuro .modal-historico, html.tema-escuro .mov-local, html.tema-escuro .usuario-item, html.tema-escuro .erro-numero,
+    html.tema-escuro .mapa-item, html.tema-escuro .galeria-sem-foto, html.tema-escuro .galeria-img, html.tema-escuro .btn-editar, html.tema-escuro .btn-limpar, html.tema-escuro .tabela-relatorio tr:nth-child(even) td { background:#1f2a1f !important; color:#e4eae1; }
+    html.tema-escuro .item-piso.nao-conferido, html.tema-escuro .item-piso.nao-sistema, html.tema-escuro .item-piso.nao-localizado, html.tema-escuro .item-piso.codigo-duplicado, html.tema-escuro .conf-item.nao-sistema { background:#182018 !important; }
+    html.tema-escuro input, html.tema-escuro select, html.tema-escuro textarea { background:#111811 !important; color:#e4eae1 !important; border-color:#334033 !important; }
+    html.tema-escuro input::placeholder, html.tema-escuro textarea::placeholder { color:#6f7d6c; }
+    html.tema-escuro input[readonly] { background:#1a221a !important; color:#9fb09b !important; }
+    html.tema-escuro input:focus, html.tema-escuro select:focus, html.tema-escuro textarea:focus { border-color:#5a9e5a !important; }
+    html.tema-escuro .card-titulo, html.tema-escuro .conf-item-nome, html.tema-escuro .mov-piso, html.tema-escuro .modal-nome, html.tema-escuro h1, html.tema-escuro h2, html.tema-escuro h3 { color:#e4eae1; }
+    html.tema-escuro label { color:#9fb09b; }
+    html.tema-escuro .conf-tipo-btn.ativo { background:rgba(90,170,90,.22) !important; border-color:#5a9e5a; }
+    html.tema-escuro .mapa-scroll.tela-cheia { background:#0e130e !important; }
+    html.tema-escuro .mapa-cel.vazia, html.tema-escuro .mapa-cel.multi { background:#101710 !important; }
+    html.tema-escuro .mapa-rampa { background:#3a3f3a; color:#cfd6cc; }
+    html.tema-escuro .conf-grupo-titulo { background:#24402a; }
+    html.tema-escuro .conf-grupo-titulo.outros { background:#33403a; }
+    html.tema-escuro .mov-btn-copiar-sel:disabled { background:#2a332a; color:#6f7d6c; }
+    html.tema-escuro #tela-login { background:#0b120b; }
+    html.tema-escuro #btn-login-google { background:#1f2a1f !important; color:#9cc7f2 !important; }
+    html.tema-escuro .toast { box-shadow:0 4px 18px rgba(0,0,0,.6); }
+    html.tema-escuro ::-webkit-scrollbar-thumb { background:#3a463a; }
+    html.tema-escuro .modal-handle { background:#3a463a; }
+    html.tema-escuro hr { border-color:#334033; }
+    /* cards/fundos brancos escritos direto nos elementos */
+    html.tema-escuro [style*="background:#fff;"], html.tema-escuro [style$="background:#fff"], html.tema-escuro [style*="background: #fff;"], html.tema-escuro [style*="background:#fafafa"], html.tema-escuro [style*="background:#f5f2ec"], html.tema-escuro [style*="background:#fafaf7"], html.tema-escuro [style*="background:#f0f0ec"], html.tema-escuro [style*="background:#f7f5f0"], html.tema-escuro [style*="background:#eee"] { background:#1f2a1f !important; color:#e4eae1; }
+    html.tema-escuro .card [style*="background:#fff;"], html.tema-escuro .mapa-folha-caixa [style*="background:#fff;"] { background:#1f2a1f !important; }
+    html.tema-escuro [style*="border:1.5px solid #d0c9bb"], html.tema-escuro [style*="border: 1.5px solid #d0c9bb"], html.tema-escuro [style*="border:1px solid #eee"], html.tema-escuro [style*="border-top:1px solid #eee"] { border-color:#334033 !important; }
+    html.tema-escuro [style*="color:#1a2e1a"], html.tema-escuro [style*="color: #1a2e1a"], html.tema-escuro [style*="color:#222"], html.tema-escuro [style*="color:#333"] { color:#e4eae1 !important; }
+    html.tema-escuro [style*="color:#555"], html.tema-escuro [style*="color:#666"], html.tema-escuro [style*="color:#888"], html.tema-escuro [style*="color:#999"] { color:#9fb09b !important; }
+    /* botões escuros continuam escuros (texto branco) */
+    html.tema-escuro [style*="background:#1a2e1a"], html.tema-escuro [style*="background:var(--verde-escuro)"] { background:#2d4f2d !important; color:#fff !important; }
+    html.tema-escuro .mapa-ctrl button { background:rgba(45,79,45,.95); }
+    html.tema-escuro .btn-perigoso, html.tema-escuro .btn-excluir, html.tema-escuro .tag.vermelho, html.tema-escuro .banner-codigo-duplicado, html.tema-escuro .btn-foto-remover, html.tema-escuro .btn-limpar-mov, html.tema-escuro .usuario-item button, html.tema-escuro .conf-btn-excluir, html.tema-escuro .erro-status.pendente, html.tema-escuro .erro-btn-excluir, html.tema-escuro .quebra-status-btn.pendente, html.tema-escuro .conf-status-btn.reconf-precisa, html.tema-escuro .conf-btn-quebra, html.tema-escuro [style*="background:#fde8e8"], html.tema-escuro [style*="background: #fde8e8"], html.tema-escuro [style*="background:#fff5f5"], html.tema-escuro [style*="background: #fff5f5"], html.tema-escuro [style*="background:#fde9d0"], html.tema-escuro [style*="background: #fde9d0"] { background:rgba(220,70,55,.20) !important; color:#ff8f80 !important; border-color:#ff8f8055 !important; }
+    html.tema-escuro .tag.laranja, html.tema-escuro .tag.alerta, html.tema-escuro .btn-conferir, html.tema-escuro .banner-nao-conferido, html.tema-escuro .tag.laranja-alerta, html.tema-escuro .btn-localizado, html.tema-escuro .banner-nao-localizado, html.tema-escuro .conf-status-btn.reconf-pendente, html.tema-escuro [style*="background:#fdebd0"], html.tema-escuro [style*="background: #fdebd0"], html.tema-escuro [style*="background:#fde8d0"], html.tema-escuro [style*="background: #fde8d0"], html.tema-escuro [style*="background:#fff3e0"], html.tema-escuro [style*="background: #fff3e0"], html.tema-escuro [style*="background:#fff8f0"], html.tema-escuro [style*="background: #fff8f0"], html.tema-escuro [style*="background:#fffaf4"], html.tema-escuro [style*="background: #fffaf4"], html.tema-escuro [style*="background:#fdf8f0"], html.tema-escuro [style*="background: #fdf8f0"], html.tema-escuro [style*="background:#fde9d0"], html.tema-escuro [style*="background: #fde9d0"] { background:rgba(230,126,34,.20) !important; color:#f5b971 !important; border-color:#f5b97155 !important; }
+    html.tema-escuro .tag.roxo, html.tema-escuro .tag.roxo-alerta, html.tema-escuro .btn-sistema, html.tema-escuro .banner-nao-sistema, html.tema-escuro .conf-status-btn.nao-adicionado, html.tema-escuro .adm-toggle, html.tema-escuro .tag-adm, html.tema-escuro [style*="background:#e8daef"], html.tema-escuro [style*="background: #e8daef"], html.tema-escuro [style*="background:#f5eef8"], html.tema-escuro [style*="background: #f5eef8"], html.tema-escuro [style*="background:#fdf6ff"], html.tema-escuro [style*="background: #fdf6ff"], html.tema-escuro [style*="background:#fdf8ff"], html.tema-escuro [style*="background: #fdf8ff"], html.tema-escuro [style*="background:#f6f1ff"], html.tema-escuro [style*="background: #f6f1ff"], html.tema-escuro [style*="background:#efe6ff"], html.tema-escuro [style*="background: #efe6ff"], html.tema-escuro [style*="background:#f3eefc"], html.tema-escuro [style*="background: #f3eefc"] { background:rgba(160,90,200,.22) !important; color:#d9a8f2 !important; border-color:#d9a8f255 !important; }
+    html.tema-escuro .tag.verde, html.tema-escuro .btn-conferido-ok, html.tema-escuro .btn-sistema-ok, html.tema-escuro .btn-localizado-ok, html.tema-escuro .modal-metragem-destaque, html.tema-escuro .mov-local.destino, html.tema-escuro .conf-status-btn.adicionado, html.tema-escuro .conf-status-btn.reconf-conferido, html.tema-escuro .conf-btn-editar, html.tema-escuro .conf-resumo-box, html.tema-escuro .erro-status.resolvido, html.tema-escuro .quebra-status-btn.retirado, html.tema-escuro .mov-item.selecionada, html.tema-escuro .mover-vaga-btn.ativo, html.tema-escuro .mov-btn-copiar, html.tema-escuro [style*="background:#d5f5dd"], html.tema-escuro [style*="background: #d5f5dd"], html.tema-escuro [style*="background:#e8f5e9"], html.tema-escuro [style*="background: #e8f5e9"], html.tema-escuro [style*="background:#f0faf0"], html.tema-escuro [style*="background: #f0faf0"], html.tema-escuro [style*="background:#eaf7ec"], html.tema-escuro [style*="background: #eaf7ec"], html.tema-escuro [style*="background:#eafaf0"], html.tema-escuro [style*="background: #eafaf0"], html.tema-escuro [style*="background:#e8f8ec"], html.tema-escuro [style*="background: #e8f8ec"] { background:rgba(90,170,90,.20) !important; color:#9fe0a5 !important; border-color:#9fe0a555 !important; }
+    html.tema-escuro .tag.azul, html.tema-escuro .mov-btn-mapa, html.tema-escuro [style*="background:#d6eaf8"], html.tema-escuro [style*="background: #d6eaf8"], html.tema-escuro [style*="background:#eef3fb"], html.tema-escuro [style*="background: #eef3fb"], html.tema-escuro [style*="background:#f1f0fb"], html.tema-escuro [style*="background: #f1f0fb"], html.tema-escuro [style*="background:#e8f0fe"], html.tema-escuro [style*="background: #e8f0fe"], html.tema-escuro [style*="background:#f0f4ff"], html.tema-escuro [style*="background: #f0f4ff"] { background:rgba(70,130,210,.22) !important; color:#9cc7f2 !important; border-color:#9cc7f255 !important; }
+    html.tema-escuro .conf-status-btn.reconf-conferindo, html.tema-escuro .tag-adm.fixo, html.tema-escuro .campo-destaque, html.tema-escuro [style*="background:#fdf3d0"], html.tema-escuro [style*="background: #fdf3d0"], html.tema-escuro [style*="background:#fff4d6"], html.tema-escuro [style*="background: #fff4d6"], html.tema-escuro [style*="background:#fffbe0"], html.tema-escuro [style*="background: #fffbe0"] { background:rgba(240,200,40,.18) !important; color:#f2d570 !important; border-color:#f2d57055 !important; }
+    html.tema-escuro [style*="color:#c0392b"] { color:#ff8f80 !important; }
+    html.tema-escuro [style*="color:#1a6b32"], html.tema-escuro [style*="color:#1a5e20"], html.tema-escuro [style*="color:#1a7a34"], html.tema-escuro [style*="color:#1a5e20"] { color:#9fe0a5 !important; }
+    html.tema-escuro [style*="color:#7d4e0f"], html.tema-escuro [style*="color:#b35c00"], html.tema-escuro [style*="color:#8a5a00"] { color:#f5b971 !important; }
+    html.tema-escuro [style*="color:#8e44ad"], html.tema-escuro [style*="color:#5b2a9a"], html.tema-escuro [style*="color:#4a4790"] { color:#d9a8f2 !important; }
+    html.tema-escuro [style*="color:#1a4f8b"], html.tema-escuro [style*="color:#1a5276"] { color:#9cc7f2 !important; }
+    html.tema-escuro .tag { border-color:transparent; }
+    /* botão do tema no topo */
+    .btn-tema-header { background:rgba(255,255,255,.12); border:none; border-radius:8px; width:34px; height:30px; font-size:16px; cursor:pointer; display:flex; align-items:center; justify-content:center; }
+    /* opções de aparência */
+    .tema-opcoes { display:grid; grid-template-columns:repeat(3,1fr); gap:8px; }
+    .tema-opcao { display:flex; flex-direction:column; align-items:center; gap:2px; padding:10px 6px; border-radius:12px; border:1.5px solid #d0c9bb; background:#fff; cursor:pointer; font-size:20px; color:var(--texto); }
+    .tema-opcao b { font-size:13px; }
+    .tema-opcao small { font-size:10px; color:var(--texto-suave); }
+    .tema-opcao.ativo { border-color:#2e7d32; box-shadow:0 0 0 2px #2e7d32 inset; background:#eaf7ec; }
+    html.tema-escuro .tema-opcao { background:#1f2a1f; border-color:#334033; }
+    html.tema-escuro .tema-opcao.ativo { background:rgba(90,170,90,.22); }
+    /* ordem das abas */
+    .ordem-aba-item { display:flex; align-items:center; gap:8px; padding:8px 10px; border-radius:10px; background:var(--bege); margin-bottom:6px; transition:background .3s; }
+    .ordem-aba-item.desligada { opacity:.55; }
+    .ordem-aba-item.acabou-de-mover { background:#fff3c4; }
+    html.tema-escuro .ordem-aba-item { background:#1f2a1f; }
+    html.tema-escuro .ordem-aba-item.acabou-de-mover { background:rgba(240,200,40,.25); }
+    .ordem-aba-num { width:24px; height:24px; border-radius:50%; background:#1a2e1a; color:#fff; font-size:12px; font-weight:800; display:flex; align-items:center; justify-content:center; flex:0 0 auto; }
+    .ordem-aba-nome { flex:1; font-size:14px; font-weight:600; }
+    .ordem-aba-nome small { font-weight:400; color:var(--texto-suave); }
+    .ordem-aba-item button { width:38px; height:34px; border-radius:8px; border:1.5px solid #c8d6c8; background:#fff; font-size:14px; cursor:pointer; color:#1a2e1a; }
+    .ordem-aba-item button:disabled { opacity:.3; cursor:default; }
+    html.tema-escuro .ordem-aba-item button { background:#111811; border-color:#334033; color:#e4eae1; }
+
+    /* modo noturno: textos que eram verde-escuro sobre fundo claro */
+    html.tema-escuro .card-titulo, html.tema-escuro .item-nome, html.tema-escuro .modal-nome, html.tema-escuro .btn-editar, html.tema-escuro .modal-historico-titulo, html.tema-escuro .mov-piso, html.tema-escuro .usuario-item,
+    html.tema-escuro .conf-item-nome, html.tema-escuro .erro-numero, html.tema-escuro .galeria-nome, html.tema-escuro .login-card-titulo, html.tema-escuro .mapa-btn-mover, html.tema-escuro .conf-tipo-btn.ativo,
+    html.tema-escuro [style*="color:var(--verde-escuro)"], html.tema-escuro [style*="color: var(--verde-escuro)"] { color:#e4eae1 !important; }
+    html.tema-escuro .resumo-valor, html.tema-escuro .modal-stat-valor { color:#9fe0a5 !important; }
+    html.tema-escuro .tag { background:#24402a; color:#cfe8cf; }
+    html.tema-escuro .item-piso.nao-conferido .item-nome { color:#f5b971 !important; }
+    html.tema-escuro .item-piso.codigo-duplicado .item-nome { color:#ff8f80 !important; }
+    html.tema-escuro .conf-status-btn.reconf-conferindo { color:#f2d570 !important; }
+    /* "Manter conectado": caixinha marcada visível (nos dois temas) */
+    .login-manter input { -webkit-appearance:checkbox !important; appearance:auto !important; padding:0 !important; border:none !important; box-shadow:none !important; flex:0 0 auto; }
 </style>
 </head>
 <body>
@@ -1499,39 +1592,40 @@ PASSOS PARA RODAR NO GITHUB PAGES:
       <p id="subtitulo-header">Gerenciamento de inventário</p>
     </div>
     <div style="display:flex;align-items:center;gap:8px">
+      <button id="btn-tema-header" class="btn-tema-header" onclick="alternarTemaRapido()" title="Modo noturno">🌙</button>
       <button class="btn-instalar-app header-instalar" onclick="instalarApp()" title="Instalar app">📲<span> Instalar</span></button>
       <div id="header-user"></div>
     </div>
   </div>
   <div class="tabs">
-    <div class="tab ativo" onclick="irPara('cadastrar')">
+    <div class="tab ativo" data-aba="cadastrar" onclick="irPara('cadastrar')">
       <span class="tab-icon">➕</span>Cadastrar
     </div>
-    <div class="tab" onclick="irPara('estoque')">
+    <div class="tab" data-aba="estoque" onclick="irPara('estoque')">
       <span class="tab-icon">📦</span>Estoque
     </div>
-    <div class="tab" onclick="irPara('relatorio')">
+    <div class="tab" data-aba="relatorio" onclick="irPara('relatorio')">
       <span class="tab-icon">📊</span>Relatório
     </div>
-    <div class="tab" onclick="irPara('movimentacoes')">
+    <div class="tab" data-aba="movimentacoes" onclick="irPara('movimentacoes')">
       <span class="tab-icon">🔄</span>Movim.
     </div>
-    <div class="tab" onclick="irPara('galeria')">
+    <div class="tab" data-aba="galeria" onclick="irPara('galeria')">
       <span class="tab-icon">🖼️</span>Galeria
     </div>
-    <div class="tab" onclick="irPara('config')">
+    <div class="tab" data-aba="config" onclick="irPara('config')">
       <span class="tab-icon">⚙️</span>Config
     </div>
-    <div class="tab" onclick="irPara('erros')">
+    <div class="tab" data-aba="erros" onclick="irPara('erros')">
       <span class="tab-icon">⚠️</span>Erros
     </div>
-    <div class="tab" onclick="irPara('conferencia')">
+    <div class="tab" data-aba="conferencia" onclick="irPara('conferencia')">
       <span class="tab-icon">📋</span>Conferência
     </div>
-    <div class="tab" onclick="irPara('quebras')">
+    <div class="tab" data-aba="quebras" onclick="irPara('quebras')">
       <span class="tab-icon">💔</span>Quebras
     </div>
-    <div class="tab" onclick="irPara('mapa')">
+    <div class="tab" data-aba="mapa" onclick="irPara('mapa')">
       <span class="tab-icon">🗺️</span>Mapa
     </div>
   </div>
@@ -1792,6 +1886,23 @@ PASSOS PARA RODAR NO GITHUB PAGES:
 
       <button class="btn" style="background:#1a2e1a;color:#fff;width:100%;margin-bottom:8px" onclick="exportarCSVPersonalizado()">📤 Exportar</button>
       <p style="font-size:11px;color:#888;text-align:center">Filtrando por rua, só entram os itens com endereço naquela rua.</p>
+    </div>
+
+    <div class="card" id="config-tema-card" style="margin-top:0;margin-bottom:12px">
+      <div class="card-titulo">🎨 Aparência</div>
+      <p style="font-size:13px;color:var(--texto-suave);margin-bottom:10px">Vale só para este aparelho.</p>
+      <div class="tema-opcoes">
+        <button class="tema-opcao" data-tema="auto" onclick="escolherTema('auto')">📱<b>Automático</b><small>igual ao celular</small></button>
+        <button class="tema-opcao" data-tema="claro" onclick="escolherTema('claro')">☀️<b>Claro</b><small>sempre</small></button>
+        <button class="tema-opcao" data-tema="escuro" onclick="escolherTema('escuro')">🌙<b>Noturno</b><small>sempre</small></button>
+      </div>
+    </div>
+
+    <div class="card" id="config-ordem-card" style="margin-top:0;margin-bottom:12px;display:none">
+      <div class="card-titulo">↕️ Ordem das abas</div>
+      <p style="font-size:13px;color:var(--texto-suave);margin-bottom:10px">Use ▲ ▼ para escolher a ordem da barra de abas. Vale para <b>todos</b> os aparelhos. A primeira aba é a que abre ao entrar no app.</p>
+      <div id="ordem-abas-lista"></div>
+      <button onclick="restaurarOrdemAbas()" style="width:100%;margin-top:10px;padding:10px;border-radius:10px;border:1.5px solid #d0c9bb;background:#fff;font-size:13px;font-weight:600;cursor:pointer">↩️ Voltar à ordem padrão</button>
     </div>
 
     <div class="card" id="config-app-card" style="margin-top:0;margin-bottom:12px">
@@ -2568,11 +2679,11 @@ function irPara(pag) {
   document.querySelectorAll('.pagina').forEach(p => p.classList.remove('ativa'));
   document.querySelectorAll('.tab').forEach(t => t.classList.remove('ativo'));
   document.getElementById('pag-' + pag).classList.add('ativa');
-  const tabs = document.querySelectorAll('.tab');
-  const idx = { cadastrar: 0, estoque: 1, relatorio: 2, movimentacoes: 3, galeria: 4, config: 5, erros: 6, conferencia: 7, quebras: 8, mapa: 9 };
-  const activeTab = tabs[idx[pag]];
-  activeTab.classList.add('ativo');
-  activeTab.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
+  const activeTab = document.querySelector(`.tab[data-aba="${pag}"]`);
+  if (activeTab) {
+    activeTab.classList.add('ativo');
+    activeTab.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
+  }
   if (pag === 'estoque') renderLista();
   if (pag === 'relatorio') { renderRelatorio(); }
   if (pag === 'movimentacoes') renderMovimentacoes();
@@ -6522,9 +6633,9 @@ function paginaPermitida(pag) {
 }
 
 function aplicarPermissoes() {
-  const tabs = document.querySelectorAll('.tab');
+  aplicarOrdemAbas();
   ABAS_PERMISSAO.forEach(a => {
-    const t = tabs[a.idx];
+    const t = document.querySelector(`.tab[data-aba="${a.id}"]`);
     if (t) t.style.display = podeVer(a.id) ? '' : 'none';
     document.body.classList.toggle('ro-' + a.id, a.editavel && podeVer(a.id) && !podeEditar(a.id));
   });
@@ -6533,9 +6644,7 @@ function aplicarPermissoes() {
   const ativa = document.querySelector('.pagina.ativa');
   const pagAtiva = ativa ? ativa.id.replace('pag-', '') : null;
   if (pagAtiva && !paginaPermitida(pagAtiva)) {
-    // prefere abrir na Conferência
-    const primeira = podeVer('conferencia') ? { id: 'conferencia' } : ABAS_PERMISSAO.find(a => podeVer(a.id));
-    irPara(primeira ? primeira.id : 'config');
+    irPara(primeiraAbaVisivel());
   }
   const cardExp = document.getElementById('config-export-card');
   if (cardExp) cardExp.style.display = podeVer('conferencia') ? '' : 'none';
@@ -6561,6 +6670,7 @@ function aplicarPermissoesDaNuvem(dados) {
   }
   if (mudou) {
     aplicarPermissoes();
+    renderOrdemAbas();
     if (document.getElementById('pag-mapa')?.classList.contains('ativa')) renderMapa();
   }
   return mudou;
@@ -6732,6 +6842,10 @@ function renderConfig() {
   aplicarPermissoes();
   renderSeletorColunas();
   renderBotoesRua();
+  renderOrdemAbas();
+  aplicarTema();
+  const cardOrdem = document.getElementById('config-ordem-card');
+  if (cardOrdem) cardOrdem.style.display = usuarioAtivoIsMestre() ? 'block' : 'none';
 }
 
 function renderGaleria() {
@@ -6988,10 +7102,91 @@ function toast(msg, erro = false) {
   setTimeout(() => el.classList.remove('visivel'), 2600);
 }
 
+
+// ===================== ORDEM DAS ABAS (escolhida pelo ADM, vale para todos) =====================
+const ABAS_TODAS = [
+  { id: 'cadastrar', nome: '➕ Cadastrar' }, { id: 'estoque', nome: '📦 Estoque' }, { id: 'relatorio', nome: '📊 Relatório' },
+  { id: 'movimentacoes', nome: '🔄 Movimentações' }, { id: 'galeria', nome: '🖼️ Galeria' }, { id: 'config', nome: '⚙️ Config' },
+  { id: 'erros', nome: '⚠️ Erros' }, { id: 'conferencia', nome: '📋 Conferência' }, { id: 'quebras', nome: '💔 Quebras' }, { id: 'mapa', nome: '🗺️ Mapa' }
+];
+const ORDEM_ABAS_PADRAO = ['conferencia', 'quebras', 'mapa', 'movimentacoes', 'erros', 'config', 'cadastrar', 'estoque', 'relatorio', 'galeria'];
+function ordemAbas() {
+  const salva = carregarConfigApp().ordemAbas;
+  const base = Array.isArray(salva) ? salva.filter(id => ORDEM_ABAS_PADRAO.includes(id)) : [];
+  ORDEM_ABAS_PADRAO.forEach(id => { if (!base.includes(id)) base.push(id); }); // abas novas vão para o fim
+  return base;
+}
+function aplicarOrdemAbas() {
+  const barra = document.querySelector('.tabs');
+  if (!barra) return;
+  const ordem = ordemAbas();
+  const atual = [...barra.querySelectorAll('.tab[data-aba]')].map(t => t.dataset.aba);
+  if (atual.join() === ordem.join()) return;
+  ordem.forEach(id => { const t = barra.querySelector(`.tab[data-aba="${id}"]`); if (t) barra.appendChild(t); });
+}
+function primeiraAbaVisivel() {
+  return ordemAbas().find(id => paginaPermitida(id)) || 'config';
+}
+function moverAba(id, delta) {
+  if (!usuarioAtivoIsMestre()) { toast('🔒 Apenas mestres/ADM podem mudar a ordem das abas.', true); return; }
+  const ordem = ordemAbas();
+  const i = ordem.indexOf(id), j = i + delta;
+  if (i < 0 || j < 0 || j >= ordem.length) return;
+  [ordem[i], ordem[j]] = [ordem[j], ordem[i]];
+  const cfg = carregarConfigApp(); cfg.ordemAbas = ordem; salvarConfigApp(cfg);
+  aplicarOrdemAbas(); renderOrdemAbas();
+  document.querySelector(`.ordem-aba-item[data-id="${id}"]`)?.classList.add('acabou-de-mover');
+}
+function restaurarOrdemAbas() {
+  if (!usuarioAtivoIsMestre()) return;
+  const cfg = carregarConfigApp(); delete cfg.ordemAbas; salvarConfigApp(cfg);
+  aplicarOrdemAbas(); renderOrdemAbas();
+  toast('↩️ Ordem padrão das abas restaurada');
+}
+function renderOrdemAbas() {
+  const el = document.getElementById('ordem-abas-lista');
+  if (!el) return;
+  const ordem = ordemAbas();
+  el.innerHTML = ordem.map((id, i) => {
+    const a = ABAS_TODAS.find(x => x.id === id);
+    const desl = typeof abaDesligada === 'function' && abaDesligada(id);
+    return `<div class="ordem-aba-item${desl ? ' desligada' : ''}" data-id="${id}">
+      <span class="ordem-aba-num">${i + 1}</span>
+      <span class="ordem-aba-nome">${a ? a.nome : id}${desl ? ' <small>(desligada)</small>' : ''}</span>
+      <button onclick="moverAba('${id}', -1)" ${i === 0 ? 'disabled' : ''} aria-label="Subir">▲</button>
+      <button onclick="moverAba('${id}', 1)" ${i === ordem.length - 1 ? 'disabled' : ''} aria-label="Descer">▼</button>
+    </div>`;
+  }).join('');
+}
+
+// ===================== MODO NOTURNO (escolha de cada aparelho) =====================
+function temaEscolhido() { try { return localStorage.getItem('estoque_tema') || 'auto'; } catch (e) { return 'auto'; } }
+function aplicarTema() {
+  const t = temaEscolhido();
+  const escuro = t === 'escuro' || (t === 'auto' && window.matchMedia('(prefers-color-scheme: dark)').matches);
+  document.documentElement.classList.toggle('tema-escuro', escuro);
+  document.querySelector('meta[name="theme-color"]')?.setAttribute('content', escuro ? '#0b120b' : '#1a2e1a');
+  const btn = document.getElementById('btn-tema-header');
+  if (btn) { btn.textContent = escuro ? '☀️' : '🌙'; btn.title = escuro ? 'Modo claro' : 'Modo noturno'; }
+  document.querySelectorAll('.tema-opcao').forEach(b => b.classList.toggle('ativo', b.dataset.tema === t));
+}
+function escolherTema(t) {
+  try { localStorage.setItem('estoque_tema', t); } catch (e) {}
+  aplicarTema();
+  if (document.getElementById('pag-mapa')?.classList.contains('ativa')) renderMapa();
+}
+function alternarTemaRapido() {
+  escolherTema(document.documentElement.classList.contains('tema-escuro') ? 'claro' : 'escuro');
+}
+window.matchMedia('(prefers-color-scheme: dark)').addEventListener?.('change', () => { if (temaEscolhido() === 'auto') aplicarTema(); });
+
 // INIT — inicialização básica (restante roda após login via onAuthStateChanged)
 // A tela de login fica visível até o Firebase confirmar o estado de auth
 atualizarSelectResponsavel(); // popula o select de responsável ao carregar
 aplicarPermissoes(); // esconde abas/ações conforme o usuário ativo
+aplicarTema();
+// Abre na primeira aba da ordem escolhida
+if (paginaPermitida(primeiraAbaVisivel())) irPara(primeiraAbaVisivel());
 </script>
 
 
