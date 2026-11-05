@@ -1330,7 +1330,7 @@ PASSOS PARA RODAR NO GITHUB PAGES:
       text-transform:none !important; letter-spacing:normal !important; font-weight:400 !important;
       font-size:13px !important; color:var(--texto) !important; margin:0 !important; line-height:1.4; }
     .perm-switch-linha small { color:var(--texto-suave); font-size:12px; }
-    #perm-overlay input[type=checkbox], #config-acesso-card input[type=checkbox] {
+    #perm-overlay input[type=checkbox], #config-acesso-card input[type=checkbox], #config-abas-card input[type=checkbox] {
       -webkit-appearance:checkbox !important; appearance:auto !important; width:22px !important; height:22px !important;
       min-width:22px; padding:0 !important; margin:0 !important; border:none !important; box-shadow:none !important;
       accent-color:#2e7d32; cursor:pointer; flex:0 0 auto; }
@@ -1703,26 +1703,6 @@ PASSOS PARA RODAR NO GITHUB PAGES:
     <div class="resumo-grid" id="resumo-cards"></div>
     <button class="btn" style="margin-bottom:12px;background:#5a9e5a;color:#fff" data-edit-area="relatorio" onclick="recalcularTodasMetragens()">🔄 Recalcular Peças/Caixa e Metragem de todos os pisos</button>
     <div class="tabela-relatorio" id="tabela-wrap"></div>
-    <div style="margin-top:12px;background:#fff;border-radius:12px;padding:16px;box-shadow:0 2px 12px rgba(0,0,0,0.08)">
-      <div class="card-titulo" style="margin-bottom:12px">📤 Exportar CSV</div>
-
-      <!-- Seleção de colunas -->
-      <div style="font-size:12px;font-weight:700;color:var(--texto-suave);margin-bottom:8px;text-transform:uppercase;letter-spacing:.5px">Colunas a exportar</div>
-      <div id="col-select-wrap" style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:14px"></div>
-      <div style="display:flex;gap:8px;margin-bottom:14px">
-        <button onclick="toggleTodasColunas(true)"  style="flex:1;padding:7px;font-size:12px;font-weight:700;border-radius:8px;border:1.5px solid #5a9e5a;background:#f0faf0;color:#1a6b32;cursor:pointer">✅ Todas</button>
-        <button onclick="toggleTodasColunas(false)" style="flex:1;padding:7px;font-size:12px;font-weight:700;border-radius:8px;border:1.5px solid #e0c8a0;background:#fdf8f0;color:#7d4e0f;cursor:pointer">☐ Nenhuma</button>
-      </div>
-
-      <!-- Filtro por rua -->
-      <div style="font-size:12px;font-weight:700;color:var(--texto-suave);margin-bottom:8px;text-transform:uppercase;letter-spacing:.5px">Filtrar por rua <span style="font-weight:400">(opcional)</span></div>
-      <div id="export-rua-lista" style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px"></div>
-      <input type="text" id="export-rua-input" placeholder="Ou digite a rua ex: 11" style="width:100%;box-sizing:border-box;padding:10px 14px;font-size:14px;border-radius:8px;border:1.5px solid #d0c9bb;margin-bottom:14px" inputmode="numeric" oninput="renderBotoesRua()" />
-
-      <button class="btn" style="background:#1a2e1a;color:#fff;width:100%;margin-bottom:8px" onclick="exportarCSVPersonalizado()">📤 Exportar</button>
-      <p style="font-size:11px;color:#888;text-align:center">Pisos com <b>📍 Não está no local</b> são sempre excluídos quando filtrando por rua</p>
-    </div>
-
     <button id="btn-apagar-tudo" class="btn" style="margin-top:10px;background:#fde8e8;color:#c0392b;font-weight:700;display:none" onclick="apagarTodosOsPisos()">🗑️ Apagar todos os pisos</button>
 
     <div style="margin-top: 12px; background: #fff; border-radius: 12px; padding: 16px; box-shadow: 0 2px 12px rgba(0,0,0,0.12);">
@@ -1788,6 +1768,32 @@ PASSOS PARA RODAR NO GITHUB PAGES:
 <div class="pagina" id="pag-config">
   <div style="padding:16px">
 
+    <div class="card" id="config-export-card" style="margin-top:0;margin-bottom:12px">
+      <div class="card-titulo">📤 Exportar CSV — Conferência</div>
+      <p style="font-size:12px;color:var(--texto-suave);margin:-4px 0 12px">Exporta os itens da aba Conferência em planilha (abre no Excel / Google Planilhas).</p>
+
+      <div style="font-size:12px;font-weight:700;color:var(--texto-suave);margin-bottom:8px;text-transform:uppercase;letter-spacing:.5px">Colunas a exportar</div>
+      <div id="col-select-wrap" style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:14px"></div>
+      <div style="display:flex;gap:8px;margin-bottom:14px">
+        <button onclick="toggleTodasColunas(true)"  style="flex:1;padding:7px;font-size:12px;font-weight:700;border-radius:8px;border:1.5px solid #5a9e5a;background:#f0faf0;color:#1a6b32;cursor:pointer">✅ Todas</button>
+        <button onclick="toggleTodasColunas(false)" style="flex:1;padding:7px;font-size:12px;font-weight:700;border-radius:8px;border:1.5px solid #e0c8a0;background:#fdf8f0;color:#7d4e0f;cursor:pointer">☐ Nenhuma</button>
+      </div>
+
+      <div style="font-size:12px;font-weight:700;color:var(--texto-suave);margin-bottom:8px;text-transform:uppercase;letter-spacing:.5px">Status <span style="font-weight:400">(opcional)</span></div>
+      <select id="export-status" style="width:100%;box-sizing:border-box;padding:10px 14px;font-size:14px;border-radius:8px;border:1.5px solid #d0c9bb;background:#fff;margin-bottom:14px">
+        <option value="todos">Todos os itens</option>
+        <option value="aberto">🟣 Só Em aberto</option>
+        <option value="finalizado">✅ Só Finalizado</option>
+      </select>
+
+      <div style="font-size:12px;font-weight:700;color:var(--texto-suave);margin-bottom:8px;text-transform:uppercase;letter-spacing:.5px">Filtrar por rua <span style="font-weight:400">(opcional)</span></div>
+      <div id="export-rua-lista" style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px"></div>
+      <input type="text" id="export-rua-input" placeholder="Ou digite a rua ex: 44" style="width:100%;box-sizing:border-box;padding:10px 14px;font-size:14px;border-radius:8px;border:1.5px solid #d0c9bb;margin-bottom:14px" inputmode="numeric" oninput="renderBotoesRua()" />
+
+      <button class="btn" style="background:#1a2e1a;color:#fff;width:100%;margin-bottom:8px" onclick="exportarCSVPersonalizado()">📤 Exportar</button>
+      <p style="font-size:11px;color:#888;text-align:center">Filtrando por rua, só entram os itens com endereço naquela rua.</p>
+    </div>
+
     <div class="card" id="config-app-card" style="margin-top:0;margin-bottom:12px">
       <div class="card-titulo">📲 Aplicativo</div>
       <div style="display:flex;align-items:center;gap:12px">
@@ -1806,6 +1812,23 @@ PASSOS PARA RODAR NO GITHUB PAGES:
         <button onclick="adicionarUsuario()" style="background:var(--verde-escuro);color:#fff;border:none;border-radius:8px;padding:10px 16px;font-weight:700;font-size:14px;cursor:pointer">+ Add</button>
       </div>
       <div id="lista-usuarios"></div>
+    </div>
+
+    <div class="card" id="config-abas-card" style="margin-top:12px;display:none">
+      <div class="card-titulo">🧩 Abas do app</div>
+      <p style="font-size:13px;color:var(--texto-suave);margin-bottom:12px">Abas desligadas somem para <b>todos</b>, mas nada é apagado. Marque para ligar de novo.</p>
+      <label class="perm-switch-linha" style="margin-bottom:10px !important">
+        <input type="checkbox" id="aba-ligada-cadastrar" onchange="alternarAbaDesligada('cadastrar', this)" />
+        <span><b>➕ Cadastrar</b><br><small>Cadastro de pisos no Estoque antigo</small></span>
+      </label>
+      <label class="perm-switch-linha" style="margin-bottom:10px !important">
+        <input type="checkbox" id="aba-ligada-estoque" onchange="alternarAbaDesligada('estoque', this)" />
+        <span><b>📦 Estoque</b><br><small>Lista de pisos do Estoque antigo</small></span>
+      </label>
+      <label class="perm-switch-linha">
+        <input type="checkbox" id="aba-ligada-relatorio" onchange="alternarAbaDesligada('relatorio', this)" />
+        <span><b>📊 Relatório</b><br><small>Resumo do Estoque antigo, backup e importar dados</small></span>
+      </label>
     </div>
 
     <div class="card" id="config-acesso-card" style="margin-top:12px;display:none">
@@ -1905,11 +1928,11 @@ PASSOS PARA RODAR NO GITHUB PAGES:
     <!-- Filtro por status Sistema e Reconferência -->
     <div class="linha-2" style="margin-bottom:12px">
       <div class="campo-grupo">
-        <label style="font-size:11px;text-transform:uppercase;letter-spacing:.5px">🟣 Status Sistema</label>
+        <label style="font-size:11px;text-transform:uppercase;letter-spacing:.5px">🟣 Status</label>
         <select id="conf-filtro-sistema" onchange="setFiltroConfSistema(this.value)" style="width:100%;padding:9px 12px;font-size:13px;border-radius:8px;border:1.5px solid #d0c9bb;background:#fff">
           <option value="todos">Todos</option>
-          <option value="no_sistema">✅ No Sistema</option>
-          <option value="nao_sistema">🟣 Não no Sistema</option>
+          <option value="no_sistema">✅ Finalizado</option>
+          <option value="nao_sistema">🟣 Em aberto</option>
         </select>
       </div>
       <div class="campo-grupo">
@@ -1981,9 +2004,6 @@ PASSOS PARA RODAR NO GITHUB PAGES:
       <div class="card-titulo">🗺️ Pátio 04</div>
       <input type="search" id="mapa-busca" placeholder="🔍 Buscar piso, lote ou endereço..." oninput="buscarNoMapa()" style="width:100%;box-sizing:border-box;padding:11px 14px;font-size:14px;border-radius:10px;border:1.5px solid #d0c9bb;background:#fff;margin-bottom:10px" />
       <div style="display:flex;flex-wrap:wrap;gap:6px;align-items:center">
-        <button class="mapa-fonte-btn ativo" data-fonte="todos" onclick="setMapaFonte('todos')">Todos</button>
-        <button class="mapa-fonte-btn" data-fonte="conferencia" onclick="setMapaFonte('conferencia')">📋 Conferência</button>
-        <button class="mapa-fonte-btn" data-fonte="estoque" onclick="setMapaFonte('estoque')">📦 Estoque</button>
         <span style="flex:1"></span>
         <button class="mapa-fonte-btn" id="btn-editar-mapa" onclick="abrirEditorMapa()">✏️ Apartamentos</button>
       </div>
@@ -2537,7 +2557,10 @@ function atualizarPreviewMetragem() {
 function irPara(pag) {
   if (pag !== 'mapa' && typeof mapaMover !== 'undefined' && mapaMover) cancelarMoverMapa();
   if (pag !== 'mapa' && document.getElementById('mapa-viewport')?.classList.contains('tela-cheia')) alternarTelaCheiaMapa();
-  if (!paginaPermitida(pag)) { toast('🔒 Você não tem acesso a esta aba.', true); return; }
+  if (!paginaPermitida(pag)) {
+    toast(abaDesligada(pag) ? '🔌 Esta aba está desligada (um ADM pode religar em Config).' : '🔒 Você não tem acesso a esta aba.', true);
+    return;
+  }
   document.querySelectorAll('.pagina').forEach(p => p.classList.remove('ativa'));
   document.querySelectorAll('.tab').forEach(t => t.classList.remove('ativo'));
   document.getElementById('pag-' + pag).classList.add('ativa');
@@ -2547,7 +2570,7 @@ function irPara(pag) {
   activeTab.classList.add('ativo');
   activeTab.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
   if (pag === 'estoque') renderLista();
-  if (pag === 'relatorio') { renderRelatorio(); renderSeletorColunas(); renderBotoesRua(); }
+  if (pag === 'relatorio') { renderRelatorio(); }
   if (pag === 'movimentacoes') renderMovimentacoes();
   if (pag === 'galeria') renderGaleria();
   if (pag === 'config') renderConfig();
@@ -3527,29 +3550,40 @@ function renderRelatorio() {
 // ===================== EXPORTAR CSV PERSONALIZADO =====================
 let ruaSelecionada = null;
 
-// Definição de todas as colunas disponíveis
+// Colunas disponíveis — dados da aba CONFERÊNCIA
+const _numBR = (v, casas) => { const n = parseFloat(v); return n > 0 ? (casas != null ? n.toFixed(casas) : String(n)).replace('.', ',') : ''; };
+const _endParte = (i, k) => { const e = partesEnderecoConf(i.endereco); return e ? String(e[k]).padStart(2, '0') : ''; };
+const _TIPO_NOME = { piso: 'Piso', argamassa: 'Argamassa', telha: 'Telha', tijolo: 'Tijolo', forro: 'Forro', miudezas: 'Miudezas', outro: 'Outro' };
 const COLUNAS_EXPORT = [
-  { id: 'nome',             label: 'Nome',                 fn: d => d.nome },
-  { id: 'lote',             label: 'Lote',                 fn: d => d.lote },
-  { id: 'marca',            label: 'Marca',                fn: d => d.marca||'' },
-  { id: 'codigo',           label: 'Código',               fn: d => d.codigo||'' },
-  { id: 'tamanho',          label: 'Tamanho',              fn: d => d.tamanho||'' },
-  { id: 'bitola',           label: 'Bitola',               fn: d => d.bitola||'' },
-  { id: 'tonalidade',       label: 'Tonalidade',           fn: d => d.tonalidade||'' },
-  { id: 'patio',            label: 'Pátio',                fn: d => d.patio||'' },
-  { id: 'rua',              label: 'Rua',                  fn: d => d.rua||'' },
-  { id: 'apartamento',      label: 'Apt',                  fn: d => d.apartamento||'' },
-  { id: 'nivel',            label: 'Nível',                fn: d => d.nivel||'' },
-  { id: 'caixas',           label: 'Caixas',               fn: d => d.caixas||0 },
-  { id: 'qtdPallets',       label: 'Pallets',              fn: d => d.qtdPallets||'' },
-  { id: 'caixasPorPallet',  label: 'Caixas/Pallet',        fn: d => d.caixasPorPallet||'' },
-  { id: 'caixasAvulsas',    label: 'Cx. Avulsas',          fn: d => d.caixasAvulsasFora||'' },
-  { id: 'pecas',            label: 'Peças Avulsas',        fn: d => d.pecas||0 },
-  { id: 'm2PorCaixa',       label: 'm²/Caixa',             fn: d => d.m2PorCaixa ? d.m2PorCaixa.toString().replace('.',',') : '' },
-  { id: 'pecasPorCaixa',    label: 'Peças/Caixa',          fn: d => d.pecasPorCaixa||'' },
-  { id: 'metragem',         label: 'Metragem (m²)',        fn: d => calcularMetragemTotal(d) > 0 ? calcularMetragemTotal(d).toFixed(4).replace('.',',') : '' },
-  { id: 'data',             label: 'Data Cadastro',        fn: d => d.data||'' },
-  { id: 'dataAlteracao',    label: 'Última Alteração',     fn: d => d.dataAlteracao||'' },
+  { id: 'tipo',          label: 'Tipo',              fn: i => _TIPO_NOME[i.tipo] || i.tipo || '' },
+  { id: 'nome',          label: 'Nome',              fn: i => i.nome || '' },
+  { id: 'lote',          label: 'Lote',              fn: i => i.lote || '' },
+  { id: 'marca',         label: 'Marca',             fn: i => i.marca || '' },
+  { id: 'codigo',        label: 'Código',            fn: i => i.codigo || '' },
+  { id: 'tamanho',       label: 'Tamanho',           fn: i => i.tamanho || '' },
+  { id: 'bitola',        label: 'Bitola',            fn: i => i.bitola || '' },
+  { id: 'tonalidade',    label: 'Tonalidade',        fn: i => i.tonalidade || '' },
+  { id: 'endereco',      label: 'Endereço',          fn: i => i.endereco || '' },
+  { id: 'patio',         label: 'Pátio',             fn: i => _endParte(i, 0) },
+  { id: 'rua',           label: 'Rua',               fn: i => _endParte(i, 1) },
+  { id: 'apartamento',   label: 'Apt',               fn: i => _endParte(i, 2) },
+  { id: 'andar',         label: 'Andar',             fn: i => _endParte(i, 3) },
+  { id: 'vaga',          label: 'Vaga',              fn: i => _endParte(i, 4) },
+  { id: 'pallets',       label: 'Pallets',           fn: i => i.pallets || '' },
+  { id: 'porPallet',     label: 'Cx/Pç por Pallet',  fn: i => i.caixasPorPallet || i.pecasPorPallet || i.sacasPorPallet || '' },
+  { id: 'avulsas',       label: 'Avulsas',           fn: i => i.caixasAvulsas || i.sacasAvulsas || (i.tipo !== 'piso' ? i.pecasAvulsas : '') || '' },
+  { id: 'total',         label: 'Total',             fn: i => i.tipo === 'piso' ? (i.totalCaixas || 0) : (i.totalPecas ?? i.totalSacos ?? i.quantidade ?? '') },
+  { id: 'unidade',       label: 'Unidade',           fn: i => i.tipo === 'piso' ? 'cx' : (i.tipo === 'argamassa' ? 'sacos' : (i.unidade || 'pç')) },
+  { id: 'pecasAvulsas',  label: 'Peças Avulsas (piso)', fn: i => i.tipo === 'piso' ? (i.pecasAvulsas || 0) : '' },
+  { id: 'm2PorCaixa',    label: 'm²/Caixa',          fn: i => _numBR(i.m2PorCaixa) },
+  { id: 'pecasPorCaixa', label: 'Peças/Caixa',       fn: i => i.pecasPorCaixa || '' },
+  { id: 'metragem',      label: 'Metragem (m²)',     fn: i => _numBR(i.m2Total, 4) },
+  { id: 'status',        label: 'Status',            fn: i => i.noSistema ? 'Finalizado' : 'Em aberto' },
+  { id: 'conferencia',   label: 'Conferência',       fn: i => (CONF_RECONF_LABELS[i.reconferencia || 'pendente'] || '').replace(/^\S+\s/, '') },
+  { id: 'responsavel',   label: 'Responsável',       fn: i => i.responsavel || '' },
+  { id: 'obs',           label: 'Observação',        fn: i => i.obs || '' },
+  { id: 'data',          label: 'Data Cadastro',     fn: i => i.criadoEm || '' },
+  { id: 'dataAlteracao', label: 'Última Alteração',  fn: i => { const t = tsAlteracaoConf(i); return t ? new Date(t).toLocaleString('pt-BR') : ''; } },
 ];
 
 // Guarda estado das colunas selecionadas (começa com todas ativas)
@@ -3582,9 +3616,8 @@ function toggleTodasColunas(ligar) {
 }
 
 function renderBotoesRua() {
-  const dados = carregar();
   const ruas = [...new Set(
-    dados.filter(d => d.rua && !d.naoLocalizado).map(d => String(d.rua).trim())
+    carregarConferencia().map(i => partesEnderecoConf(i.endereco)).filter(Boolean).map(e => String(e[1]).padStart(2, '0'))
   )].sort((a, b) => {
     const na = parseFloat(a), nb = parseFloat(b);
     return isNaN(na) || isNaN(nb) ? a.localeCompare(b) : na - nb;
@@ -3609,6 +3642,7 @@ function renderBotoesRua() {
 
 function selecionarRua(rua) {
   ruaSelecionada = ruaSelecionada === rua ? null : rua;
+  const inp = document.getElementById('export-rua-input'); if (inp && ruaSelecionada) inp.value = '';
   renderBotoesRua();
 }
 
@@ -3618,27 +3652,27 @@ function exportarCSVPersonalizado() {
   const inputRua = (document.getElementById('export-rua-input')?.value || '').trim();
   const rua = ruaSelecionada || inputRua || null;
 
-  let todos = carregar();
+  let todos = carregarConferencia();
 
-  // Filtra por rua se selecionada (exclui também os não localizados)
+  const status = document.getElementById('export-status')?.value || 'todos';
+  if (status === 'aberto') todos = todos.filter(i => !i.noSistema);
+  else if (status === 'finalizado') todos = todos.filter(i => i.noSistema);
+
+  // Filtra por rua (pelo endereço 04.44.03.00.01 → rua 44)
   if (rua) {
-    todos = todos.filter(d =>
-      String(d.rua || '').trim().toLowerCase() === rua.toLowerCase() &&
-      !d.naoLocalizado
-    );
-    if (todos.length === 0) {
-      toast(`⚠️ Nenhum piso encontrado na Rua ${rua}.`, true);
-      return;
-    }
+    const alvo = parseInt(rua);
+    todos = todos.filter(i => { const e = partesEnderecoConf(i.endereco); return e && e[1] === alvo; });
+    if (todos.length === 0) { toast(`⚠️ Nenhum item encontrado na Rua ${rua}.`, true); return; }
   }
+  if (todos.length === 0) { toast('⚠️ Nenhum item para exportar.', true); return; }
 
-  if (todos.length === 0) { toast('⚠️ Nenhum dado para exportar.', true); return; }
-
-  // Ordena por pátio → apartamento
+  // Ordena por endereço (pátio → rua → apt → andar → vaga); sem endereço por último
   todos.sort((a, b) => {
-    const pa = parseFloat(a.patio)||0, pb = parseFloat(b.patio)||0;
-    if (pa !== pb) return pa - pb;
-    return (parseFloat(a.apartamento)||0) - (parseFloat(b.apartamento)||0);
+    const ea = partesEnderecoConf(a.endereco), eb = partesEnderecoConf(b.endereco);
+    if (!ea && !eb) return String(b.id).localeCompare(String(a.id));
+    if (!ea) return 1; if (!eb) return -1;
+    for (let k = 0; k < 5; k++) if (ea[k] !== eb[k]) return ea[k] - eb[k];
+    return 0;
   });
 
   const colunas = COLUNAS_EXPORT.filter(c => colunasAtivas.has(c.id));
@@ -3654,9 +3688,10 @@ function exportarCSVPersonalizado() {
   const a = document.createElement('a');
   a.href = url;
   const sufixo = rua ? `_rua${rua}` : '_todos';
-  a.download = `estoque${sufixo}_${new Date().toLocaleDateString('pt-BR').replace(/\//g,'-')}.csv`;
+  a.download = `conferencia${sufixo}${status !== 'todos' ? '_' + status : ''}_${new Date().toLocaleDateString('pt-BR').replace(/\//g,'-')}.csv`;
   a.click();
-  toast(`📤 Exportado — ${todos.length} piso${todos.length > 1 ? 's' : ''}${rua ? ` da Rua ${rua}` : ''}`);
+  setTimeout(() => URL.revokeObjectURL(url), 2000);
+  toast(`📤 Exportado — ${todos.length} item${todos.length > 1 ? 's' : ''}${rua ? ` da Rua ${rua}` : ''}`);
 }
 
 // Mantém compatibilidade com botão legado
@@ -3929,7 +3964,7 @@ let confTipoAtual = 'piso';
 let confFotoAtual = null;
 let filtroConfUsuario = 'todos'; // filtro ativo de usuário na conferência
 let filtroConfTipo = 'todos'; // filtro ativo de tipo de material na conferência
-let filtroConfSistema = 'todos'; // filtro por status "No Sistema" / "Não no Sistema"
+let filtroConfSistema = 'todos'; // filtro por status "Finalizado" (noSistema) / "Em aberto"
 let filtroConfReconferencia = 'todos'; // filtro por status de reconferência
 
 // Campos por tipo de material
@@ -4462,7 +4497,7 @@ function toggleStatusConf(id) {
   lista[idx].noSistema = !lista[idx].noSistema;
   salvarConferencia(lista);
   renderConferencia();
-  toast(lista[idx].noSistema ? '✅ Marcado como No Sistema' : '🟣 Marcado como Não no Sistema');
+  toast(lista[idx].noSistema ? '✅ Marcado como Finalizado' : '🟣 Marcado como Em aberto');
 }
 
 // Estados cíclicos de reconferência: pendente → precisa conferência → conferindo → conferido → pendente
@@ -4916,7 +4951,7 @@ function renderConferencia() {
           <div class="conf-item-nome">${icon} ${item.nome}</div>
           <div style="display:flex;gap:6px;flex-wrap:wrap">
             <button class="conf-status-btn ${item.noSistema ? 'adicionado' : 'nao-adicionado'}" onclick="toggleStatusConf('${item.id}')">
-              ${item.noSistema ? '✅ No Sistema' : '🟣 Não no Sistema'}
+              ${item.noSistema ? '✅ Finalizado' : '🟣 Em aberto'}
             </button>
             <button class="conf-status-btn ${CONF_RECONF_CLASSES[item.reconferencia||'pendente']}" onclick="toggleReconferencia('${item.id}')">
               ${CONF_RECONF_LABELS[item.reconferencia||'pendente']}
@@ -5749,12 +5784,12 @@ function coletarItensMapa() {
         andar: m[4] !== undefined ? m[4] : '', vaga: m[5] !== undefined ? m[5] : '',
         pallets: i.pallets, caixas: i.totalCaixas ?? i.totalPecas ?? i.totalSacos ?? i.quantidade,
         unidade: i.totalCaixas !== undefined ? 'cx' : (i.totalSacos !== undefined ? 'sc' : 'pç'),
-        status: i.noSistema ? 'No Sistema' : 'Não no Sistema', endereco: i.endereco,
+        status: i.noSistema ? 'Finalizado' : 'Em aberto', endereco: i.endereco,
         ultimaMov: _movsPorConf[i.id] || null
       });
     });
   }
-  if (mapaFonte !== 'conferencia') {
+  if (false) { // Pisos da aba Estoque não aparecem mais no mapa (só Conferência)
     carregar().forEach(d => {
       if (parseInt(d.patio) !== MAPA_PATIO || !d.rua || !d.apartamento) return;
       const pad = v => String(v).padStart(2, '0');
@@ -6372,8 +6407,35 @@ function usuarioAtivoValido() {
 }
 
 // tipo: 'ver' | 'editar'
+// Abas que podem ser desligadas para todos (continuam no app; um ADM religa em Config)
+const ABAS_DESLIGAVEIS = [
+  { id: 'cadastrar', nome: '➕ Cadastrar' },
+  { id: 'estoque',   nome: '📦 Estoque' },
+  { id: 'relatorio', nome: '📊 Relatório' }
+];
+const ABAS_DESLIGADAS_PADRAO = { cadastrar: true, estoque: true, relatorio: true };
+function abasDesligadas() {
+  const c = carregarConfigApp().abasDesligadas;
+  // abas novas que ainda não foram configuradas usam o padrão (desligadas)
+  return c && typeof c === 'object' ? { ...ABAS_DESLIGADAS_PADRAO, ...c, relatorio: c.relatorio !== undefined ? c.relatorio : true } : ABAS_DESLIGADAS_PADRAO;
+}
+function abaDesligada(area) { return !!abasDesligadas()[area]; }
+function alternarAbaDesligada(area, el) {
+  if (!usuarioAtivoIsMestre()) { toast('🔒 Apenas mestres/ADM podem ligar ou desligar abas.', true); if (el) el.checked = !el.checked; return; }
+  const cfg = carregarConfigApp();
+  const atual = { ...abasDesligadas() };
+  atual[area] = !(el ? el.checked : !atual[area]); // marcado = aba ligada
+  cfg.abasDesligadas = atual;
+  salvarConfigApp(cfg);
+  aplicarPermissoes();
+  const nome = (ABAS_DESLIGAVEIS.find(a => a.id === area) || {}).nome || area;
+  toast(atual[area] ? `🔌 Aba ${nome} desligada para todos` : `✅ Aba ${nome} ligada para todos`);
+}
+
 function permissaoUsuario(tipo, area) {
   if (area === 'config') return tipo === 'ver' ? true : usuarioAtivoIsMestre();
+  // Aba desligada: some para todos (inclusive ADM). Os dados continuam (ex.: pisos do Estoque no Mapa).
+  if (tipo === 'ver' && abaDesligada(area)) return false;
   const nome = usuarioAtivoValido();
   if (!nome) return !carregarConfigApp().exigirLogin;
   if (isMestre(nome)) return true;
@@ -6409,8 +6471,18 @@ function aplicarPermissoes() {
   const ativa = document.querySelector('.pagina.ativa');
   const pagAtiva = ativa ? ativa.id.replace('pag-', '') : null;
   if (pagAtiva && !paginaPermitida(pagAtiva)) {
-    const primeira = ABAS_PERMISSAO.find(a => podeVer(a.id));
+    // prefere abrir na Conferência
+    const primeira = podeVer('conferencia') ? { id: 'conferencia' } : ABAS_PERMISSAO.find(a => podeVer(a.id));
     irPara(primeira ? primeira.id : 'config');
+  }
+  const cardExp = document.getElementById('config-export-card');
+  if (cardExp) cardExp.style.display = podeVer('conferencia') ? '' : 'none';
+  // Card de ligar/desligar abas (só ADM)
+  const cardAbas = document.getElementById('config-abas-card');
+  if (cardAbas) {
+    cardAbas.style.display = usuarioAtivoIsMestre() ? 'block' : 'none';
+    const des = abasDesligadas();
+    ABAS_DESLIGAVEIS.forEach(a => { const c = document.getElementById('aba-ligada-' + a.id); if (c) c.checked = !des[a.id]; });
   }
 }
 
@@ -6596,6 +6668,8 @@ function renderConfig() {
 
   atualizarSelectResponsavel();
   aplicarPermissoes();
+  renderSeletorColunas();
+  renderBotoesRua();
 }
 
 function renderGaleria() {
