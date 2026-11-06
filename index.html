@@ -1600,6 +1600,19 @@ PASSOS PARA RODAR NO GITHUB PAGES:
     .ed-nome { max-width:96px; font-size:11px; flex:0 0 auto; }
 
     html.tema-escuro .mapa-cel.vazia .mapa-num, html.tema-escuro .mapa-cel.multi > .mapa-num { color:#d6ddd3 !important; }
+
+    /* ===== estado da sincronização ===== */
+    .sync-status { display:flex; align-items:center; gap:8px; flex-wrap:wrap; font-size:12px; font-weight:600; border-radius:10px; padding:8px 10px; margin-bottom:10px; line-height:1.4; }
+    .sync-status:empty { display:none; }
+    .sync-status span { flex:1 1 180px; }
+    .sync-status button { border:none; border-radius:8px; padding:6px 10px; font-size:12px; font-weight:700; cursor:pointer; background:rgba(0,0,0,.08); color:inherit; }
+    .sync-status.ok { background:#eaf7ec; color:#1a6b32; }
+    .sync-status.enviando { background:#eef3fb; color:#1a4f8b; }
+    .sync-status.aviso { background:#fff3e0; color:#8a4b00; }
+    html.tema-escuro .sync-status.ok { background:rgba(90,170,90,.2); color:#9fe0a5; }
+    html.tema-escuro .sync-status.enviando { background:rgba(70,130,210,.22); color:#9cc7f2; }
+    html.tema-escuro .sync-status.aviso { background:rgba(230,126,34,.22); color:#f5b971; }
+    html.tema-escuro .sync-status button { background:rgba(255,255,255,.12); }
 </style>
 </head>
 <body>
@@ -2106,6 +2119,7 @@ PASSOS PARA RODAR NO GITHUB PAGES:
     </div>
 
     <!-- Resumo e lista -->
+    <div id="conf-sync-status" class="sync-status"></div>
     <div id="conf-resumo"></div>
     <div id="conf-lista"></div>
 
@@ -2141,6 +2155,7 @@ PASSOS PARA RODAR NO GITHUB PAGES:
     </div>
 
     <!-- Resumo -->
+    <div id="quebras-sync-status" class="sync-status"></div>
     <div id="quebras-resumo"></div>
 
     <!-- Lista -->
@@ -2739,6 +2754,7 @@ function irPara(pag) {
   if (pag === 'erros') renderErros();
   if (pag === 'conferencia' || pag === 'quebras') posicionarFormConf(pag);
   if (pag === 'conferencia') renderConferencia();
+  if (pag === 'conferencia' || pag === 'quebras') renderStatusSync();
   if (pag === 'quebras') renderQuebras();
   if (pag === 'mapa') { renderMapa(); if (!mapaView.ajustadoVisivel) { mapaView.ajustadoVisivel = true; requestAnimationFrame(() => ajustarMapa(false, false)); } }
 }
@@ -4675,12 +4691,41 @@ async function enviarFotosPendentes() {
 }
 window.addEventListener('online', () => agendarEnvioFotos(1500));
 
+// ===================== ESTADO DA SINCRONIZAÇÃO (aparece na Conferência e nas Quebras) =====================
+var estadoSync = {}; // nome → { enviando, pendente, ok (hora), erro }
+function marcarPendenteSync(nome) { estadoSync[nome] = { ...(estadoSync[nome] || {}), pendente: true }; renderStatusSync(); }
+function renderStatusSync() {
+  const linhas = { conferencia: 'conf-sync-status', quebras: 'quebras-sync-status' };
+  Object.entries(linhas).forEach(([nome, id]) => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    const e = estadoSync[nome] || {};
+    let txt, cls;
+    if (!window._usuarioUid) { txt = '📴 Não conectado à conta Google — salvando só neste aparelho'; cls = 'aviso'; }
+    else if (e.enviando) { txt = '⏳ Enviando para a nuvem...'; cls = 'enviando'; }
+    else if (e.pendente && !navigator.onLine) { txt = '📴 Sem internet — as alterações estão guardadas neste aparelho e serão enviadas quando a internet voltar. Não apague os dados do app.'; cls = 'aviso'; }
+    else if (e.pendente && e.erro) { txt = `⚠️ Ainda não enviado — tentando de novo... (${e.erro})`; cls = 'aviso'; }
+    else if (e.pendente) { txt = '⏳ Aguardando envio...'; cls = 'enviando'; }
+    else if (e.ok) { txt = `☁️ Tudo enviado · ${new Date(e.ok).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}`; cls = 'ok'; }
+    else { txt = '☁️ Sincronizando com a nuvem...'; cls = 'enviando'; }
+    el.className = 'sync-status ' + cls;
+    el.innerHTML = `<span>${txt}</span><button onclick="sincronizarAgora('${nome}')">🔄 Sincronizar agora</button>`;
+  });
+}
+function sincronizarAgora(nome) {
+  if (!window._usuarioUid || !window.sincronizarListaAgora) { toast('📴 Não conectado à conta Google.', true); return; }
+  if (!navigator.onLine) { toast('📴 Sem internet no momento — vou enviar assim que voltar.', true); }
+  window.sincronizarListaAgora(nome, true);
+}
+window.addEventListener('offline', renderStatusSync);
+
 function carregarConferencia() {
   try { return JSON.parse(localStorage.getItem(CHAVE_CONF)) || []; }
   catch(e) { return []; }
 }
 
 function salvarConferencia(lista) {
+  marcarPendenteSync('conferencia');
   carimbarLista(CHAVE_CONF, lista);
   localStorage.setItem(CHAVE_CONF, JSON.stringify(lista));
   if (lista.some(i => typeof i.foto === 'string' && i.foto.startsWith('data:'))) agendarEnvioFotos();
@@ -5276,6 +5321,7 @@ function carregarQuebras() {
 }
 
 function salvarQuebras(lista) {
+  marcarPendenteSync('quebras');
   carimbarLista(CHAVE_QUEBRAS, lista);
   localStorage.setItem(CHAVE_QUEBRAS, JSON.stringify(lista));
   if (lista.some(i => typeof i.foto === 'string' && i.foto.startsWith('data:'))) agendarEnvioFotos();
@@ -5515,6 +5561,7 @@ function carregarErros() {
 }
 
 function salvarErros(lista) {
+  marcarPendenteSync('erros');
   carimbarLista(CHAVE_ERROS, lista);
   localStorage.setItem(CHAVE_ERROS, JSON.stringify(lista));
   if (window._usuarioUid) sincronizarErrosFirestore(window._usuarioUid);
@@ -6189,7 +6236,7 @@ document.addEventListener('keydown', e => {
   if (e.key === 'Escape' && document.getElementById('mapa-viewport')?.classList.contains('tela-cheia') && !document.getElementById('mapa-folha')) alternarTelaCheiaMapa();
 });
 
-const VERSAO_APP = '2026.11.06';
+const VERSAO_APP = '2026.11.06b';
 // ===================== MAPA LIVRE POR PÁTIO (desenho editável) =====================
 // Cada pátio é um desenho com 3 tipos de peça (unidades: 1 apt ≈ 28 x 26):
 //   { t:'rua',  rua:42, x,y,w,h, cor, rotulo? }                 → bloco colorido da rua
@@ -7633,26 +7680,67 @@ function mesclarComNuvem(nome, dadosNuvem) {
   return { mudouLocal, precisaEnviar, paraNuvem, tomb };
 }
 const _syncEmAndamento = {};
+const _retrySync = {};
+// Promessa com limite de tempo (sinal ruim não pode deixar a sincronização travada para sempre)
+const comTempoLimite = (prom, ms) => Promise.race([prom, new Promise((_, rej) => setTimeout(() => rej(Object.assign(new Error('tempo esgotado'), { code: 'timeout' })), ms))]);
+function agendarNovaTentativa(nome, uid) {
+  const t = _retrySync[nome] || { n: 0 };
+  clearTimeout(t.timer);
+  const espera = Math.min(30000, 4000 * Math.pow(1.6, t.n)); // 4s, 6s, 10s... até 30s
+  t.n++;
+  t.timer = setTimeout(() => sincronizarLista(nome, uid), espera);
+  _retrySync[nome] = t;
+}
 async function sincronizarLista(nome, uid) {
   // evita duas sincronizações da mesma lista ao mesmo tempo (a 2ª roda logo depois)
   if (_syncEmAndamento[nome]) { _syncEmAndamento[nome + '_de_novo'] = true; return false; }
   _syncEmAndamento[nome] = true;
-  let mudouLocal = false;
+  estadoSync[nome] = { ...(estadoSync[nome] || {}), enviando: true };
+  renderStatusSync();
+  let mudouLocal = false, sucesso = false;
   try {
     const cfg = SYNC_LISTAS[nome];
-    const snap = await getDoc(cfg.ref(uid));
+    const snap = await comTempoLimite(getDoc(cfg.ref(uid)), 20000);
     const r = mesclarComNuvem(nome, snap.exists() ? snap.data() : {});
     mudouLocal = r.mudouLocal;
     if (!snap.exists() || r.precisaEnviar) {
-      await setDoc(cfg.ref(uid), { [cfg.campo]: r.paraNuvem, removidos: r.tomb, atualizadoEm: serverTimestamp() });
+      await comTempoLimite(setDoc(cfg.ref(uid), { [cfg.campo]: r.paraNuvem, removidos: r.tomb, atualizadoEm: serverTimestamp() }), 30000);
     }
-  } catch (e) { console.error('Erro ao sincronizar ' + nome + ':', e); }
+    sucesso = true;
+    if (_retrySync[nome]) { clearTimeout(_retrySync[nome].timer); _retrySync[nome] = { n: 0 }; }
+    estadoSync[nome] = { ok: Date.now(), pendente: !!_syncEmAndamento[nome + '_de_novo'] };
+  } catch (e) {
+    console.error('Erro ao sincronizar ' + nome + ':', e);
+    estadoSync[nome] = { ...(estadoSync[nome] || {}), enviando: false, pendente: true, erro: e?.code || e?.message || 'erro' };
+    agendarNovaTentativa(nome, uid); // tenta de novo sozinho até conseguir
+  }
   finally {
     _syncEmAndamento[nome] = false;
+    if (estadoSync[nome]) estadoSync[nome].enviando = false;
+    renderStatusSync();
     if (_syncEmAndamento[nome + '_de_novo']) { _syncEmAndamento[nome + '_de_novo'] = false; sincronizarLista(nome, uid); }
+  }
+  if (mudouLocal) {
+    if (nome === 'conferencia' && document.getElementById('pag-conferencia')?.classList.contains('ativa')) renderConferencia();
+    if (nome === 'quebras' && document.getElementById('pag-quebras')?.classList.contains('ativa')) renderQuebras();
   }
   return mudouLocal;
 }
+window.sincronizarListaAgora = async (nome, avisar) => {
+  if (_retrySync[nome]) _retrySync[nome].n = 0;
+  await sincronizarLista(nome, window._usuarioUid);
+  const e = estadoSync[nome] || {};
+  if (avisar) toast(e.pendente ? '⚠️ Ainda não foi possível enviar — tentando de novo sozinho' : '☁️ Sincronizado!', !!e.pendente);
+};
+// Internet voltou → envia tudo que ficou guardado no aparelho
+window.addEventListener('online', () => {
+  if (!window._usuarioUid) return;
+  ['conferencia', 'quebras', 'erros', 'estoque'].forEach(n => { if (_retrySync[n]) _retrySync[n].n = 0; sincronizarLista(n, window._usuarioUid); });
+  window.sincronizarMovimentacoesFirestore && window.sincronizarMovimentacoesFirestore(window._usuarioUid);
+  window.sincronizarUsuariosFirestore && window.sincronizarUsuariosFirestore(window._usuarioUid);
+  window.recarregarConfigNuvem && window.recarregarConfigNuvem(false);
+  renderStatusSync();
+});
 window._fbSyncConf = uid => sincronizarLista('conferencia', uid);
 window.sincronizarConferenciaFirestore = uid => sincronizarLista('conferencia', uid);
 window.sincronizarQuebrasFirestore = uid => sincronizarLista('quebras', uid);
@@ -7715,7 +7803,10 @@ window.sincronizarMovimentacoesFirestore = async function(uid) {
     if (!snap.exists() || jsonEstavel(d.movimentacoes || []) !== jsonEstavel(merged) || (d.limpoEm || 0) !== limpo) {
       await setDoc(refMovimentacoes(uid), { movimentacoes: merged, limpoEm: limpo, atualizadoEm: serverTimestamp() });
     }
-  } catch(e) { console.error('Erro ao sincronizar movimentações:', e); }
+  } catch(e) {
+    console.error('Erro ao sincronizar movimentações:', e);
+    clearTimeout(window._retryMovs); window._retryMovs = setTimeout(() => window.sincronizarMovimentacoesFirestore(uid), 15000);
+  }
 };
 
 window.sincronizarFotosFirestore = async function(uid) {
@@ -7873,6 +7964,7 @@ onAuthStateChanged(auth, async user => {
 
     // Carrega dados iniciais do Firestore
     await carregarDoFirestore(user.uid);
+    renderStatusSync();
     // Fotos da Conferência/Quebras que ainda estão só neste aparelho → nuvem
     if (temFotoPendente()) agendarEnvioFotos(2000);
 
