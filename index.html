@@ -1600,6 +1600,34 @@ PASSOS PARA RODAR NO GITHUB PAGES:
     .ed-nome { max-width:96px; font-size:11px; flex:0 0 auto; }
 
     html.tema-escuro .mapa-cel.vazia .mapa-num, html.tema-escuro .mapa-cel.multi > .mapa-num { color:#d6ddd3 !important; }
+
+    /* ===== estado da sincronização ===== */
+    .sync-status { display:flex; align-items:center; gap:8px; flex-wrap:wrap; font-size:12px; font-weight:600; border-radius:10px; padding:8px 10px; margin-bottom:10px; line-height:1.4; }
+    .sync-status:empty { display:none; }
+    .sync-status span { flex:1 1 180px; }
+    .sync-status button { border:none; border-radius:8px; padding:6px 10px; font-size:12px; font-weight:700; cursor:pointer; background:rgba(0,0,0,.08); color:inherit; }
+    .sync-status.ok { background:#eaf7ec; color:#1a6b32; }
+    .sync-status.enviando { background:#eef3fb; color:#1a4f8b; }
+    .sync-status.aviso { background:#fff3e0; color:#8a4b00; }
+    html.tema-escuro .sync-status.ok { background:rgba(90,170,90,.2); color:#9fe0a5; }
+    html.tema-escuro .sync-status.enviando { background:rgba(70,130,210,.22); color:#9cc7f2; }
+    html.tema-escuro .sync-status.aviso { background:rgba(230,126,34,.22); color:#f5b971; }
+    html.tema-escuro .sync-status button { background:rgba(255,255,255,.12); }
+
+    .diag-box { font-size:13px; line-height:1.6; background:var(--bege); border-radius:10px; padding:10px 12px; }
+    .diag-lista { margin-top:8px; padding-top:8px; border-top:1px solid rgba(0,0,0,.08); }
+    .diverg-linha { display:flex; gap:10px; align-items:flex-start; padding:8px 0; border-bottom:1px solid rgba(0,0,0,.06); cursor:pointer; font-size:13px; line-height:1.45; -webkit-tap-highlight-color:transparent; }
+    .diverg-caixa { flex:0 0 auto; width:22px; height:22px; margin-top:1px; border-radius:6px; border:2px solid #9aa79a; background:#fff; display:flex; align-items:center; justify-content:center; font-size:14px; font-weight:900; color:#fff; }
+    .diverg-linha.marcado .diverg-caixa { background:#2e7d32; border-color:#2e7d32; }
+    .diverg-linha.marcado .diverg-caixa::after { content:'✓'; }
+    .diverg-dest { color:#2e7d32; }
+    html.tema-escuro .diverg-caixa { background:#111811; border-color:#4a5a4a; }
+    html.tema-escuro .diverg-linha.marcado .diverg-caixa { background:#3e9a44; border-color:#3e9a44; }
+    html.tema-escuro .diverg-dest { color:#7fd37f; }
+    html.tema-escuro .diverg-linha { border-bottom-color:rgba(255,255,255,.07); }
+    .diag-btn { border:1.5px solid #d0c9bb; background:#fff; border-radius:8px; padding:7px 10px; font-size:12px; font-weight:700; cursor:pointer; color:var(--texto); }
+    html.tema-escuro .diag-box { background:#1f2a1f; }
+    html.tema-escuro .diag-btn { background:#111811; border-color:#334033; }
 </style>
 </head>
 <body>
@@ -1952,7 +1980,7 @@ PASSOS PARA RODAR NO GITHUB PAGES:
       <div class="card-titulo">📲 Aplicativo</div>
       <div style="display:flex;align-items:center;gap:12px">
         <img src="icon-192.png" alt="" style="width:56px;height:56px;border-radius:14px;box-shadow:0 2px 8px rgba(0,0,0,.15)" onerror="this.remove()" />
-        <div style="flex:1;font-size:13px;color:var(--texto-suave)" id="config-app-status">Instale o app na tela inicial do celular ou do computador.</div>
+        <div style="flex:1;font-size:13px;color:var(--texto-suave)"><div id="config-app-status">Instale o app na tela inicial do celular ou do computador.</div><div id="config-app-versao" style="font-size:11px;margin-top:4px"></div></div>
       </div>
       <button class="btn-instalar-app config-instalar" onclick="instalarApp()" style="margin-top:12px">📲 Instalar app</button>
     </div>
@@ -1996,6 +2024,19 @@ PASSOS PARA RODAR NO GITHUB PAGES:
         <input type="checkbox" id="cfg-exigir-login" onchange="alternarExigirLogin(this)" />
         <span><b>Exigir login de usuário</b><br><small>Sem login, o aparelho só mostra a aba Config até alguém entrar com usuário e senha.</small></span>
       </label>
+    </div>
+
+    <div class="card" id="config-diag-card" style="margin-top:12px">
+      <div class="card-titulo">🩺 Sincronização</div>
+      <p style="font-size:13px;color:var(--texto-suave);margin-bottom:10px">Compara este aparelho com a nuvem. Use no celular e no PC se algo não aparecer no outro aparelho.</p>
+      <button onclick="executarDiagnostico()" style="width:100%;padding:11px;border:none;border-radius:10px;background:#1a2e1a;color:#fff;font-weight:700;font-size:14px;cursor:pointer">🩺 Verificar agora</button>
+      <div id="diag-resultado" style="margin-top:10px"></div>
+      <div style="margin-top:14px;padding-top:12px;border-top:1px solid rgba(0,0,0,.08)">
+        <div style="font-weight:700;font-size:14px">🔁 Endereços x Movimentações</div>
+        <p style="font-size:13px;color:var(--texto-suave);margin:4px 0 8px">Procura pisos da Conferência que voltaram para o endereço antigo, mesmo tendo sido movidos (a aba Movimentações guarda o destino).</p>
+        <button onclick="verificarEnderecosMov()" style="width:100%;padding:11px;border:none;border-radius:10px;background:#2c5f8a;color:#fff;font-weight:700;font-size:14px;cursor:pointer">🔁 Verificar endereços</button>
+        <div id="diag-enderecos" style="margin-top:10px"></div>
+      </div>
     </div>
 
     <div class="card" style="margin-top:12px">
@@ -2106,6 +2147,7 @@ PASSOS PARA RODAR NO GITHUB PAGES:
     </div>
 
     <!-- Resumo e lista -->
+    <div id="conf-sync-status" class="sync-status"></div>
     <div id="conf-resumo"></div>
     <div id="conf-lista"></div>
 
@@ -2141,6 +2183,7 @@ PASSOS PARA RODAR NO GITHUB PAGES:
     </div>
 
     <!-- Resumo -->
+    <div id="quebras-sync-status" class="sync-status"></div>
     <div id="quebras-resumo"></div>
 
     <!-- Lista -->
@@ -2164,6 +2207,7 @@ PASSOS PARA RODAR NO GITHUB PAGES:
       <input type="search" id="mapa-busca" placeholder="🔍 Buscar piso, lote ou endereço..." oninput="buscarNoMapa()" style="width:100%;box-sizing:border-box;padding:11px 14px;font-size:14px;border-radius:10px;border:1.5px solid #d0c9bb;background:#fff;margin-bottom:10px" />
       <div style="display:flex;flex-wrap:wrap;gap:6px;align-items:center">
         <span style="flex:1"></span>
+        <button class="mapa-fonte-btn" onclick="window.recarregarConfigNuvem && window.recarregarConfigNuvem(true)" title="Buscar o desenho mais recente na nuvem">🔄 Atualizar</button>
         <button class="mapa-fonte-btn" id="btn-editar-mapa" onclick="entrarEditorMapa()">✏️ Editar mapa</button>
       </div>
       <div id="mapa-resumo" style="font-size:13px;margin-top:10px;line-height:1.6"></div>
@@ -2532,18 +2576,90 @@ function tsDataBR(str) {
 // Cada item ganha "_ts" (hora da última alteração). Exclusões ficam registradas em "<chave>__removidos".
 // Ao sincronizar, as listas dos aparelhos são JUNTADAS item a item (vence a alteração mais recente),
 // em vez de uma lista inteira sobrescrever a outra.
+// Hora "certa" para carimbar alterações: hora do aparelho corrigida pela diferença medida com o servidor do Google
+// (celular/PC com relógio adiantado ou atrasado não "ganham" nem "perdem" alterações por causa disso)
+window._relogioOffset = (() => { try { return parseInt(localStorage.getItem('estoque_relogio_offset')) || 0; } catch (e) { return 0; } })();
+function agoraSync() { return Date.now() - (window._relogioOffset || 0); }
 function tsItem(i) {
   if (!i) return 0;
-  return i._ts || tsDataBR(i.dataAlteracao || i.editadoEm || i.criadoEm || i.data) || 0;
+  return i._ts || tsDataBR(i.dataAlteracao || i.editadoEm || i.criadoEm || i.data) || (typeof i.ts === 'number' ? i.ts : 0) || tsDataBR(i.dataHora) || 0;
 }
-function _semMeta(i) { const c = { ...i }; delete c._ts; delete c.fotos; if (!(typeof c.foto === 'string' && c.foto.startsWith('http'))) delete c.foto; return JSON.stringify(c); }
+function _semMeta(i) { const c = { ...i }; delete c._ts; delete c._f; delete c._b; delete c.fotos; if (!(typeof c.foto === 'string' && c.foto.startsWith('http'))) delete c.foto; return jsonEstavel(c); }
+// ----- Sincronização CAMPO A CAMPO -----
+// Além do "_ts" do item, cada campo alterado guarda a hora da sua alteração em "_f" ({campo: hora}).
+// "_b" = hora dos campos que não estão em "_f". Assim, se o celular muda o ENDEREÇO e o PC muda o STATUS
+// do mesmo piso, as duas alterações são mantidas (antes, a do PC apagava a do celular).
+const _CAMPOS_FORA_MESCLA = new Set(['_ts', '_f', '_b', 'fotos']);
+function _valCampo(o, k) { const v = o[k]; if (k === 'foto' && !(typeof v === 'string' && v.startsWith('http'))) return undefined; return v; }
+function _baseItem(i) { return i._b != null ? i._b : tsItem(i); }
+function tsCampo(i, k) { return (i._f && i._f[k] != null) ? i._f[k] : _baseItem(i); }
+function _mexidoVersaoAntiga(i) {
+  if (i._b == null) return false;
+  let m = i._b;
+  if (i._f) Object.values(i._f).forEach(t => { if (t > m) m = t; });
+  return tsItem(i) > m;
+}
+function camposMudados(p, i) {
+  const ks = new Set([...Object.keys(p), ...Object.keys(i)]);
+  return [...ks].filter(k => !_CAMPOS_FORA_MESCLA.has(k) && jsonEstavel(_valCampo(p, k)) !== jsonEstavel(_valCampo(i, k)));
+}
+// Junta duas versões do mesmo item: cada campo fica com a alteração mais recente daquele campo
+function mesclarItem(l, n) {
+  if (jsonEstavel(l) === jsonEstavel(n)) return l;
+  const tl = tsItem(l), tn = tsItem(n);
+  const ks = new Set();
+  [l, n, l._f || {}, n._f || {}].forEach(o => Object.keys(o).forEach(k => ks.add(k)));
+  _CAMPOS_FORA_MESCLA.forEach(k => ks.delete(k));
+  // Item mexido por um aparelho com VERSÃO ANTIGA do app: "_ts" mais novo que todos os carimbos de campo.
+  // Não dá para saber qual campo ele mudou; num empate de carimbo com valor diferente, a mudança veio dele.
+  const antigoL = _mexidoVersaoAntiga(l), antigoN = _mexidoVersaoAntiga(n);
+  const r = {}, tsc = {};
+  ks.forEach(k => {
+    const al = tsCampo(l, k), an = tsCampo(n, k);
+    const vl = _valCampo(l, k), vn = _valCampo(n, k);
+    let usarL, t = Math.max(al, an);
+    if (al !== an) usarL = al > an;
+    else if (antigoL !== antigoN && jsonEstavel(vl) !== jsonEstavel(vn)) { usarL = antigoL; t = Math.max(t, usarL ? tl : tn); }
+    else if (tl !== tn) usarL = tl > tn;
+    else usarL = jsonEstavel(vl) >= jsonEstavel(vn); // empate total: regra fixa, todos os aparelhos chegam ao mesmo resultado
+    const v = usarL ? vl : vn;
+    if (v !== undefined) r[k] = v;
+    tsc[k] = t;
+  });
+  r._ts = Math.max(tl, tn);
+  // O resultado da junção é diferente da versão "mais nova"? Então ele vira a mais nova (+1),
+  // senão um aparelho com versão antiga do app (que olha só o "_ts") ficaria com a dele e reenviaria sem parar.
+  const semR = _semMeta(r);
+  const juntou = (tl === r._ts && _semMeta(l) !== semR) || (tn === r._ts && _semMeta(n) !== semR);
+  if (juntou) r._ts += 1;
+  const base = Math.max(_baseItem(l), _baseItem(n));
+  const f = {};
+  Object.entries(tsc).forEach(([k, t]) => { if (t !== base) f[k] = t; });
+  if (juntou) f._m = r._ts; // marca da junção (não é um campo do item)
+  if (Object.keys(f).length) r._f = f;
+  if (r._f || base !== r._ts) r._b = base;
+  // dados que só existem neste aparelho (foto ainda não enviada, fotos do cadastro)
+  if (r.foto == null && l.foto != null) r.foto = l.foto;
+  const fo = l.fotos != null ? l.fotos : n.fotos;
+  if (fo != null) r.fotos = fo;
+  return r;
+}
 function carregarTomb(chave) { try { return JSON.parse(localStorage.getItem(chave + '__removidos')) || {}; } catch (e) { return {}; } }
 function salvarTomb(chave, t) { try { localStorage.setItem(chave + '__removidos', JSON.stringify(t || {})); } catch (e) {} }
 function lerListaLS(chave) { try { return JSON.parse(localStorage.getItem(chave)) || []; } catch (e) { return []; } }
 // Marca o que o usuário mudou/criou/excluiu antes de gravar a lista no aparelho
-function carimbarLista(chave, nova) {
+function carimbarLista(chave, nova) { carimbarListaMud(chave, nova); return nova; }
+// Igual ao carimbarLista, mas devolve o que mudou: { agora, novos: [id], mudados: {id: [campos]}, removidos: [id] }
+function carimbarListaMud(chave, nova) {
+  const mudancas = { agora: 0, novos: [], mudados: {}, removidos: [] };
   const anterior = lerListaLS(chave);
-  const agora = Date.now();
+  // "Relógio lógico": a nova alteração fica sempre depois da mais recente já vista neste aparelho
+  // (protege contra celular/PC com relógio atrasado ou adiantado)
+  let maiorVisto = 0;
+  anterior.forEach(i => { if (i && i._ts > maiorVisto) maiorVisto = i._ts; });
+  Object.values(carregarTomb(chave)).forEach(t => { if (t > maiorVisto) maiorVisto = t; });
+  const agora = Math.max(agoraSync(), maiorVisto + 1);
+  mudancas.agora = agora;
   const prev = new Map(anterior.filter(i => i && i.id != null).map(i => [String(i.id), i]));
   const tomb = carregarTomb(chave);
   let mudouTomb = false;
@@ -2553,14 +2669,46 @@ function carimbarLista(chave, nova) {
     const id = String(i.id);
     ids.add(id);
     const p = prev.get(id);
-    if (!p || _semMeta(p) !== _semMeta(i)) {
-      i._ts = agora;
+    if (!p) {
+      // item novo: todos os campos nascem agora
+      i._ts = agora; delete i._f; delete i._b;
       if (tomb[id]) { delete tomb[id]; mudouTomb = true; }
-    } else if (p._ts && !i._ts) i._ts = p._ts;
+      mudancas.novos.push(id);
+      return;
+    }
+    const mud = (JSON.stringify(p) === JSON.stringify(i)) ? [] : camposMudados(p, i); // atalho: item idêntico
+    if (mud.length) {
+      const f = { ...(p._f || {}) };
+      mud.forEach(k => { f[k] = agora; });
+      i._b = _baseItem(p); i._f = f; i._ts = agora;
+      if (tomb[id]) { delete tomb[id]; mudouTomb = true; }
+      mudancas.mudados[id] = mud;
+    } else {
+      if (p._ts && !i._ts) i._ts = p._ts;
+      if (p._f && !i._f) i._f = p._f;
+      if (p._b != null && i._b == null) i._b = p._b;
+    }
   });
-  prev.forEach((p, id) => { if (!ids.has(id)) { tomb[id] = agora; mudouTomb = true; } });
+  prev.forEach((p, id) => { if (!ids.has(id)) { tomb[id] = agora; mudouTomb = true; mudancas.removidos.push(id); } });
   if (mudouTomb) salvarTomb(chave, tomb);
-  return nova;
+  return mudancas;
+}
+
+// ===================== TEMPO REAL: o que ainda não chegou na nuvem =====================
+// "<chave>__pend" = { id: hora da alteração } — só sai daqui quando o servidor confirma que recebeu.
+// Assim, mesmo fechando o app sem internet, nada se perde: ao abrir de novo, é enviado.
+function carregarPend(chave) { try { return JSON.parse(localStorage.getItem(chave + '__pend')) || {}; } catch (e) { return {}; } }
+function salvarPend(chave, p) { try { if (Object.keys(p || {}).length) localStorage.setItem(chave + '__pend', JSON.stringify(p)); else localStorage.removeItem(chave + '__pend'); } catch (e) {} }
+// Grava a lista no aparelho e manda NA HORA só o que mudou para os outros aparelhos
+function salvarListaTempoReal(nome, chave, lista) {
+  const mud = carimbarListaMud(chave, lista);
+  const ids = [...mud.novos, ...Object.keys(mud.mudados), ...mud.removidos];
+  if (ids.length) { const p = carregarPend(chave); ids.forEach(id => { p[id] = mud.agora; }); salvarPend(chave, p); }
+  localStorage.setItem(chave, JSON.stringify(lista));
+  if (ids.length) {
+    marcarPendenteSync(nome);
+    if (window.enviarMudancasTempoReal) { try { window.enviarMudancasTempoReal(nome, mud, lista); } catch (e) { console.error(e); } }
+  }
 }
 // Junta lista do aparelho + lista da nuvem
 function mesclarListas(local, nuvem, tombL, tombN, camposLocais = ['foto', 'fotos']) {
@@ -2571,7 +2719,7 @@ function mesclarListas(local, nuvem, tombL, tombN, camposLocais = ['foto', 'foto
   const mapa = new Map();
   const locMap = new Map((local || []).filter(i => i && i.id != null).map(i => [String(i.id), i]));
   (nuvem || []).forEach(i => { if (i && i.id != null) mapa.set(String(i.id), i); });
-  locMap.forEach((i, id) => { const n = mapa.get(id); if (!n || tsItem(i) >= tsItem(n)) mapa.set(id, i); });
+  locMap.forEach((i, id) => { const n = mapa.get(id); mapa.set(id, n ? mesclarItem(i, n) : i); });
   const lista = [];
   mapa.forEach((i, id) => {
     if (tomb[id] && tomb[id] >= tsItem(i)) return; // excluído depois da última alteração
@@ -2738,6 +2886,7 @@ function irPara(pag) {
   if (pag === 'erros') renderErros();
   if (pag === 'conferencia' || pag === 'quebras') posicionarFormConf(pag);
   if (pag === 'conferencia') renderConferencia();
+  if (pag === 'conferencia' || pag === 'quebras') renderStatusSync();
   if (pag === 'quebras') renderQuebras();
   if (pag === 'mapa') { renderMapa(); if (!mapaView.ajustadoVisivel) { mapaView.ajustadoVisivel = true; requestAnimationFrame(() => ajustarMapa(false, false)); } }
 }
@@ -4075,7 +4224,7 @@ function carregarMovimentacoes() {
 }
 
 function salvarMovimentacoes(movs) {
-  localStorage.setItem(CHAVE_MOV, JSON.stringify(movs));
+  salvarListaTempoReal('movimentacoes', CHAVE_MOV, movs);
 }
 // Sincronização entre aparelhos: junta as listas por id e respeita o momento em que a lista foi limpa
 const CHAVE_MOV_LIMPO = 'estoque_mov_limpo_v1';
@@ -4104,7 +4253,7 @@ function registrarMovimentacao({ pisoId, pisoNome, lote, bitola, tonalidade, ori
   const movs = carregarMovimentacoes();
   movs.unshift({
     ...(extra || {}),
-    ts: Date.now(),
+    ts: agoraSync(),
     id: `${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
     pisoId,
     pisoNome,
@@ -4674,16 +4823,143 @@ async function enviarFotosPendentes() {
 }
 window.addEventListener('online', () => agendarEnvioFotos(1500));
 
+// ===================== DIAGNÓSTICO (tela na Config) =====================
+let _ultimoDiag = null;
+async function executarDiagnostico() {
+  const el = document.getElementById('diag-resultado');
+  if (!window.diagnosticoSync) { el.innerHTML = '<p style="color:#c0392b">Firebase não carregou neste aparelho.</p>'; return; }
+  el.innerHTML = '<p style="font-size:13px">⏳ Verificando com a nuvem...</p>';
+  const r = await window.diagnosticoSync();
+  _ultimoDiag = r;
+  const nomes = { conferencia: '📋 Conferência', quebras: '💔 Quebras' };
+  const durRel = s => { s = Math.abs(s); return s >= 3600 ? `${Math.floor(s / 3600)}h${String(Math.round((s % 3600) / 60)).padStart(2, '0')}` : `${Math.round(s / 60)} min`; };
+  const rel = r.relogio != null ? (Math.abs(r.relogio) <= 60 ? `✅ certo (${r.relogio}s)` : `⚠️ ${r.relogio > 0 ? 'adiantado' : 'atrasado'} ${durRel(r.relogio)} <span style="font-weight:400">(o app já corrige sozinho)</span>`) : (r.relogioErro ? `não medido (${r.relogioErro})` : '-');
+  const podeEd = podeEditar('conferencia');
+  el.innerHTML = `<div class="diag-box">
+    <div>🏷️ Versão: <b>${r.versao}</b></div>
+    <div>👤 Conta Google: <b>${escMapa(r.conta)}</b> <span style="opacity:.7">(${r.uid})</span></div>
+    <div>🌐 Internet: <b>${r.online ? 'sim' : 'não'}</b> · 🕐 Relógio: <b>${rel}</b></div>
+    ${Object.entries(r.listas).map(([n, i]) => {
+      if (i.erro) return `<div class="diag-lista"><b>${nomes[n]}</b><br>⚠️ Erro ao ler a nuvem: ${escMapa(i.erro)}</div>`;
+      const d = i.diferentes || {};
+      const tudoIgual = !i.soAparelho && !i.soNuvem && !d.aparelhoMaisNovo && !d.nuvemMaisNova && !d.empate;
+      return `<div class="diag-lista"><b>${nomes[n]}</b> — aparelho ${i.aparelho} · nuvem ${i.nuvem} itens (${i.tamanhoKB} KB${i.maiorPedacoKB != null ? ` · ⚡ tempo real, maior pedaço ${i.maiorPedacoKB} KB` : ''})<br>
+        ${i.pendentes ? `⏳ ${i.pendentes} alteração(ões) deste aparelho aguardando a nuvem confirmar<br>` : ''}
+        ${tudoIgual ? '✅ Igual à nuvem' : `
+        ${i.soAparelho ? `📱 ${i.soAparelho} só neste aparelho<br>` : ''}${i.soNuvem ? `☁️ ${i.soNuvem} só na nuvem<br>` : ''}
+        ${d.aparelhoMaisNovo ? `📱 ${d.aparelhoMaisNovo} mais novos aqui<br>` : ''}${d.nuvemMaisNova ? `☁️ ${d.nuvemMaisNova} mais novos na nuvem<br>` : ''}${d.empate ? `⚖️ ${d.empate} diferentes com a mesma hora<br>` : ''}
+        ${podeEd ? `<div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:6px">
+          <button class="diag-btn" onclick="recuperarSync('${n}','aparelho')">📤 Enviar a versão deste aparelho</button>
+          <button class="diag-btn" onclick="recuperarSync('${n}','nuvem')">📥 Usar a versão da nuvem</button></div>` : ''}`}
+        ${i.estado?.erro ? `<br><span style="color:#c0392b">Último erro de envio: ${escMapa(i.estado.erro)}</span>` : ''}</div>`;
+    }).join('')}
+    <button class="diag-btn" style="margin-top:8px" onclick="copiarTexto(JSON.stringify(_ultimoDiag, null, 1)).then(ok=>toast(ok?'📋 Relatório copiado — cole na conversa':'❌ Não copiou', !ok))">📋 Copiar relatório</button>
+  </div>`;
+}
+// ----- Recuperação: pisos que voltaram para o endereço antigo depois de um "mover" -----
+let _divergEnd = [];
+function enderecosDivergentes() {
+  const ultima = new Map();
+  carregarMovimentacoes().forEach(m => {
+    if (!m || !m.confId || !m.destino) return;
+    const u = ultima.get(String(m.confId));
+    if (!u || tsMov(m) > tsMov(u)) ultima.set(String(m.confId), m);
+  });
+  const res = [];
+  carregarConferencia().forEach(i => {
+    const m = ultima.get(String(i.id)); if (!m) return;
+    const atual = String(i.endereco || '').trim();
+    if (atual === String(m.destino).trim()) return;          // está onde foi movido → ok
+    if (atual !== String(m.origem || '').trim()) return;     // foi mudado por outro caminho → não mexe
+    res.push({ id: i.id, nome: i.nome, lote: i.lote, atual, destino: String(m.destino).trim(), quem: m.responsavel || '', quando: m.dataHora || '' });
+  });
+  return res.sort((a, b) => a.destino.localeCompare(b.destino, 'pt-BR', { numeric: true }));
+}
+function verificarEnderecosMov() {
+  const el = document.getElementById('diag-enderecos');
+  _divergEnd = enderecosDivergentes();
+  if (!_divergEnd.length) { el.innerHTML = '<div class="diag-box">✅ Todos os pisos movidos estão no endereço de destino.</div>'; return; }
+  const podeEd = podeEditar('conferencia');
+  el.innerHTML = `<div class="diag-box">
+    <b>⚠️ ${_divergEnd.length} piso(s) voltaram para o endereço antigo:</b>
+    <div style="max-height:320px;overflow:auto;margin-top:6px">
+    ${_divergEnd.map((d, k) => `<div class="diverg-linha${podeEd ? ' marcado' : ''}" data-k="${k}" ${podeEd ? `onclick="this.classList.toggle('marcado')"` : ''}>
+      ${podeEd ? `<span class="diverg-caixa"></span>` : ''}
+      <span><b>${escMapa(d.nome || '')}</b>${d.lote ? ` <span style="opacity:.7">· Lote ${escMapa(d.lote)}</span>` : ''}<br>
+      📍 está em <b>${escMapa(d.atual)}</b> → deveria estar em <b class="diverg-dest">${escMapa(d.destino)}</b><br>
+      <span style="font-size:11px;opacity:.7">movido ${d.quem ? 'por ' + escMapa(d.quem) + ' ' : ''}${d.quando ? 'em ' + escMapa(d.quando) : ''}</span></span></div>`).join('')}
+    </div>
+    ${podeEd ? `<button class="diag-btn" style="margin-top:8px;background:#2e7d32;color:#fff" onclick="corrigirEnderecosMov()">✅ Levar os marcados para o destino</button>` : '<div style="margin-top:6px;opacity:.8">Sem permissão para editar a Conferência.</div>'}
+  </div>`;
+}
+function corrigirEnderecosMov() {
+  if (!exigirEdicao('conferencia')) return;
+  const marcados = [...document.querySelectorAll('.diverg-linha.marcado')].map(c => _divergEnd[+c.dataset.k]).filter(Boolean);
+  if (!marcados.length) { toast('Nenhum piso marcado.', true); return; }
+  const lista = carregarConferencia();
+  const agora = new Date().toLocaleString('pt-BR');
+  let n = 0;
+  marcados.forEach(d => {
+    const i = lista.find(x => x.id === d.id);
+    if (i && String(i.endereco || '').trim() === d.atual) { i.endereco = d.destino; i.editadoEm = agora; n++; }
+  });
+  salvarConferencia(lista);
+  toast(`✅ ${n} piso(s) levados para o endereço de destino`);
+  if (document.getElementById('pag-conferencia')?.classList.contains('ativa')) renderConferencia();
+  verificarEnderecosMov();
+}
+async function recuperarSync(nome, lado) {
+  const rotulo = nome === 'conferencia' ? 'Conferência' : 'Quebras';
+  if (lado === 'aparelho') {
+    if (!confirm(`Enviar a ${rotulo} DESTE aparelho para todos?\\n\\nOs itens que estão diferentes passam a valer como estão aqui. Itens que só existem na nuvem continuam.`)) return;
+    try { const n = await window.forcarVersaoAparelho(nome); toast(`📤 ${n} item(ns) enviados como versão mais nova`); }
+    catch (e) { toast('⚠️ Não foi possível enviar: ' + (e?.code || e?.message), true); }
+  } else {
+    if (!confirm(`Trocar a ${rotulo} deste aparelho pela versão da nuvem?\\n\\nAlterações feitas aqui que não chegaram na nuvem serão perdidas.`)) return;
+    try { const n = await window.usarVersaoNuvem(nome); toast(`📥 ${n} item(ns) carregados da nuvem`); }
+    catch (e) { toast('⚠️ Não foi possível ler a nuvem: ' + (e?.code || e?.message), true); }
+  }
+  if (nome === 'conferencia') renderConferencia(); else renderQuebras();
+  executarDiagnostico();
+}
+
+// ===================== ESTADO DA SINCRONIZAÇÃO (aparece na Conferência e nas Quebras) =====================
+var estadoSync = {}; // nome → { enviando, pendente, ok (hora), erro }
+function marcarPendenteSync(nome) { estadoSync[nome] = { ...(estadoSync[nome] || {}), pendente: true }; renderStatusSync(); }
+function renderStatusSync() {
+  const linhas = { conferencia: 'conf-sync-status', quebras: 'quebras-sync-status' };
+  Object.entries(linhas).forEach(([nome, id]) => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    const e = estadoSync[nome] || {};
+    let txt, cls;
+    if (!window._usuarioUid) { txt = '📴 Não conectado à conta Google — salvando só neste aparelho'; cls = 'aviso'; }
+    else if (e.conectado === false && navigator.onLine) { txt = e.pendente ? '🔌 Conectando com a nuvem... (alterações guardadas neste aparelho)' : '🔌 Conectando com a nuvem...'; cls = 'enviando'; }
+    else if (e.enviando) { txt = '⏳ Enviando para a nuvem...'; cls = 'enviando'; }
+    else if (e.pendente && !navigator.onLine) { txt = '📴 Sem internet — as alterações estão guardadas neste aparelho e serão enviadas quando a internet voltar. Não apague os dados do app.'; cls = 'aviso'; }
+    else if (e.pendente && e.erro) { txt = `⚠️ Ainda não enviado — tentando de novo... (${e.erro})`; cls = 'aviso'; }
+    else if (e.pendente) { txt = '⏳ Aguardando envio...'; cls = 'enviando'; }
+    else if (e.ok) { txt = `⚡ Tempo real ligado · tudo enviado`; cls = 'ok'; }
+    else { txt = '☁️ Sincronizando com a nuvem...'; cls = 'enviando'; }
+    el.className = 'sync-status ' + cls;
+    el.innerHTML = `<span>${txt}</span><button onclick="sincronizarAgora('${nome}')">🔄 Sincronizar agora</button>`;
+  });
+}
+function sincronizarAgora(nome) {
+  if (!window._usuarioUid || !window.sincronizarListaAgora) { toast('📴 Não conectado à conta Google.', true); return; }
+  if (!navigator.onLine) { toast('📴 Sem internet no momento — vou enviar assim que voltar.', true); }
+  window.sincronizarListaAgora(nome, true);
+}
+window.addEventListener('offline', renderStatusSync);
+
 function carregarConferencia() {
   try { return JSON.parse(localStorage.getItem(CHAVE_CONF)) || []; }
   catch(e) { return []; }
 }
 
 function salvarConferencia(lista) {
-  carimbarLista(CHAVE_CONF, lista);
-  localStorage.setItem(CHAVE_CONF, JSON.stringify(lista));
+  salvarListaTempoReal('conferencia', CHAVE_CONF, lista);
   if (lista.some(i => typeof i.foto === 'string' && i.foto.startsWith('data:'))) agendarEnvioFotos();
-  if (window._usuarioUid) sincronizarConferenciaFirestore(window._usuarioUid);
 }
 
 function setFiltroConfUsuario(usuario) {
@@ -5275,12 +5551,8 @@ function carregarQuebras() {
 }
 
 function salvarQuebras(lista) {
-  carimbarLista(CHAVE_QUEBRAS, lista);
-  localStorage.setItem(CHAVE_QUEBRAS, JSON.stringify(lista));
+  salvarListaTempoReal('quebras', CHAVE_QUEBRAS, lista);
   if (lista.some(i => typeof i.foto === 'string' && i.foto.startsWith('data:'))) agendarEnvioFotos();
-  if (window._usuarioUid && window.sincronizarQuebrasFirestore) {
-    window.sincronizarQuebrasFirestore(window._usuarioUid);
-  }
 }
 
 function setFiltroQuebraStatus(status, btn) {
@@ -5514,9 +5786,7 @@ function carregarErros() {
 }
 
 function salvarErros(lista) {
-  carimbarLista(CHAVE_ERROS, lista);
-  localStorage.setItem(CHAVE_ERROS, JSON.stringify(lista));
-  if (window._usuarioUid) sincronizarErrosFirestore(window._usuarioUid);
+  salvarListaTempoReal('erros', CHAVE_ERROS, lista);
 }
 
 function adicionarErro() {
@@ -6188,6 +6458,33 @@ document.addEventListener('keydown', e => {
   if (e.key === 'Escape' && document.getElementById('mapa-viewport')?.classList.contains('tela-cheia') && !document.getElementById('mapa-folha')) alternarTelaCheiaMapa();
 });
 
+const VERSAO_APP = '2026.11.06f';
+// ----- Aviso de versão nova (aba aberta há muito tempo no PC continuaria com a versão antiga) -----
+let _ultimaChecagemVersao = 0;
+async function checarNovaVersao() {
+  if (!/^https?:$/.test(location.protocol) || document.getElementById('aviso-versao')) return;
+  if (Date.now() - _ultimaChecagemVersao < 60000) return;
+  _ultimaChecagemVersao = Date.now();
+  try {
+    const r = await fetch(location.pathname, { cache: 'no-store' });
+    if (!r.ok) return;
+    const m = (await r.text()).match(/const VERSAO_APP = '([^']+)'/);
+    if (m && m[1] > VERSAO_APP) mostrarAvisoVersao(m[1]);
+  } catch (e) {}
+}
+function mostrarAvisoVersao(nova) {
+  if (document.getElementById('aviso-versao')) return;
+  const d = document.createElement('div');
+  d.id = 'aviso-versao';
+  d.style.cssText = 'position:fixed;left:0;right:0;top:0;z-index:100000;background:#e67e22;color:#fff;padding:calc(10px + env(safe-area-inset-top)) 14px 10px;display:flex;gap:10px;align-items:center;justify-content:center;flex-wrap:wrap;font-weight:700;font-size:14px;box-shadow:0 2px 10px rgba(0,0,0,.25)';
+  d.innerHTML = `<span>🆕 Saiu uma versão nova do app (${nova}). Atualize para a sincronização funcionar certo.</span>
+    <button onclick="location.reload()" style="background:#fff;color:#a04f00;border:none;border-radius:8px;padding:8px 16px;font-weight:800;font-size:14px;cursor:pointer">🔄 Atualizar</button>`;
+  document.body.appendChild(d);
+}
+setTimeout(checarNovaVersao, 20000);
+setInterval(checarNovaVersao, 10 * 60000);
+document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') checarNovaVersao(); });
+window.addEventListener('online', () => setTimeout(checarNovaVersao, 3000));
 // ===================== MAPA LIVRE POR PÁTIO (desenho editável) =====================
 // Cada pátio é um desenho com 3 tipos de peça (unidades: 1 apt ≈ 28 x 26):
 //   { t:'rua',  rua:42, x,y,w,h, cor, rotulo? }                 → bloco colorido da rua
@@ -6257,6 +6554,9 @@ function layoutRascunhoP2() {
 }
 
 function mapasSalvos() { const m = carregarConfigApp().mapasPatios; return m && typeof m === 'object' ? m : {}; }
+// Hora do salvamento de um desenho: sempre depois do último desenho conhecido daquele pátio
+// (um desenho gravado por um aparelho com relógio adiantado não pode "segurar" as alterações novas)
+function tsNovoMapa(p) { const a = mapasSalvos()[p]; return Math.max(agoraSync(), ((a && a.ts) || 0) + 1); }
 function patiosComMapa() {
   const set = new Set([2, 4, ...Object.keys(mapasSalvos()).map(Number)]);
   return [...set].filter(p => p > 0 && mapasSalvos()[p] !== null).sort((a, b) => a - b);
@@ -6320,7 +6620,9 @@ function novoPatioMapa() {
   if (!(p > 0 && p < 100)) { toast('⚠️ Número de pátio inválido.', true); return; }
   if (patiosComMapa().includes(p)) { selecionarPatioMapa(p); return; }
   const cfg = carregarConfigApp();
-  cfg.mapasPatios = { ...mapasSalvos(), [p]: { elementos: [] } };
+  cfg.mapasPatios = { ...mapasSalvos(), [p]: { elementos: [], ts: tsNovoMapa(p), em: agoraSync(), por: window._usuarioAtivo || '' } };
+  localStorage.setItem(CHAVE_CONFIG_APP, JSON.stringify(cfg));
+  if (window.enviarMapaTempoReal) window.enviarMapaTempoReal(p); // tempo real
   salvarConfigApp(cfg);
   selecionarPatioMapa(p);
   entrarEditorMapa();
@@ -6431,7 +6733,8 @@ function renderMapa() {
     resumo.innerHTML = `🗺️ <b>${ocupados}</b> apartamento(s) ocupado(s) · <b>${itens.length}</b> item(ns) no Pátio ${_pad2(P)}` +
       (foraDoMapa.length ? `<br><a href="#" onclick="mostrarForaDoMapa();return false" style="color:#b35c00;font-weight:700">⚠️ ${foraDoMapa.length} item(ns) com endereço fora do desenho — ver</a>` : '') +
       (semDesenho.length ? `<br><span style="color:var(--texto-suave)">ℹ️ ${semDesenho.length} item(ns) em pátios sem desenho (${[...new Set(semDesenho.map(i => _pad2(i.patio)))].join(', ')})</span>` : '') +
-      (layout.rascunho && !mapaEd.ativo ? `<br><span style="color:#b35c00">✏️ Desenho em rascunho — confira no galpão e ajuste em <b>Editar mapa</b>.</span>` : '');
+      (layout.rascunho && !mapaEd.ativo ? `<br><span style="color:#b35c00">✏️ Desenho em rascunho — confira no galpão e ajuste em <b>Editar mapa</b>.</span>` : '') +
+      (layout.ts && !mapaEd.ativo ? `<br><span style="font-size:11px;color:var(--texto-suave)">💾 Desenho salvo em ${new Date(Math.min(layout.em || layout.ts, agoraSync())).toLocaleString('pt-BR')}${layout.por ? ' por ' + escMapa(layout.por) : ''}</span>` : '');
   }
   const be = document.getElementById('btn-editar-mapa');
   if (be) be.style.display = usuarioAtivoIsMestre() && !mapaEd.ativo ? '' : 'none';
@@ -6458,12 +6761,16 @@ function sairEditorMapa(semPerguntar) {
 function salvarEditorMapa() {
   if (!usuarioAtivoIsMestre()) { toast('🔒 Apenas mestres/ADM podem salvar o mapa.', true); return; }
   const cfg = carregarConfigApp();
-  cfg.mapasPatios = { ...mapasSalvos(), [mapaEd.patio]: { elementos: mapaEd.els } };
-  salvarConfigApp(cfg);
+  cfg.mapasPatios = { ...mapasSalvos(), [mapaEd.patio]: { elementos: JSON.parse(JSON.stringify(mapaEd.els)), ts: tsNovoMapa(mapaEd.patio), em: agoraSync(), por: window._usuarioAtivo || '' } };
+  localStorage.setItem(CHAVE_CONFIG_APP, JSON.stringify(cfg));
+  if (window.enviarMapaTempoReal) window.enviarMapaTempoReal(mapaEd.patio); // tempo real: vai na hora para os outros aparelhos
+  const envio = salvarConfigApp(cfg);
   delete _cacheLayout[mapaEd.patio];
   const p = mapaEd.patio;
   sairEditorMapa(true);
-  toast(`✅ Desenho do Pátio ${_pad2(p)} salvo para todos os aparelhos`);
+  if (!window._usuarioUid) { toast(`💾 Desenho do Pátio ${_pad2(p)} salvo neste aparelho (sem conexão com a conta)`, true); return; }
+  toast(`⏳ Enviando desenho do Pátio ${_pad2(p)}...`);
+  Promise.resolve(envio).then(ok => { if (ok) toast(`☁️ Desenho do Pátio ${_pad2(p)} salvo e enviado para todos os aparelhos`); });
 }
 function edGuardar() { mapaEd.hist.push(JSON.stringify(mapaEd.els)); if (mapaEd.hist.length > 40) mapaEd.hist.shift(); mapaEd.alterado = true; }
 function edDesfazer() {
@@ -6900,7 +7207,29 @@ function salvarPermissoes(p) {
 }
 function salvarConfigApp(c) {
   localStorage.setItem(CHAVE_CONFIG_APP, JSON.stringify(c || {}));
-  if (window._usuarioUid && window.sincronizarUsuariosFirestore) sincronizarUsuariosFirestore(window._usuarioUid);
+  if (window._usuarioUid && window.sincronizarUsuariosFirestore) return sincronizarUsuariosFirestore(window._usuarioUid);
+  return Promise.resolve(false);
+}
+// Desenhos do mapa: cada pátio guarda a hora em que foi salvo (ts). Ao juntar aparelho + nuvem,
+// vence o desenho mais recente de cada pátio — um aparelho desatualizado não sobrescreve mais.
+function mesclarMapasPatios(local, nuvem) {
+  const out = {};
+  const L = local && typeof local === 'object' ? local : {}, N = nuvem && typeof nuvem === 'object' ? nuvem : {};
+  new Set([...Object.keys(L), ...Object.keys(N)]).forEach(k => {
+    const a = L[k], b = N[k];
+    if (a === undefined) { out[k] = b; return; }
+    if (b === undefined) { out[k] = a; return; }
+    const ta = (a && a.ts) || 0, tb = (b && b.ts) || 0;
+    out[k] = ta > tb ? a : b; // empate → nuvem
+  });
+  return out;
+}
+// Junta a config do aparelho com a da nuvem (mapas por hora; o resto vale o que veio)
+function mesclarConfigApp(local, nuvem, prioridade) {
+  const base = prioridade === 'local' ? { ...(nuvem || {}), ...(local || {}) } : { ...(local || {}), ...(nuvem || {}) };
+  const mapas = mesclarMapasPatios((local || {}).mapasPatios, (nuvem || {}).mapasPatios);
+  if (Object.keys(mapas).length) base.mapasPatios = mapas; else delete base.mapasPatios;
+  return base;
 }
 
 function usuarioAtivoValido() {
@@ -6996,14 +7325,27 @@ function aplicarPermissoesDaNuvem(dados) {
     const n = JSON.stringify(dados.permissoes || {});
     if (n !== JSON.stringify(carregarPermissoes())) { localStorage.setItem(CHAVE_PERMISSOES, n); mudou = true; }
   }
+  let mapaMudou = false;
   if (dados.config !== undefined) {
-    const n = JSON.stringify(dados.config || {});
-    if (n !== JSON.stringify(carregarConfigApp())) { localStorage.setItem(CHAVE_CONFIG_APP, n); mudou = true; }
+    const local = carregarConfigApp();
+    const junta = mesclarConfigApp(local, dados.config || {}, 'nuvem');
+    if (jsonEstavel(junta) !== jsonEstavel(local)) {
+      mapaMudou = jsonEstavel(junta.mapasPatios || {}) !== jsonEstavel(local.mapasPatios || {});
+      localStorage.setItem(CHAVE_CONFIG_APP, JSON.stringify(junta)); mudou = true;
+    }
+    // este aparelho tem um desenho mais novo que a nuvem → envia
+    if (jsonEstavel(junta.mapasPatios || {}) !== jsonEstavel((dados.config || {}).mapasPatios || {}) && window._usuarioUid && window.sincronizarUsuariosFirestore) {
+      setTimeout(() => sincronizarUsuariosFirestore(window._usuarioUid), 500);
+    }
   }
+  if (window.reconciliarMapas) window.reconciliarMapas();
   if (mudou) {
     aplicarPermissoes();
     renderOrdemAbas();
-    if (document.getElementById('pag-mapa')?.classList.contains('ativa') && !mapaEd.ativo) renderMapa();
+    if (document.getElementById('pag-mapa')?.classList.contains('ativa') && !mapaEd.ativo) {
+      renderMapa();
+      if (mapaMudou) toast('🔄 Desenho do mapa atualizado');
+    }
   }
   return mudou;
 }
@@ -7176,6 +7518,8 @@ function renderConfig() {
   renderBotoesRua();
   renderOrdemAbas();
   aplicarTema();
+  const ver = document.getElementById('config-app-versao');
+  if (ver) ver.innerHTML = `🏷️ Versão do app: <b>${VERSAO_APP}</b> — confira se é a mesma em todos os aparelhos`;
   const cardOrdem = document.getElementById('config-ordem-card');
   if (cardOrdem) cardOrdem.style.display = usuarioAtivoIsMestre() ? 'block' : 'none';
 }
@@ -7396,7 +7740,7 @@ function renderMovimentacoes() {
 function limparMovimentacoes() {
   if (!exigirEdicao('movimentacoes')) return;
   if (!confirm('Apagar todo o histórico de movimentações?\n\nIsso apaga em todos os aparelhos.')) return;
-  salvarMovLimpo(Date.now());
+  salvarMovLimpo(agoraSync());
   movSelecionadas.clear();
   salvarMovimentacoes([]);
   renderMovimentacoes();
@@ -7538,7 +7882,7 @@ import {
 } from "https://www.gstatic.com/firebasejs/12.16.0/firebase-auth.js";
 import {
   getFirestore, doc, getDoc, setDoc, collection,
-  onSnapshot, writeBatch, serverTimestamp
+  onSnapshot, writeBatch, serverTimestamp, deleteField
 } from "https://www.gstatic.com/firebasejs/12.16.0/firebase-firestore.js";
 
 const firebaseConfig = {
@@ -7592,26 +7936,165 @@ function mesclarComNuvem(nome, dadosNuvem) {
   return { mudouLocal, precisaEnviar, paraNuvem, tomb };
 }
 const _syncEmAndamento = {};
+const _retrySync = {};
+// Promessa com limite de tempo (sinal ruim não pode deixar a sincronização travada para sempre)
+const comTempoLimite = (prom, ms) => Promise.race([prom, new Promise((_, rej) => setTimeout(() => rej(Object.assign(new Error('tempo esgotado'), { code: 'timeout' })), ms))]);
+function agendarNovaTentativa(nome, uid) {
+  const t = _retrySync[nome] || { n: 0 };
+  clearTimeout(t.timer);
+  const espera = Math.min(30000, 4000 * Math.pow(1.6, t.n)); // 4s, 6s, 10s... até 30s
+  t.n++;
+  t.timer = setTimeout(() => sincronizarLista(nome, uid), espera);
+  _retrySync[nome] = t;
+}
 async function sincronizarLista(nome, uid) {
+  if (typeof TR !== 'undefined' && TR[nome]) { trSincronizar(nome); return false; } // tempo real (pedaços)
   // evita duas sincronizações da mesma lista ao mesmo tempo (a 2ª roda logo depois)
   if (_syncEmAndamento[nome]) { _syncEmAndamento[nome + '_de_novo'] = true; return false; }
   _syncEmAndamento[nome] = true;
-  let mudouLocal = false;
+  estadoSync[nome] = { ...(estadoSync[nome] || {}), enviando: true };
+  renderStatusSync();
+  let mudouLocal = false, sucesso = false;
   try {
     const cfg = SYNC_LISTAS[nome];
-    const snap = await getDoc(cfg.ref(uid));
+    const snap = await comTempoLimite(getDoc(cfg.ref(uid)), 20000);
     const r = mesclarComNuvem(nome, snap.exists() ? snap.data() : {});
     mudouLocal = r.mudouLocal;
     if (!snap.exists() || r.precisaEnviar) {
-      await setDoc(cfg.ref(uid), { [cfg.campo]: r.paraNuvem, removidos: r.tomb, atualizadoEm: serverTimestamp() });
+      await comTempoLimite(setDoc(cfg.ref(uid), { [cfg.campo]: r.paraNuvem, removidos: r.tomb, atualizadoEm: serverTimestamp() }), 30000);
     }
-  } catch (e) { console.error('Erro ao sincronizar ' + nome + ':', e); }
+    sucesso = true;
+    if (_retrySync[nome]) { clearTimeout(_retrySync[nome].timer); _retrySync[nome] = { n: 0 }; }
+    estadoSync[nome] = { ok: Date.now(), pendente: !!_syncEmAndamento[nome + '_de_novo'] };
+  } catch (e) {
+    console.error('Erro ao sincronizar ' + nome + ':', e);
+    estadoSync[nome] = { ...(estadoSync[nome] || {}), enviando: false, pendente: true, erro: e?.code || e?.message || 'erro' };
+    agendarNovaTentativa(nome, uid); // tenta de novo sozinho até conseguir
+  }
   finally {
     _syncEmAndamento[nome] = false;
+    if (estadoSync[nome]) estadoSync[nome].enviando = false;
+    renderStatusSync();
     if (_syncEmAndamento[nome + '_de_novo']) { _syncEmAndamento[nome + '_de_novo'] = false; sincronizarLista(nome, uid); }
+  }
+  if (mudouLocal) {
+    if (nome === 'conferencia' && document.getElementById('pag-conferencia')?.classList.contains('ativa')) renderConferencia();
+    if (nome === 'quebras' && document.getElementById('pag-quebras')?.classList.contains('ativa')) renderQuebras();
+    if ((nome === 'conferencia' || nome === 'estoque') && document.getElementById('pag-mapa')?.classList.contains('ativa') && !(window.mapaEd && mapaEd.ativo)) { try { renderMapa(); } catch (e) {} }
   }
   return mudouLocal;
 }
+// Mede a diferença entre o relógio deste aparelho e o do servidor (ms; + = aparelho adiantado)
+async function medirRelogio(uid) {
+  const refRel = doc(db, 'usuarios', uid, 'dados', 'relogio');
+  const antes = Date.now();
+  await comTempoLimite(setDoc(refRel, { t: serverTimestamp(), aparelho: navigator.userAgent.slice(0, 80) }), 15000);
+  const meio = (antes + Date.now()) / 2;
+  const sn = await comTempoLimite(getDoc(refRel), 15000);
+  const srv = sn.data()?.t?.toMillis?.();
+  if (!srv) return null;
+  const off = Math.round(meio - srv);
+  window._relogioOffset = Math.abs(off) > 2000 ? off : 0; // diferença pequena = ruído da internet
+  try { localStorage.setItem('estoque_relogio_offset', String(window._relogioOffset)); } catch (e) {}
+  return off;
+}
+window.medirRelogio = () => window._usuarioUid ? medirRelogio(window._usuarioUid).catch(() => null) : Promise.resolve(null);
+// ===================== DIAGNÓSTICO DA SINCRONIZAÇÃO =====================
+window.diagnosticoSync = async function() {
+  const uid = window._usuarioUid;
+  const r = { versao: VERSAO_APP, hora: new Date().toLocaleString('pt-BR'), conta: window._usuarioEmail || '(não conectado)', uid: uid ? uid.slice(0, 8) : '-', online: navigator.onLine, listas: {} };
+  if (!uid) return r;
+  try {
+    const off = await medirRelogio(uid);
+    if (off != null) { r.relogio = Math.round(off / 1000); r.relogioCorrigido = !!window._relogioOffset; } // segundos (+ adiantado / − atrasado)
+  } catch (e) { r.relogioErro = e?.code || e?.message; }
+  for (const nome of ['conferencia', 'quebras']) {
+    if (TR[nome]) { r.listas[nome] = diagLista(nome); continue; }
+    const cfg = SYNC_LISTAS[nome];
+    const info = { estado: estadoSync[nome] || {} };
+    try {
+      const snap = await comTempoLimite(getDoc(cfg.ref(uid)), 20000);
+      const nuvem = snap.exists() ? (snap.data()[cfg.campo] || []) : [];
+      const local = lerListaLS(cfg.chave);
+      const mN = new Map(nuvem.map(i => [String(i.id), i])), mL = new Map(local.map(i => [String(i.id), i]));
+      info.aparelho = local.length; info.nuvem = nuvem.length;
+      info.soAparelho = [...mL.keys()].filter(k => !mN.has(k)).length;
+      info.soNuvem = [...mN.keys()].filter(k => !mL.has(k)).length;
+      let difAparelhoMaisNovo = 0, difNuvemMaisNova = 0, difEmpate = 0;
+      mL.forEach((l, k) => {
+        const n = mN.get(k); if (!n) return;
+        const a = cfg.limpar(l), b = n;
+        if (_semMeta(a) === _semMeta(b)) return;
+        const ta = tsItem(l), tb = tsItem(n);
+        if (ta > tb) difAparelhoMaisNovo++; else if (tb > ta) difNuvemMaisNova++; else difEmpate++;
+      });
+      info.diferentes = { aparelhoMaisNovo: difAparelhoMaisNovo, nuvemMaisNova: difNuvemMaisNova, empate: difEmpate };
+      info.removidosNuvem = Object.keys(snap.exists() ? (snap.data().removidos || {}) : {}).length;
+      info.tamanhoKB = Math.round(JSON.stringify(nuvem).length / 1024);
+    } catch (e) { info.erro = e?.code || e?.message; }
+    r.listas[nome] = info;
+  }
+  return r;
+};
+// Recuperação: faz a versão DESTE aparelho valer (itens diferentes ficam "mais novos") e envia
+window.forcarVersaoAparelho = async function(nome) {
+  if (TR[nome]) return forcarVersaoAparelhoTR(nome);
+  const uid = window._usuarioUid, cfg = SYNC_LISTAS[nome];
+  const snap = await comTempoLimite(getDoc(cfg.ref(uid)), 20000);
+  const nuvem = snap.exists() ? (snap.data()[cfg.campo] || []) : [];
+  const tombN = snap.exists() ? (snap.data().removidos || {}) : {};
+  const mN = new Map(nuvem.map(i => [String(i.id), i]));
+  const local = lerListaLS(cfg.chave);
+  let maior = agoraSync();
+  [...nuvem, ...local].forEach(i => { if (i && i._ts > maior) maior = i._ts; });
+  Object.values(tombN).forEach(t => { if (t > maior) maior = t; });
+  let n = 0;
+  [...nuvem, ...local].forEach(i => { if (i && i._f) Object.values(i._f).forEach(t => { if (t > maior) maior = t; }); });
+  // itens diferentes: TODOS os campos passam a valer a partir de agora (a versão deste aparelho vence)
+  local.forEach(i => { const c = mN.get(String(i.id)); if (!c || _semMeta(cfg.limpar(i)) !== _semMeta(c) || tombN[String(i.id)]) { i._ts = ++maior; delete i._f; delete i._b; n++; } });
+  localStorage.setItem(cfg.chave, JSON.stringify(local));
+  await sincronizarLista(nome, uid);
+  return n;
+};
+// Recuperação: troca a lista deste aparelho pela da nuvem (fotos ainda não enviadas são mantidas)
+window.usarVersaoNuvem = async function(nome) {
+  if (TR[nome]) return usarVersaoNuvemTR(nome);
+  const uid = window._usuarioUid, cfg = SYNC_LISTAS[nome];
+  const snap = await comTempoLimite(getDoc(cfg.ref(uid)), 20000);
+  const nuvem = snap.exists() ? (snap.data()[cfg.campo] || []) : [];
+  const local = new Map(lerListaLS(cfg.chave).map(i => [String(i.id), i]));
+  const lista = nuvem.map(i => { const l = local.get(String(i.id)); return (l && l.foto && !i.foto) ? { ...i, foto: l.foto } : i; });
+  if (cfg.ordenar) lista.sort(cfg.ordenar);
+  localStorage.setItem(cfg.chave, JSON.stringify(lista));
+  salvarTomb(cfg.chave, snap.exists() ? (snap.data().removidos || {}) : {});
+  estadoSync[nome] = { ok: Date.now() };
+  return lista.length;
+};
+
+window.sincronizarListaAgora = async (nome, avisar) => {
+  if (TR[nome]) {
+    const st = trEstado[nome];
+    if (!st || !st.pronto) { if (avisar) toast('🔌 Ainda conectando com a nuvem — assim que conectar, envia sozinho.', true); return; }
+    const n = trSincronizar(nome);
+    const pend = Object.keys(carregarPend(TR[nome].chave)).length;
+    if (avisar) toast(!pend ? '☁️ Tudo sincronizado!' : (navigator.onLine ? `⏳ Enviando ${pend} alteração(ões)...` : '📴 Sem internet — envia sozinho quando voltar'), pend > 0 && !navigator.onLine);
+    return;
+  }
+  if (_retrySync[nome]) _retrySync[nome].n = 0;
+  await sincronizarLista(nome, window._usuarioUid);
+  const e = estadoSync[nome] || {};
+  if (avisar) toast(e.pendente ? '⚠️ Ainda não foi possível enviar — tentando de novo sozinho' : '☁️ Sincronizado!', !!e.pendente);
+};
+// Internet voltou → envia tudo que ficou guardado no aparelho
+window.addEventListener('online', () => {
+  if (!window._usuarioUid) return;
+  if (_retrySync.estoque) _retrySync.estoque.n = 0;
+  sincronizarLista('estoque', window._usuarioUid);
+  LISTAS_TR.forEach(n => trSincronizar(n));
+  window.sincronizarUsuariosFirestore && window.sincronizarUsuariosFirestore(window._usuarioUid);
+  window.recarregarConfigNuvem && window.recarregarConfigNuvem(false);
+  renderStatusSync();
+});
 window._fbSyncConf = uid => sincronizarLista('conferencia', uid);
 window.sincronizarConferenciaFirestore = uid => sincronizarLista('conferencia', uid);
 window.sincronizarQuebrasFirestore = uid => sincronizarLista('quebras', uid);
@@ -7620,14 +8103,49 @@ window.sincronizarUsuariosFirestore = async function(uid) {
   try {
     const lista = carregarUsuarios();
     const senhas = carregarSenhas();
-    await setDoc(refUsuarios(uid), { lista, senhas, permissoes: carregarPermissoes(), config: carregarConfigApp(), atualizadoEm: serverTimestamp() });
-  } catch(e) { console.error('Erro ao sincronizar usuários:', e); }
+    // Junta os desenhos do mapa com os da nuvem antes de gravar (vence o mais recente de cada pátio)
+    let config = carregarConfigApp();
+    try {
+      const snap = await getDoc(refUsuarios(uid));
+      if (snap.exists() && snap.data().config) {
+        config = mesclarConfigApp(config, snap.data().config, 'local');
+        localStorage.setItem(CHAVE_CONFIG_APP, JSON.stringify(config));
+      }
+    } catch (e) { console.warn('Leitura antes de gravar falhou:', e); }
+    const limpo = v => JSON.parse(JSON.stringify(v ?? null)); // Firestore não aceita "undefined"
+    await setDoc(refUsuarios(uid), { lista: limpo(lista), senhas: limpo(senhas), permissoes: limpo(carregarPermissoes()), config: limpo(config), atualizadoEm: serverTimestamp() });
+    return true;
+  } catch(e) {
+    console.error('Erro ao sincronizar usuários:', e);
+    toast('⚠️ Não foi possível enviar as configurações para a nuvem (' + (e?.code || e?.message || 'erro') + ')', true);
+    return false;
+  }
 };
 
 window.sincronizarErrosFirestore = uid => sincronizarLista('erros', uid);
+// Busca de novo usuários/acessos/config/mapas na nuvem (ao voltar para o app ou pelo botão 🔄)
+window.recarregarConfigNuvem = async function(avisar) {
+  if (!window._usuarioUid) { if (avisar) toast('⚠️ Sem conexão com a conta.', true); return false; }
+  try {
+    const snap = await getDoc(refUsuarios(window._usuarioUid));
+    if (!snap.exists()) return false;
+    const d = snap.data();
+    if (d.lista && JSON.stringify(d.lista) !== JSON.stringify(carregarUsuarios())) { localStorage.setItem(CHAVE_USUARIOS, JSON.stringify(d.lista)); atualizarSelectResponsavel(); }
+    const mudou = aplicarPermissoesDaNuvem(d);
+    if (avisar) toast(mudou ? '🔄 Atualizado com a nuvem' : '✅ Já está com a versão mais recente');
+    return mudou;
+  } catch (e) { if (avisar) toast('⚠️ Não foi possível buscar na nuvem (' + (e?.code || e?.message || 'erro') + ')', true); return false; }
+};
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'visible' && window._usuarioUid) {
+    window.recarregarConfigNuvem(false);
+    LISTAS_TR.forEach(n => trSincronizar(n));
+  }
+});
 window.sincronizarEstoqueFirestore = uid => sincronizarLista('estoque', uid);
 
-window.sincronizarMovimentacoesFirestore = async function(uid) {
+window.sincronizarMovimentacoesFirestore = async function(uid) { trSincronizar('movimentacoes'); };
+window._sincronizarMovimentacoesAntigo = async function(uid) {
   try {
     // Lê a nuvem e mescla (não sobrescreve o que outro aparelho registrou; respeita "Limpar")
     const snap = await getDoc(refMovimentacoes(uid));
@@ -7640,7 +8158,10 @@ window.sincronizarMovimentacoesFirestore = async function(uid) {
     if (!snap.exists() || jsonEstavel(d.movimentacoes || []) !== jsonEstavel(merged) || (d.limpoEm || 0) !== limpo) {
       await setDoc(refMovimentacoes(uid), { movimentacoes: merged, limpoEm: limpo, atualizadoEm: serverTimestamp() });
     }
-  } catch(e) { console.error('Erro ao sincronizar movimentações:', e); }
+  } catch(e) {
+    console.error('Erro ao sincronizar movimentações:', e);
+    clearTimeout(window._retryMovs); window._retryMovs = setTimeout(() => window.sincronizarMovimentacoesFirestore(uid), 15000);
+  }
 };
 
 window.sincronizarFotosFirestore = async function(uid) {
@@ -7663,22 +8184,18 @@ async function carregarDoFirestore(uid) {
   try {
     toast('☁️ Carregando dados da nuvem...');
 
-    const [snapEstoque, snapMovs, snapFotos, snapUsuarios, snapErros, snapConferencia, snapQuebras] = await Promise.all([
-      getDoc(refEstoque(uid)),
-      getDoc(refMovimentacoes(uid)),
+    const [snapFotos, snapUsuarios] = await comTempoLimite(Promise.all([
       getDoc(refFotos(uid)),
-      getDoc(refUsuarios(uid)),
-      getDoc(refErros(uid)),
-      getDoc(refConferencia(uid)),
-      getDoc(refQuebras(uid))
-    ]);
+      getDoc(refUsuarios(uid))
+    ]), 25000);
+    const snapMovs = { exists: () => false };
 
     let foiAtualizado = false;
 
     // Estoque: junta item a item com a nuvem
     if (await sincronizarLista('estoque', uid)) foiAtualizado = true;
 
-    if (snapMovs.exists()) {
+    if (false && snapMovs.exists()) { // movimentações: agora em tempo real
       const dm = snapMovs.data();
       const limpo = Math.max(carregarMovLimpo(), dm.limpoEm || 0);
       const movsLocais = carregarMovimentacoes();
@@ -7725,14 +8242,7 @@ async function carregarDoFirestore(uid) {
       aplicarPermissoesDaNuvem(snapUsuarios.data());
     }
 
-    // Erros, Conferência e Quebras: junta item a item com a nuvem
-    await sincronizarLista('erros', uid);
-    await sincronizarLista('conferencia', uid);
-    await sincronizarLista('quebras', uid);
-    renderConferencia(); renderQuebras(); renderErros();
-
-    // Sincroniza dados locais para a nuvem após carregar
-    sincronizarMovimentacoesFirestore(uid);
+    // Conferência, Quebras, Erros e Movimentações: em tempo real (iniciarTudoTempoReal)
     sincronizarFotosFirestore(uid);
     sincronizarUsuariosFirestore(uid);
 
@@ -7755,14 +8265,404 @@ window.salvarDados = function(dados) {
   }
 };
 
-// Intercepta salvarMovimentacoes para sincronizar automaticamente
-const _salvarMovsOriginal = salvarMovimentacoes;
-window.salvarMovimentacoes = function(movs) {
-  _salvarMovsOriginal(movs);
-  if (window._usuarioUid && window.sincronizarMovimentacoesFirestore) {
-    window.sincronizarMovimentacoesFirestore(window._usuarioUid);
-  }
+// Movimentações agora vão em tempo real pelas próprias funções salvar (ver TEMPO REAL)
+const _salvarMovsOriginal = movs => localStorage.setItem(CHAVE_MOV, JSON.stringify(movs));
+
+// =====================================================================================
+// ===================== SINCRONIZAÇÃO EM TEMPO REAL (POR PEDAÇOS) =====================
+// =====================================================================================
+// Cada lista fica dividida em vários documentos pequenos ("pedaços") na nuvem:
+//   usuarios/{uid}/dados/conferencia_p00 ... conferencia_p31  →  { itens: { id: item }, rem: { id: hora } }
+// Cada alteração manda SÓ os campos que mudaram (setDoc com merge), e o próprio servidor do Firebase
+// junta alterações de aparelhos diferentes. Todos os aparelhos ficam "ouvindo" os pedaços e recebem
+// a mudança em ~1 segundo. Não depende do relógio dos aparelhos.
+const DEL = { __apagar__: true }; // marca "apagar este campo" (vira deleteField() no envio)
+const TR = {
+  conferencia:   { chave: CHAVE_CONF,    n: 32, antigoRef: uid => refConferencia(uid),   antigoCampo: 'lista',         ordenar: ordemIdDesc,
+                   aoMudar: () => { if (pagAtiva('conferencia')) renderConferencia(); if (pagAtiva('mapa') && !(window.mapaEd && mapaEd.ativo)) renderMapa(); }, msg: '🔄 Conferência atualizada' },
+  quebras:       { chave: CHAVE_QUEBRAS, n: 8,  antigoRef: uid => refQuebras(uid),       antigoCampo: 'lista',         ordenar: ordemIdDesc,
+                   aoMudar: () => { if (pagAtiva('quebras')) renderQuebras(); if (pagAtiva('conferencia')) renderConferencia(); }, msg: '🔄 Quebras atualizadas' },
+  erros:         { chave: CHAVE_ERROS,   n: 4,  antigoRef: uid => refErros(uid),         antigoCampo: 'lista',         ordenar: ordemIdDesc,
+                   aoMudar: () => { if (pagAtiva('erros')) renderErros(); }, msg: '🔄 Erros atualizados' },
+  movimentacoes: { chave: CHAVE_MOV,     n: 16, antigoRef: uid => refMovimentacoes(uid), antigoCampo: 'movimentacoes', ordenar: (a, b) => tsMov(b) - tsMov(a),
+                   aoMudar: () => { if (pagAtiva('movimentacoes')) renderMovimentacoes(); if (pagAtiva('mapa') && !(window.mapaEd && mapaEd.ativo)) renderMapa(); }, msg: '🔄 Movimentações atualizadas' }
 };
+const LISTAS_TR = Object.keys(TR);
+function pagAtiva(id) { return !!document.getElementById('pag-' + id)?.classList.contains('ativa'); }
+function baldeDe(id, n) { let h = 2166136261; const s = String(id); for (let i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = Math.imul(h, 16777619); } return (h >>> 0) % n; }
+const refBalde = (uid, nome, b) => doc(db, 'usuarios', uid, 'dados', `${nome}_p${String(b).padStart(2, '0')}`);
+function hashTexto(t) { let h = 2166136261; for (let i = 0; i < t.length; i++) { h ^= t.charCodeAt(i); h = Math.imul(h, 16777619); } return (h >>> 0).toString(36) + ':' + t.length; }
+const trEstado = {}; // nome → { uid, baldes[], recebidos:Set, pronto, importado, emitidos:Map(id→hora), voando, unsubs[], remAntigo }
+
+// (item sem "id" = sobra de uma edição que chegou depois de o item ser apagado em outro aparelho → conta como apagado)
+function itensServidor(st) { const m = new Map(); st.baldes.forEach(b => { if (b && b.itens) Object.entries(b.itens).forEach(([id, it]) => { if (it && typeof it === 'object' && it.id != null) m.set(id, it); }); }); return m; }
+const apagadoDepois = (R, id, item) => R[id] != null && R[id] >= tsItem(item);
+function remTotal(nome, st) {
+  const r = { ...carregarTomb(TR[nome].chave) };
+  const add = o => Object.entries(o || {}).forEach(([k, v]) => { if (typeof v === 'number' && (!r[k] || v > r[k])) r[k] = v; });
+  add(st.remAntigo); st.baldes.forEach(b => b && add(b.rem));
+  return r;
+}
+// Aplica um "patch" no espelho local do pedaço (antes do servidor responder)
+function aplicarPatch(alvo, patch) {
+  Object.entries(patch).forEach(([k, v]) => {
+    if (v === DEL) { delete alvo[k]; return; }
+    if (v && typeof v === 'object' && !Array.isArray(v)) { if (!alvo[k] || typeof alvo[k] !== 'object' || Array.isArray(alvo[k])) alvo[k] = {}; aplicarPatch(alvo[k], v); return; }
+    alvo[k] = v;
+  });
+}
+function paraFirestore(v) {
+  if (v === DEL) return deleteField();
+  if (Array.isArray(v)) return JSON.parse(JSON.stringify(v));
+  if (v && typeof v === 'object') { const o = {}; Object.entries(v).forEach(([k, x]) => { if (x !== undefined) o[k] = paraFirestore(x); }); return o; }
+  return v;
+}
+function itemParaNuvem(it) {
+  const c = JSON.parse(JSON.stringify(it));
+  if (!(typeof c.foto === 'string' && c.foto.startsWith('http'))) delete c.foto;
+  delete c.fotos;
+  return c;
+}
+// Diferença entre o que está na nuvem (s) e o resultado desejado (m): só os campos que mudam
+function diffServidor(s, m) {
+  const ks = camposMudados(s, m);
+  if (!ks.length) return null;
+  const p = { _f: {} };
+  ks.forEach(k => { const v = _valCampo(m, k); p[k] = v === undefined ? DEL : JSON.parse(JSON.stringify(v)); p._f[k] = tsCampo(m, k); });
+  p._ts = Math.max(tsItem(m), tsItem(s));
+  if (m._b != null) p._b = m._b;
+  return p;
+}
+// Envia operações agrupadas por pedaço. ops: [{ id, tipo: 'novo'|'campos'|'del'|'trocar', item?, campos?, ts? }]
+function enviarOps(nome, ops) {
+  const st = trEstado[nome], cfg = TR[nome];
+  if (!st || !ops.length) return;
+  const porBalde = {};
+  const pend = carregarPend(cfg.chave);
+  ops.forEach(op => {
+    const b = baldeDe(op.id, cfg.n);
+    const pb = porBalde[b] || (porBalde[b] = { patch: { itens: {} }, ids: {} });
+    if (op.tipo === 'novo') pb.patch.itens[op.id] = itemParaNuvem(op.item);
+    else if (op.tipo === 'campos') pb.patch.itens[op.id] = op.campos;
+    else if (op.tipo === 'trocar') pb.patch.itens[op.id] = op.campos;
+    else if (op.tipo === 'del') { pb.patch.itens[op.id] = DEL; (pb.patch.rem || (pb.patch.rem = {}))[op.id] = op.ts; }
+    pb.ids[op.id] = pend[op.id] || 0;
+    st.emitidos.set(op.id, Date.now());
+  });
+  Object.entries(porBalde).forEach(([b, pb]) => {
+    // "trocar" (versão deste aparelho vence): primeiro apaga o item inteiro e depois grava — na mesma ordem no servidor
+    const trocas = ops.filter(o => o.tipo === 'trocar' && baldeDe(o.id, cfg.n) == b);
+    if (!st.baldes[b]) st.baldes[b] = {};
+    if (trocas.length) {
+      const apagar = { itens: {} }; trocas.forEach(o => { apagar.itens[o.id] = DEL; });
+      aplicarPatch(st.baldes[b], apagar);
+      setDoc(refBalde(st.uid, nome, +b), paraFirestore(apagar), { merge: true }).catch(e => erroTempoReal(nome, e, Object.keys(pb.ids)));
+    }
+    aplicarPatch(st.baldes[b], JSON.parse(JSON.stringify(pb.patch, (k, v) => v === DEL ? '__DEL__' : v), (k, v) => v === '__DEL__' ? DEL : v));
+    st.voando++;
+    setDoc(refBalde(st.uid, nome, +b), paraFirestore(pb.patch), { merge: true })
+      .then(() => {
+        // servidor confirmou: tira das pendências (se não houve alteração mais nova depois)
+        const p = carregarPend(cfg.chave);
+        Object.entries(pb.ids).forEach(([id, t]) => { if (p[id] != null && p[id] <= t) delete p[id]; });
+        salvarPend(cfg.chave, p);
+        st.ultimoErro = null;
+      })
+      .catch(e => erroTempoReal(nome, e, Object.keys(pb.ids)))
+      .finally(() => { st.voando--; atualizarEstadoTR(nome); });
+  });
+  atualizarEstadoTR(nome);
+}
+function erroTempoReal(nome, e, ids) {
+  console.error('Tempo real ' + nome + ':', e);
+  const st = trEstado[nome]; if (!st) return;
+  st.ultimoErro = e?.code || e?.message || 'erro';
+  (ids || []).forEach(id => st.emitidos.delete(id)); // poderá ser reenviado (com conferência de horário)
+  if (st.ultimoErro === 'permission-denied') avisoPermissaoNuvem();
+  else { clearTimeout(st.timerRetry); st.timerRetry = setTimeout(() => trSincronizar(nome), 8000); }
+  atualizarEstadoTR(nome);
+}
+function avisoPermissaoNuvem() {
+  if (document.getElementById('aviso-permissao')) return;
+  const d = document.createElement('div');
+  d.id = 'aviso-permissao';
+  d.style.cssText = 'position:fixed;left:10px;right:10px;bottom:calc(80px + env(safe-area-inset-bottom));z-index:99999;background:#c0392b;color:#fff;padding:12px 14px;border-radius:12px;font-size:13px;font-weight:600;box-shadow:0 4px 18px rgba(0,0,0,.3)';
+  d.innerHTML = '⛔ A nuvem do Firebase recusou o acesso (permission-denied). As alterações estão guardadas neste aparelho, mas não chegam nos outros. É preciso liberar as "Regras" do Firestore no Console do Firebase. <button onclick="this.parentElement.remove()" style="margin-left:6px;background:#fff;color:#c0392b;border:none;border-radius:6px;padding:4px 10px;font-weight:800">OK</button>';
+  document.body.appendChild(d);
+}
+function atualizarEstadoTR(nome) {
+  const st = trEstado[nome]; if (!st) return;
+  const n = Object.keys(carregarPend(TR[nome].chave)).length;
+  estadoSync[nome] = { enviando: st.voando > 0 && navigator.onLine, pendente: n > 0, ok: n === 0 ? Date.now() : (estadoSync[nome] || {}).ok, erro: st.ultimoErro, conectado: st.pronto };
+  renderStatusSync();
+}
+// Compara aparelho × nuvem item a item (pelos horários de cada campo) e manda o que falta
+function reconciliar(nome, ids) {
+  const st = trEstado[nome], cfg = TR[nome];
+  if (!st || !st.pronto) return 0;
+  const S = itensServidor(st), R = remTotal(nome, st);
+  const L = new Map(lerListaLS(cfg.chave).filter(i => i && i.id != null).map(i => [String(i.id), i]));
+  const pend = carregarPend(cfg.chave);
+  const ops = [];
+  ids.forEach(id => {
+    if (st.emitidos.has(id)) return; // já está a caminho nesta sessão (o Firebase entrega sozinho)
+    const l = L.get(id), s = S.get(id);
+    if (l && !s) { if (apagadoDepois(R, id, l)) return; ops.push({ id, tipo: 'novo', item: l }); }
+    else if (l && s) { const campos = diffServidor(s, mesclarItem(l, s)); if (campos) ops.push({ id, tipo: 'campos', campos }); }
+    else if (!l && s) { const pt = pend[id]; if (pt && tsItem(s) <= pt) ops.push({ id, tipo: 'del', ts: pt }); }
+  });
+  // pendências sem nada a enviar (já estão iguais na nuvem) → limpa
+  const p = carregarPend(cfg.chave); let mudou = false;
+  ids.forEach(id => { if (p[id] != null && !ops.some(o => o.id === id) && !st.emitidos.has(id)) { delete p[id]; mudou = true; } });
+  if (mudou) salvarPend(cfg.chave, p);
+  enviarOps(nome, ops);
+  atualizarEstadoTR(nome);
+  return ops.length;
+}
+// Dados do documento antigo (lista inteira) → pedaços. Serve para a 1ª migração e para aparelhos que ainda
+// estão com a versão antiga do app (o que eles gravarem lá entra aqui).
+function importarAntigo(nome, dados) {
+  const st = trEstado[nome], cfg = TR[nome];
+  if (!st || !st.pronto || !dados) return;
+  const lista = Array.isArray(dados[cfg.antigoCampo]) ? dados[cfg.antigoCampo] : [];
+  st.remAntigo = dados.removidos || {};
+  const limpoEm = dados.limpoEm || 0;
+  const assin = hashTexto(jsonEstavel({ lista, r: st.remAntigo, limpoEm }));
+  const chaveAssin = `estoque_tr_antigo_${nome}_${st.uid}`;
+  if (localStorage.getItem(chaveAssin) === assin) return;
+  const S = itensServidor(st), R = remTotal(nome, st);
+  const ops = [];
+  lista.forEach(o => {
+    if (!o || o.id == null) return;
+    const id = String(o.id), s = S.get(id);
+    if (nome === 'movimentacoes' && tsMov(o) <= limpoEm) return;
+    if (!s) { if (apagadoDepois(R, id, o)) return; ops.push({ id, tipo: 'novo', item: o }); }
+    else { const campos = diffServidor(s, mesclarItem(o, s)); if (campos) ops.push({ id, tipo: 'campos', campos }); }
+  });
+  Object.entries(st.remAntigo).forEach(([id, t]) => { const s = S.get(id); if (s && t >= tsItem(s)) ops.push({ id, tipo: 'del', ts: t }); });
+  if (nome === 'movimentacoes' && limpoEm) S.forEach((s, id) => { if (tsMov(s) <= limpoEm && !ops.some(o => o.id === id)) ops.push({ id, tipo: 'del', ts: limpoEm }); });
+  enviarOps(nome, ops);
+  try { localStorage.setItem(chaveAssin, assin); } catch (e) {}
+}
+// Nuvem → aparelho (o que está na nuvem é o que vale; itens ainda não enviados deste aparelho são mantidos)
+function espelhar(nome) {
+  const st = trEstado[nome], cfg = TR[nome];
+  if (!st || !st.pronto) return;
+  const S = itensServidor(st), R = remTotal(nome, st);
+  const bruto = localStorage.getItem(cfg.chave) || '[]';
+  let local; try { local = JSON.parse(bruto) || []; } catch (e) { local = []; }
+  const L = new Map(local.filter(i => i && i.id != null).map(i => [String(i.id), i]));
+  const pend = carregarPend(cfg.chave);
+  const naoEnviado = id => pend[id] != null && !st.emitidos.has(id);
+  const out = new Map();
+  S.forEach((s, id) => {
+    const l = L.get(id);
+    let it = s;
+    if (l && (naoEnviado(id) || !st.importado)) it = mesclarItem(l, s);
+    else if (!l && naoEnviado(id) && tsItem(s) <= pend[id]) it = null; // apagado aqui e ainda não enviado
+    if (it && l && typeof l.foto === 'string' && l.foto.startsWith('data:') && !(typeof it.foto === 'string' && it.foto.startsWith('http'))) it = { ...it, foto: l.foto };
+    if (it) out.set(id, it);
+  });
+  L.forEach((l, id) => {
+    if (S.has(id)) return;
+    if (naoEnviado(id) || (!st.importado && !apagadoDepois(R, id, l))) out.set(id, l);
+  });
+  const lista = [...out.values()];
+  if (cfg.ordenar) lista.sort(cfg.ordenar);
+  const novo = JSON.stringify(lista);
+  if (novo === bruto) return; // nada mudou (comparação rápida)
+  // houve mudança vinda de OUTRO aparelho? (para avisar)
+  const agora = Date.now();
+  const deFora = lista.some(i => { const l = L.get(String(i.id)); const e = st.emitidos.get(String(i.id)); return (!l || JSON.stringify(l) !== JSON.stringify(i)) && !(e && agora - e < 6000); })
+    || local.some(l => !out.has(String(l.id)) && !((st.emitidos.get(String(l.id)) || 0) > agora - 6000));
+  localStorage.setItem(cfg.chave, novo);
+  try { cfg.aoMudar(); } catch (e) { console.error(e); }
+  if (deFora && st.avisar) toast(cfg.msg);
+}
+function agendarEspelho(nome) {
+  const st = trEstado[nome]; if (!st) return;
+  clearTimeout(st.timerEsp);
+  st.timerEsp = setTimeout(() => { espelhar(nome); atualizarEstadoTR(nome); }, 60);
+}
+function iniciarTempoReal(nome, uid) {
+  const cfg = TR[nome];
+  const ant = trEstado[nome];
+  if (ant) ant.unsubs.forEach(u => { try { u(); } catch (e) {} });
+  const st = trEstado[nome] = { uid, baldes: Array.from({ length: cfg.n }, () => null), recebidos: new Set(), pronto: false, importado: false,
+    emitidos: new Map(), voando: 0, unsubs: [], remAntigo: {}, avisar: false, antigoRecebido: false };
+  for (let b = 0; b < cfg.n; b++) {
+    st.unsubs.push(onSnapshot(refBalde(uid, nome, b), { includeMetadataChanges: true }, snap => {
+      if (trEstado[nome] !== st) return;
+      st.baldes[b] = snap.exists() ? snap.data() : {};
+      if (!snap.metadata.fromCache) st.recebidos.add(b);
+      if (!st.pronto) { if (st.recebidos.size === cfg.n) aoFicarPronto(nome, st); }
+      else agendarEspelho(nome);
+    }, e => erroTempoReal(nome, e)));
+  }
+  atualizarEstadoTR(nome);
+}
+// Até esta data o app continua ouvindo o documento antigo (aparelhos que ainda não atualizaram).
+// Depois, só lê uma vez (migração) e para — evita baixar a lista inteira antiga a cada abertura.
+const PONTE_ANTIGA_ATE = Date.UTC(2026, 11, 7); // 07/12/2026
+function aoFicarPronto(nome, st) {
+  st.pronto = true;
+  const cfg = TR[nome];
+  let parar = null;
+  // documento antigo: 1ª migração + ponte com aparelhos ainda na versão antiga
+  parar = onSnapshot(cfg.antigoRef(st.uid), { includeMetadataChanges: true }, snap => {
+    if (trEstado[nome] !== st || snap.metadata.fromCache) return;
+    importarAntigo(nome, snap.exists() ? snap.data() : {});
+    if (!st.antigoRecebido) { st.antigoRecebido = true; terminarImportacao(nome, st); }
+    if (Date.now() > PONTE_ANTIGA_ATE && parar) { try { parar(); } catch (e) {} }
+  }, e => { console.error('doc antigo ' + nome, e); if (!st.antigoRecebido) { st.antigoRecebido = true; terminarImportacao(nome, st); } });
+  st.unsubs.push(() => parar && parar());
+}
+function terminarImportacao(nome, st) {
+  const cfg = TR[nome];
+  const flag = `estoque_tr_ok_${nome}_${st.uid}`;
+  const pend = carregarPend(cfg.chave);
+  const ids = new Set(Object.keys(pend));
+  if (!localStorage.getItem(flag)) lerListaLS(cfg.chave).forEach(i => { if (i && i.id != null) ids.add(String(i.id)); });
+  reconciliar(nome, [...ids]);
+  st.importado = true;
+  try { localStorage.setItem(flag, '1'); } catch (e) {}
+  espelhar(nome);
+  st.avisar = true;
+  atualizarEstadoTR(nome);
+}
+// Chamado pelas funções salvar* logo depois de gravar no aparelho
+window.enviarMudancasTempoReal = function(nome, mud, lista) {
+  const st = trEstado[nome];
+  if (!st || !st.pronto || !st.importado) return; // ainda conectando: fica nas pendências e vai assim que conectar
+  const porId = new Map(lista.filter(i => i && i.id != null).map(i => [String(i.id), i]));
+  const ops = [];
+  mud.novos.forEach(id => { const it = porId.get(id); if (it) ops.push({ id, tipo: 'novo', item: it }); });
+  Object.entries(mud.mudados).forEach(([id, campos]) => {
+    const it = porId.get(id); if (!it) return;
+    const p = { _f: {}, _ts: it._ts };
+    campos.forEach(k => { const v = _valCampo(it, k); p[k] = v === undefined ? DEL : JSON.parse(JSON.stringify(v)); p._f[k] = mud.agora; });
+    if (it._b != null) p._b = it._b;
+    ops.push({ id, tipo: 'campos', campos: p });
+  });
+  mud.removidos.forEach(id => ops.push({ id, tipo: 'del', ts: mud.agora }));
+  enviarOps(nome, ops);
+};
+// Reenvia o que ficou pendente (internet voltou, botão "Sincronizar agora", erro temporário)
+function trSincronizar(nome) {
+  const st = trEstado[nome];
+  if (!st) return 0;
+  if (!st.pronto || !st.importado) return 0;
+  return reconciliar(nome, Object.keys(carregarPend(TR[nome].chave)));
+}
+window.trSincronizar = trSincronizar;
+window.trEstado = trEstado;
+
+// ----- Diagnóstico / recuperação para as listas em tempo real -----
+function diagLista(nome) {
+  const st = trEstado[nome], cfg = TR[nome];
+  if (!st) return { erro: 'não iniciado' };
+  if (!st.pronto) return { erro: 'ainda conectando com a nuvem (' + st.recebidos.size + '/' + cfg.n + ' pedaços)' };
+  const S = itensServidor(st);
+  const local = lerListaLS(cfg.chave);
+  const mL = new Map(local.map(i => [String(i.id), i]));
+  const info = { estado: estadoSync[nome] || {}, aparelho: local.length, nuvem: S.size };
+  info.soAparelho = [...mL.keys()].filter(k => !S.has(k)).length;
+  info.soNuvem = [...S.keys()].filter(k => !mL.has(k)).length;
+  let a = 0, b = 0, c = 0;
+  mL.forEach((l, k) => { const n = S.get(k); if (!n || _semMeta(itemParaNuvem(l)) === _semMeta(itemParaNuvem(n))) return; const ta = tsItem(l), tb = tsItem(n); if (ta > tb) a++; else if (tb > ta) b++; else c++; });
+  info.diferentes = { aparelhoMaisNovo: a, nuvemMaisNova: b, empate: c };
+  info.removidosNuvem = Object.keys(remTotal(nome, st)).length;
+  const tams = st.baldes.map(x => JSON.stringify(x || {}).length);
+  info.tamanhoKB = Math.round(tams.reduce((t, x) => t + x, 0) / 1024);
+  info.maiorPedacoKB = Math.round(Math.max(...tams) / 1024);
+  info.pendentes = Object.keys(carregarPend(cfg.chave)).length;
+  return info;
+}
+async function forcarVersaoAparelhoTR(nome) {
+  const st = trEstado[nome], cfg = TR[nome];
+  if (!st || !st.pronto) throw Object.assign(new Error('ainda conectando com a nuvem'), { code: 'conectando' });
+  const S = itensServidor(st);
+  const local = lerListaLS(cfg.chave);
+  let maior = agoraSync();
+  [...S.values(), ...local].forEach(i => { if (i && i._ts > maior) maior = i._ts; });
+  const ops = []; let n = 0;
+  local.forEach(i => {
+    const id = String(i.id), s = S.get(id);
+    if (s && _semMeta(itemParaNuvem(i)) === _semMeta(itemParaNuvem(s))) return;
+    i._ts = ++maior; delete i._f; delete i._b; n++;
+    if (!s) ops.push({ id, tipo: 'novo', item: i });
+    else ops.push({ id, tipo: 'trocar', campos: itemParaNuvem(i) });
+  });
+  localStorage.setItem(cfg.chave, JSON.stringify(local));
+  st.emitidos.clear();
+  enviarOps(nome, ops);
+  return n;
+}
+async function usarVersaoNuvemTR(nome) {
+  const st = trEstado[nome], cfg = TR[nome];
+  if (!st || !st.pronto) throw Object.assign(new Error('ainda conectando com a nuvem'), { code: 'conectando' });
+  salvarPend(cfg.chave, {});
+  const S = itensServidor(st);
+  const local = new Map(lerListaLS(cfg.chave).map(i => [String(i.id), i]));
+  const lista = [...S.values()].map(i => { const l = local.get(String(i.id)); return (l && typeof l.foto === 'string' && l.foto.startsWith('data:') && !i.foto) ? { ...i, foto: l.foto } : i; });
+  if (cfg.ordenar) lista.sort(cfg.ordenar);
+  localStorage.setItem(cfg.chave, JSON.stringify(lista));
+  st.importado = true;
+  atualizarEstadoTR(nome);
+  return lista.length;
+}
+
+// ===================== MAPA DO PÁTIO EM TEMPO REAL =====================
+// usuarios/{uid}/dados/mapas → { patios: { "4": { elementos, ts, em, por } } }
+const refMapas = uid => doc(db, 'usuarios', uid, 'dados', 'mapas');
+const mapasTR = { pronto: false, unsub: null, dados: {} };
+function reconciliarMapas() {
+  if (!mapasTR.pronto || !window._usuarioUid) return;
+  const srv = mapasTR.dados || {};
+  const cfgApp = carregarConfigApp();
+  const loc = (cfgApp.mapasPatios && typeof cfgApp.mapasPatios === 'object') ? cfgApp.mapasPatios : {};
+  const enviar = {}; const novoLocal = { ...loc }; let mudouLocal = false;
+  new Set([...Object.keys(loc), ...Object.keys(srv)]).forEach(p => {
+    const l = loc[p], s = srv[p];
+    const tl = (l && l.ts) || 0, ts = (s && s.ts) || 0;
+    if (l && (!s || tl > ts)) enviar[p] = l;
+    else if (s && (!l || ts > tl || (ts === tl && jsonEstavel(s) !== jsonEstavel(l)))) { novoLocal[p] = s; mudouLocal = true; }
+  });
+  if (Object.keys(enviar).length) {
+    Object.assign(mapasTR.dados, JSON.parse(JSON.stringify(enviar)));
+    setDoc(refMapas(window._usuarioUid), { patios: JSON.parse(JSON.stringify(enviar)) }, { merge: true })
+      .catch(e => { console.error('mapas:', e); if ((e?.code) === 'permission-denied') avisoPermissaoNuvem(); });
+  }
+  if (mudouLocal) {
+    cfgApp.mapasPatios = novoLocal;
+    localStorage.setItem(CHAVE_CONFIG_APP, JSON.stringify(cfgApp));
+    if (pagAtiva('mapa') && !(window.mapaEd && mapaEd.ativo)) { renderMapa(); if (mapasTR.avisar) toast('🔄 Desenho do mapa atualizado'); }
+  }
+}
+window.reconciliarMapas = reconciliarMapas;
+window.enviarMapaTempoReal = function(p) {
+  const e = mapasSalvos()[p];
+  if (!e || !window._usuarioUid) return;
+  mapasTR.dados[p] = JSON.parse(JSON.stringify(e));
+  setDoc(refMapas(window._usuarioUid), { patios: { [p]: JSON.parse(JSON.stringify(e)) } }, { merge: true })
+    .catch(err => { console.error('mapas:', err); if ((err?.code) === 'permission-denied') avisoPermissaoNuvem(); });
+};
+function iniciarMapasTempoReal(uid) {
+  if (mapasTR.unsub) { try { mapasTR.unsub(); } catch (e) {} }
+  mapasTR.pronto = false; mapasTR.avisar = false;
+  mapasTR.unsub = onSnapshot(refMapas(uid), { includeMetadataChanges: true }, snap => {
+    if (snap.metadata.fromCache && !mapasTR.pronto) return;
+    mapasTR.dados = JSON.parse(JSON.stringify((snap.exists() && snap.data().patios) || {}));
+    mapasTR.pronto = true;
+    reconciliarMapas();
+    mapasTR.avisar = true;
+  }, e => { console.error('onSnapshot mapas:', e); if ((e?.code) === 'permission-denied') avisoPermissaoNuvem(); });
+}
+
+function iniciarTudoTempoReal(uid) {
+  LISTAS_TR.forEach(n => iniciarTempoReal(n, uid));
+  iniciarMapasTempoReal(uid);
+}
 
 // ===================== AUTH =====================
 onAuthStateChanged(auth, async user => {
@@ -7786,6 +8686,9 @@ onAuthStateChanged(auth, async user => {
     atualizarSubtitulo();
     aplicarPermissoes();
 
+    // TEMPO REAL: liga já, antes de qualquer outra carga (nada pode atrasar isso)
+    iniciarTudoTempoReal(user.uid);
+
     // Atualiza a UI da aba Config caso o usuário já esteja nela (usuário ativo persistido)
     if (document.getElementById('pag-config')?.classList.contains('ativa')) {
       renderConfig();
@@ -7796,8 +8699,11 @@ onAuthStateChanged(auth, async user => {
     await migrarFotosParaDB().catch(() => {});
     migrarFotosParaCloudinary().catch(() => {});
 
+    // Acerta o relógio pela hora do servidor (em segundo plano)
+    medirRelogio(user.uid).catch(() => null);
     // Carrega dados iniciais do Firestore
     await carregarDoFirestore(user.uid);
+    renderStatusSync();
     // Fotos da Conferência/Quebras que ainda estão só neste aparelho → nuvem
     if (temFotoPendente()) agendarEnvioFotos(2000);
 
@@ -7824,8 +8730,9 @@ onAuthStateChanged(auth, async user => {
     const mapaAtivo = () => document.getElementById('pag-mapa')?.classList.contains('ativa');
     const unsubEstoque = ouvirLista('estoque', () => { renderLista(); atualizarSubtitulo(); if (mapaAtivo()) renderMapa(); }, '🔄 Estoque atualizado em tempo real');
 
-    // Listener em tempo real — Movimentações
-    const unsubMovs = onSnapshot(refMovimentacoes(user.uid), snap => {
+    // Movimentações: tempo real por pedaços (iniciarTudoTempoReal)
+    const unsubMovs = () => {};
+    if (false) onSnapshot(refMovimentacoes(user.uid), snap => {
       if (_primeiraVezMovs) { _primeiraVezMovs = false; return; }
       if (!snap.exists()) return;
       const dm = snap.data();
@@ -7846,7 +8753,6 @@ onAuthStateChanged(auth, async user => {
 
     // Listener em tempo real — Usuários
     const unsubUsuarios = onSnapshot(refUsuarios(user.uid), snap => {
-      if (_primeiraVezUsuarios) { _primeiraVezUsuarios = false; return; }
       if (!snap.exists()) return;
       const listaRemota = snap.data().lista || [];
       const senhasRemota = snap.data().senhas || {};
@@ -7874,9 +8780,8 @@ onAuthStateChanged(auth, async user => {
       }
     }, e => console.error('onSnapshot usuarios:', e));
 
-    const unsubErros = ouvirLista('erros', () => renderErros(), '🔄 Erros sincronizados');
-    const unsubConf = ouvirLista('conferencia', () => { renderConferencia(); if (mapaAtivo()) renderMapa(); }, '🔄 Conferência sincronizada');
-    const unsubQuebras = ouvirLista('quebras', () => { renderQuebras(); if (document.getElementById('pag-conferencia')?.classList.contains('ativa')) renderConferencia(); }, '🔄 Quebras sincronizadas');
+    // Erros, Conferência e Quebras: tempo real por pedaços (iniciarTudoTempoReal)
+    const unsubErros = () => {}, unsubConf = () => {}, unsubQuebras = () => {};
 
     // Listener em tempo real — Fotos (adições e remoções em outros aparelhos)
     let _primeiraVezFotos = true;
@@ -7918,6 +8823,8 @@ window.fazerLogin = async function() {
 window.fazerLogout = async function() {
   if (!confirm('Sair da conta Google?')) return;
   if (window._unsubListeners) { window._unsubListeners.forEach(u => u()); window._unsubListeners = []; }
+  Object.values(trEstado).forEach(st => st.unsubs.forEach(u => { try { u(); } catch (e) {} }));
+  if (mapasTR.unsub) { try { mapasTR.unsub(); } catch (e) {} mapasTR.unsub = null; }
   await signOut(auth);
 };
 </script>
