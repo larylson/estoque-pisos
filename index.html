@@ -4931,7 +4931,7 @@ async function executarDiagnostico() {
       const tr = r.tempoReal || {};
       const nomesTR = { conferencia: 'Conferência', quebras: 'Quebras', movimentacoes: 'Movimentações', erros: 'Erros' };
       const linhas = Object.entries(tr).map(([n, t]) => typeof t === 'string' ? `${nomesTR[n]}: ${t}` :
-        `${t.caido ? '🔴' : t.importado ? '🟢' : '🟡'} ${nomesTR[n]}: ${t.caido ? 'escuta caiu — religando' : t.importado ? 'ligado' : t.pronto ? 'importando' : 'conectando (' + t.recebidos + ')'}${t.ultimoRecebido ? ' · recebido ' + t.ultimoRecebido : ''}${t.erro ? ` · <span style="color:#c0392b">${escMapa(t.erro)}</span>` : ''}`);
+        `${t.caido || t.semRespostaMin >= 2 ? '🔴' : t.importado ? '🟢' : '🟡'} ${nomesTR[n]}: ${t.caido ? 'escuta caiu — religando' : t.importado ? 'ligado' : t.pronto ? 'importando' : 'conectando (' + t.recebidos + ')'}${t.ultimoRecebido ? ' · recebido ' + t.ultimoRecebido : ''}${t.ultimoEnvio ? ' · enviado ' + t.ultimoEnvio : ''}${t.semRespostaMin >= 2 ? ` · <span style="color:#c0392b;font-weight:700">${t.enviando} gravação(ões) sem resposta da nuvem há ${t.semRespostaMin} min</span>` : ''}${t.erro ? ` · <span style="color:#c0392b">${escMapa(t.erro)}</span>` : ''}`);
       return `<div class="diag-lista"><b>⚡ Tempo real neste aparelho</b><br><span style="font-size:12px">${linhas.join('<br>')}</span></div>`;
     })()}
     ${r.aparelhos ? `<div class="diag-lista"><b>📱 Aparelhos nesta conta</b> <span style="font-size:11px;opacity:.7">(último acesso)</span><br>
@@ -5078,6 +5078,7 @@ function renderStatusSync() {
     const e = estadoSync[nome] || {};
     let txt, cls;
     if (!window._usuarioUid) { txt = '📴 Não conectado à conta Google — salvando só neste aparelho'; cls = 'aviso'; }
+    else if (e.travadoMin >= 2) { txt = `⛔ A nuvem não confirma as gravações há ${e.travadoMin} min — provável limite diário do Firebase. Tudo fica guardado neste aparelho e vai sozinho quando liberar.`; cls = 'aviso'; }
     else if (e.conectado === false && navigator.onLine) { txt = e.pendente ? '🔌 Conectando com a nuvem... (alterações guardadas neste aparelho)' : '🔌 Conectando com a nuvem...'; cls = 'enviando'; }
     else if (e.enviando) { txt = '⏳ Enviando para a nuvem...'; cls = 'enviando'; }
     else if (e.pendente && !navigator.onLine) { txt = '📴 Sem internet — as alterações estão guardadas neste aparelho e serão enviadas quando a internet voltar. Não apague os dados do app.'; cls = 'aviso'; }
@@ -6609,7 +6610,7 @@ document.addEventListener('keydown', e => {
   if (e.key === 'Escape' && document.getElementById('mapa-viewport')?.classList.contains('tela-cheia') && !document.getElementById('mapa-folha')) alternarTelaCheiaMapa();
 });
 
-const VERSAO_APP = '2026.11.06j';
+const VERSAO_APP = '2026.11.06k';
 // ----- Aviso de versão nova (aba aberta há muito tempo no PC continuaria com a versão antiga) -----
 let _ultimaChecagemVersao = 0;
 async function checarNovaVersao() {
@@ -8176,6 +8177,7 @@ window.diagnosticoSync = async function() {
   } catch (e) { r.aparelhosErro = e?.code || e?.message; }
   r.tempoReal = {};
   LISTAS_TR.forEach(n => { const st = trEstado[n]; r.tempoReal[n] = st ? { pronto: st.pronto, importado: st.importado, caido: st.morto, recebidos: st.recebidos.size + '/' + TR[n].n, enviando: st.voando, erro: st.ultimoErro || null,
+    semRespostaMin: (st.voando > 0 && st.voandoDesde) ? Math.floor((Date.now() - st.voandoDesde) / 60000) : 0,
     ultimoRecebido: st.ultimoRecebido ? new Date(st.ultimoRecebido).toLocaleTimeString('pt-BR') : null, ultimoEnvio: st.ultimoEnvio ? new Date(st.ultimoEnvio).toLocaleTimeString('pt-BR') : null } : 'não iniciado'; });
   r.memoria = usoMemoriaLS();
   r.erros = (window._logErros || []).slice(-10);
@@ -8545,6 +8547,7 @@ function enviarOps(nome, ops) {
       gravarNuvem(refBalde(st.uid, nome, +b), paraFirestore(apagar), { merge: true }).catch(e => erroTempoReal(nome, e, Object.keys(pb.ids)));
     }
     aplicarPatch(st.baldes[b], JSON.parse(JSON.stringify(pb.patch, (k, v) => v === DEL ? '__DEL__' : v), (k, v) => v === '__DEL__' ? DEL : v));
+    if (!st.voando) st.voandoDesde = Date.now();
     st.voando++;
     let dadosNuvem;
     try { dadosNuvem = paraFirestore(pb.patch); } catch (e) { dadosNuvem = null; registrarErro('preparar envio ' + nome, e); }
@@ -8557,7 +8560,7 @@ function enviarOps(nome, ops) {
         st.ultimoErro = null; st.ultimoEnvio = Date.now();
       })
       .catch(e => erroTempoReal(nome, e, Object.keys(pb.ids)))
-      .finally(() => { st.voando--; atualizarEstadoTR(nome); });
+      .finally(() => { st.voando--; if (!st.voando) st.voandoDesde = 0; atualizarEstadoTR(nome); });
   });
   atualizarEstadoTR(nome);
 }
@@ -8598,7 +8601,8 @@ function avisoPermissaoNuvem() {
 function atualizarEstadoTR(nome) {
   const st = trEstado[nome]; if (!st) return;
   const n = Object.keys(carregarPend(TR[nome].chave)).length;
-  estadoSync[nome] = { enviando: st.voando > 0 && navigator.onLine, pendente: n > 0, ok: n === 0 ? Date.now() : (estadoSync[nome] || {}).ok, erro: st.ultimoErro, conectado: st.pronto && st.importado && !st.morto };
+  const travadoMin = (st.voando > 0 && st.voandoDesde && navigator.onLine) ? Math.floor((Date.now() - st.voandoDesde) / 60000) : 0;
+  estadoSync[nome] = { enviando: st.voando > 0 && navigator.onLine, pendente: n > 0, ok: n === 0 ? Date.now() : (estadoSync[nome] || {}).ok, erro: st.ultimoErro, conectado: st.pronto && st.importado && !st.morto, travadoMin };
   renderStatusSync();
 }
 // Compara aparelho × nuvem item a item (pelos horários de cada campo) e manda o que falta
@@ -8802,6 +8806,7 @@ function trSincronizar(nome) {
   return reconciliar(nome, Object.keys(carregarPend(TR[nome].chave)));
 }
 window.trSincronizar = trSincronizar;
+window.atualizarEstadoTR = atualizarEstadoTR;
 window.trEstado = trEstado;
 
 // ----- Diagnóstico / recuperação para as listas em tempo real -----
@@ -9066,7 +9071,7 @@ function descreverAparelho() {
 let _ultimoRegistroAparelho = 0;
 function registrarAparelho(forcar) {
   const uid = window._usuarioUid; if (!uid) return;
-  if (!forcar && Date.now() - _ultimoRegistroAparelho < 3 * 60000) return;
+  if (!forcar && Date.now() - _ultimoRegistroAparelho < 15 * 60000) return;
   _ultimoRegistroAparelho = Date.now();
   const st = trEstado.conferencia;
   gravarNuvem(refAparelhos(uid), { [idAparelho()]: {
@@ -9076,9 +9081,22 @@ function registrarAparelho(forcar) {
   } }, { merge: true }).catch(e => registrarErro('registrar aparelho', e));
 }
 window.registrarAparelho = registrarAparelho;
+function avisoGravacaoTravada(min) {
+  let d = document.getElementById('aviso-travado');
+  if (!d) {
+    d = document.createElement('div'); d.id = 'aviso-travado';
+    d.style.cssText = 'position:fixed;left:10px;right:10px;bottom:calc(80px + env(safe-area-inset-bottom));z-index:99998;background:#b9770e;color:#fff;padding:12px 14px;border-radius:12px;font-size:13px;font-weight:600;box-shadow:0 4px 18px rgba(0,0,0,.3)';
+    document.body.appendChild(d);
+  }
+  d.innerHTML = `⛔ A nuvem não está aceitando gravações há ${min} min (as leituras funcionam). Normalmente é o <b>limite diário gratuito do Firebase</b> — libera sozinho às 05:00. As alterações ficam guardadas neste aparelho. <button onclick="window._avisoTravadoFechado=Date.now();this.parentElement.remove()" style="margin-left:6px;background:#fff;color:#b9770e;border:none;border-radius:6px;padding:4px 10px;font-weight:800">OK</button>`;
+}
 // Vigia: a cada minuto (com o app aberto) religa o que caiu, envia pendências e avisa que este aparelho está vivo
 setInterval(() => {
   if (!window._usuarioUid || document.visibilityState !== 'visible') return;
+  const travado = Math.max(0, ...LISTAS_TR.map(n => { const st = trEstado[n]; return (st && st.voando > 0 && st.voandoDesde && navigator.onLine) ? Date.now() - st.voandoDesde : 0; }));
+  if (travado > 120000) { if (!window._avisouTravado) { window._avisouTravado = true; registrarErro('nuvem', `gravações sem resposta há ${Math.floor(travado / 60000)} min (limite diário do Firebase?)`); } if (!(window._avisoTravadoFechado && Date.now() - window._avisoTravadoFechado < 10 * 60000)) avisoGravacaoTravada(Math.floor(travado / 60000)); }
+  else { window._avisouTravado = false; document.getElementById('aviso-travado')?.remove(); }
+  LISTAS_TR.forEach(n => renderStatusSync && atualizarEstadoTR(n));
   LISTAS_TR.forEach(n => {
     const st = trEstado[n]; if (!st) return;
     if (!st.pronto && Date.now() - st.iniciadoEm > 45000 && navigator.onLine) { registrarErro('vigia', `${n}: não conectou em 45s (${st.recebidos.size}/${TR[n].n}) — religando`); iniciarTempoReal(n, window._usuarioUid); }
