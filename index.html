@@ -1616,6 +1616,15 @@ PASSOS PARA RODAR NO GITHUB PAGES:
 
     .diag-box { font-size:13px; line-height:1.6; background:var(--bege); border-radius:10px; padding:10px 12px; }
     .diag-lista { margin-top:8px; padding-top:8px; border-top:1px solid rgba(0,0,0,.08); }
+    .diverg-linha { display:flex; gap:10px; align-items:flex-start; padding:8px 0; border-bottom:1px solid rgba(0,0,0,.06); cursor:pointer; font-size:13px; line-height:1.45; -webkit-tap-highlight-color:transparent; }
+    .diverg-caixa { flex:0 0 auto; width:22px; height:22px; margin-top:1px; border-radius:6px; border:2px solid #9aa79a; background:#fff; display:flex; align-items:center; justify-content:center; font-size:14px; font-weight:900; color:#fff; }
+    .diverg-linha.marcado .diverg-caixa { background:#2e7d32; border-color:#2e7d32; }
+    .diverg-linha.marcado .diverg-caixa::after { content:'✓'; }
+    .diverg-dest { color:#2e7d32; }
+    html.tema-escuro .diverg-caixa { background:#111811; border-color:#4a5a4a; }
+    html.tema-escuro .diverg-linha.marcado .diverg-caixa { background:#3e9a44; border-color:#3e9a44; }
+    html.tema-escuro .diverg-dest { color:#7fd37f; }
+    html.tema-escuro .diverg-linha { border-bottom-color:rgba(255,255,255,.07); }
     .diag-btn { border:1.5px solid #d0c9bb; background:#fff; border-radius:8px; padding:7px 10px; font-size:12px; font-weight:700; cursor:pointer; color:var(--texto); }
     html.tema-escuro .diag-box { background:#1f2a1f; }
     html.tema-escuro .diag-btn { background:#111811; border-color:#334033; }
@@ -2022,6 +2031,12 @@ PASSOS PARA RODAR NO GITHUB PAGES:
       <p style="font-size:13px;color:var(--texto-suave);margin-bottom:10px">Compara este aparelho com a nuvem. Use no celular e no PC se algo não aparecer no outro aparelho.</p>
       <button onclick="executarDiagnostico()" style="width:100%;padding:11px;border:none;border-radius:10px;background:#1a2e1a;color:#fff;font-weight:700;font-size:14px;cursor:pointer">🩺 Verificar agora</button>
       <div id="diag-resultado" style="margin-top:10px"></div>
+      <div style="margin-top:14px;padding-top:12px;border-top:1px solid rgba(0,0,0,.08)">
+        <div style="font-weight:700;font-size:14px">🔁 Endereços x Movimentações</div>
+        <p style="font-size:13px;color:var(--texto-suave);margin:4px 0 8px">Procura pisos da Conferência que voltaram para o endereço antigo, mesmo tendo sido movidos (a aba Movimentações guarda o destino).</p>
+        <button onclick="verificarEnderecosMov()" style="width:100%;padding:11px;border:none;border-radius:10px;background:#2c5f8a;color:#fff;font-weight:700;font-size:14px;cursor:pointer">🔁 Verificar endereços</button>
+        <div id="diag-enderecos" style="margin-top:10px"></div>
+      </div>
     </div>
 
     <div class="card" style="margin-top:12px">
@@ -2561,11 +2576,74 @@ function tsDataBR(str) {
 // Cada item ganha "_ts" (hora da última alteração). Exclusões ficam registradas em "<chave>__removidos".
 // Ao sincronizar, as listas dos aparelhos são JUNTADAS item a item (vence a alteração mais recente),
 // em vez de uma lista inteira sobrescrever a outra.
+// Hora "certa" para carimbar alterações: hora do aparelho corrigida pela diferença medida com o servidor do Google
+// (celular/PC com relógio adiantado ou atrasado não "ganham" nem "perdem" alterações por causa disso)
+window._relogioOffset = (() => { try { return parseInt(localStorage.getItem('estoque_relogio_offset')) || 0; } catch (e) { return 0; } })();
+function agoraSync() { return Date.now() - (window._relogioOffset || 0); }
 function tsItem(i) {
   if (!i) return 0;
   return i._ts || tsDataBR(i.dataAlteracao || i.editadoEm || i.criadoEm || i.data) || 0;
 }
-function _semMeta(i) { const c = { ...i }; delete c._ts; delete c.fotos; if (!(typeof c.foto === 'string' && c.foto.startsWith('http'))) delete c.foto; return JSON.stringify(c); }
+function _semMeta(i) { const c = { ...i }; delete c._ts; delete c._f; delete c._b; delete c.fotos; if (!(typeof c.foto === 'string' && c.foto.startsWith('http'))) delete c.foto; return jsonEstavel(c); }
+// ----- Sincronização CAMPO A CAMPO -----
+// Além do "_ts" do item, cada campo alterado guarda a hora da sua alteração em "_f" ({campo: hora}).
+// "_b" = hora dos campos que não estão em "_f". Assim, se o celular muda o ENDEREÇO e o PC muda o STATUS
+// do mesmo piso, as duas alterações são mantidas (antes, a do PC apagava a do celular).
+const _CAMPOS_FORA_MESCLA = new Set(['_ts', '_f', '_b', 'fotos']);
+function _valCampo(o, k) { const v = o[k]; if (k === 'foto' && !(typeof v === 'string' && v.startsWith('http'))) return undefined; return v; }
+function _baseItem(i) { return i._b != null ? i._b : tsItem(i); }
+function tsCampo(i, k) { return (i._f && i._f[k] != null) ? i._f[k] : _baseItem(i); }
+function _mexidoVersaoAntiga(i) {
+  if (i._b == null) return false;
+  let m = i._b;
+  if (i._f) Object.values(i._f).forEach(t => { if (t > m) m = t; });
+  return tsItem(i) > m;
+}
+function camposMudados(p, i) {
+  const ks = new Set([...Object.keys(p), ...Object.keys(i)]);
+  return [...ks].filter(k => !_CAMPOS_FORA_MESCLA.has(k) && jsonEstavel(_valCampo(p, k)) !== jsonEstavel(_valCampo(i, k)));
+}
+// Junta duas versões do mesmo item: cada campo fica com a alteração mais recente daquele campo
+function mesclarItem(l, n) {
+  if (jsonEstavel(l) === jsonEstavel(n)) return l;
+  const tl = tsItem(l), tn = tsItem(n);
+  const ks = new Set();
+  [l, n, l._f || {}, n._f || {}].forEach(o => Object.keys(o).forEach(k => ks.add(k)));
+  _CAMPOS_FORA_MESCLA.forEach(k => ks.delete(k));
+  // Item mexido por um aparelho com VERSÃO ANTIGA do app: "_ts" mais novo que todos os carimbos de campo.
+  // Não dá para saber qual campo ele mudou; num empate de carimbo com valor diferente, a mudança veio dele.
+  const antigoL = _mexidoVersaoAntiga(l), antigoN = _mexidoVersaoAntiga(n);
+  const r = {}, tsc = {};
+  ks.forEach(k => {
+    const al = tsCampo(l, k), an = tsCampo(n, k);
+    const vl = _valCampo(l, k), vn = _valCampo(n, k);
+    let usarL, t = Math.max(al, an);
+    if (al !== an) usarL = al > an;
+    else if (antigoL !== antigoN && jsonEstavel(vl) !== jsonEstavel(vn)) { usarL = antigoL; t = Math.max(t, usarL ? tl : tn); }
+    else if (tl !== tn) usarL = tl > tn;
+    else usarL = jsonEstavel(vl) >= jsonEstavel(vn); // empate total: regra fixa, todos os aparelhos chegam ao mesmo resultado
+    const v = usarL ? vl : vn;
+    if (v !== undefined) r[k] = v;
+    tsc[k] = t;
+  });
+  r._ts = Math.max(tl, tn);
+  // O resultado da junção é diferente da versão "mais nova"? Então ele vira a mais nova (+1),
+  // senão um aparelho com versão antiga do app (que olha só o "_ts") ficaria com a dele e reenviaria sem parar.
+  const semR = _semMeta(r);
+  const juntou = (tl === r._ts && _semMeta(l) !== semR) || (tn === r._ts && _semMeta(n) !== semR);
+  if (juntou) r._ts += 1;
+  const base = Math.max(_baseItem(l), _baseItem(n));
+  const f = {};
+  Object.entries(tsc).forEach(([k, t]) => { if (t !== base) f[k] = t; });
+  if (juntou) f._m = r._ts; // marca da junção (não é um campo do item)
+  if (Object.keys(f).length) r._f = f;
+  if (r._f || base !== r._ts) r._b = base;
+  // dados que só existem neste aparelho (foto ainda não enviada, fotos do cadastro)
+  if (r.foto == null && l.foto != null) r.foto = l.foto;
+  const fo = l.fotos != null ? l.fotos : n.fotos;
+  if (fo != null) r.fotos = fo;
+  return r;
+}
 function carregarTomb(chave) { try { return JSON.parse(localStorage.getItem(chave + '__removidos')) || {}; } catch (e) { return {}; } }
 function salvarTomb(chave, t) { try { localStorage.setItem(chave + '__removidos', JSON.stringify(t || {})); } catch (e) {} }
 function lerListaLS(chave) { try { return JSON.parse(localStorage.getItem(chave)) || []; } catch (e) { return []; } }
@@ -2577,7 +2655,7 @@ function carimbarLista(chave, nova) {
   let maiorVisto = 0;
   anterior.forEach(i => { if (i && i._ts > maiorVisto) maiorVisto = i._ts; });
   Object.values(carregarTomb(chave)).forEach(t => { if (t > maiorVisto) maiorVisto = t; });
-  const agora = Math.max(Date.now(), maiorVisto + 1);
+  const agora = Math.max(agoraSync(), maiorVisto + 1);
   const prev = new Map(anterior.filter(i => i && i.id != null).map(i => [String(i.id), i]));
   const tomb = carregarTomb(chave);
   let mudouTomb = false;
@@ -2587,10 +2665,23 @@ function carimbarLista(chave, nova) {
     const id = String(i.id);
     ids.add(id);
     const p = prev.get(id);
-    if (!p || _semMeta(p) !== _semMeta(i)) {
-      i._ts = agora;
+    if (!p) {
+      // item novo: todos os campos nascem agora
+      i._ts = agora; delete i._f; delete i._b;
       if (tomb[id]) { delete tomb[id]; mudouTomb = true; }
-    } else if (p._ts && !i._ts) i._ts = p._ts;
+      return;
+    }
+    const mud = camposMudados(p, i);
+    if (mud.length) {
+      const f = { ...(p._f || {}) };
+      mud.forEach(k => { f[k] = agora; });
+      i._b = _baseItem(p); i._f = f; i._ts = agora;
+      if (tomb[id]) { delete tomb[id]; mudouTomb = true; }
+    } else {
+      if (p._ts && !i._ts) i._ts = p._ts;
+      if (p._f && !i._f) i._f = p._f;
+      if (p._b != null && i._b == null) i._b = p._b;
+    }
   });
   prev.forEach((p, id) => { if (!ids.has(id)) { tomb[id] = agora; mudouTomb = true; } });
   if (mudouTomb) salvarTomb(chave, tomb);
@@ -2605,7 +2696,7 @@ function mesclarListas(local, nuvem, tombL, tombN, camposLocais = ['foto', 'foto
   const mapa = new Map();
   const locMap = new Map((local || []).filter(i => i && i.id != null).map(i => [String(i.id), i]));
   (nuvem || []).forEach(i => { if (i && i.id != null) mapa.set(String(i.id), i); });
-  locMap.forEach((i, id) => { const n = mapa.get(id); if (!n || tsItem(i) >= tsItem(n)) mapa.set(id, i); });
+  locMap.forEach((i, id) => { const n = mapa.get(id); mapa.set(id, n ? mesclarItem(i, n) : i); });
   const lista = [];
   mapa.forEach((i, id) => {
     if (tomb[id] && tomb[id] >= tsItem(i)) return; // excluído depois da última alteração
@@ -4139,7 +4230,7 @@ function registrarMovimentacao({ pisoId, pisoNome, lote, bitola, tonalidade, ori
   const movs = carregarMovimentacoes();
   movs.unshift({
     ...(extra || {}),
-    ts: Date.now(),
+    ts: agoraSync(),
     id: `${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
     pisoId,
     pisoNome,
@@ -4718,7 +4809,8 @@ async function executarDiagnostico() {
   const r = await window.diagnosticoSync();
   _ultimoDiag = r;
   const nomes = { conferencia: '📋 Conferência', quebras: '💔 Quebras' };
-  const rel = r.relogio != null ? (Math.abs(r.relogio) <= 60 ? `✅ certo (${r.relogio}s)` : `⚠️ ${r.relogio > 0 ? 'adiantado' : 'atrasado'} ${Math.abs(Math.round(r.relogio / 60))} min`) : (r.relogioErro ? `não medido (${r.relogioErro})` : '-');
+  const durRel = s => { s = Math.abs(s); return s >= 3600 ? `${Math.floor(s / 3600)}h${String(Math.round((s % 3600) / 60)).padStart(2, '0')}` : `${Math.round(s / 60)} min`; };
+  const rel = r.relogio != null ? (Math.abs(r.relogio) <= 60 ? `✅ certo (${r.relogio}s)` : `⚠️ ${r.relogio > 0 ? 'adiantado' : 'atrasado'} ${durRel(r.relogio)} <span style="font-weight:400">(o app já corrige sozinho)</span>`) : (r.relogioErro ? `não medido (${r.relogioErro})` : '-');
   const podeEd = podeEditar('conferencia');
   el.innerHTML = `<div class="diag-box">
     <div>🏷️ Versão: <b>${r.versao}</b></div>
@@ -4739,6 +4831,58 @@ async function executarDiagnostico() {
     }).join('')}
     <button class="diag-btn" style="margin-top:8px" onclick="copiarTexto(JSON.stringify(_ultimoDiag, null, 1)).then(ok=>toast(ok?'📋 Relatório copiado — cole na conversa':'❌ Não copiou', !ok))">📋 Copiar relatório</button>
   </div>`;
+}
+// ----- Recuperação: pisos que voltaram para o endereço antigo depois de um "mover" -----
+let _divergEnd = [];
+function enderecosDivergentes() {
+  const ultima = new Map();
+  carregarMovimentacoes().forEach(m => {
+    if (!m || !m.confId || !m.destino) return;
+    const u = ultima.get(String(m.confId));
+    if (!u || tsMov(m) > tsMov(u)) ultima.set(String(m.confId), m);
+  });
+  const res = [];
+  carregarConferencia().forEach(i => {
+    const m = ultima.get(String(i.id)); if (!m) return;
+    const atual = String(i.endereco || '').trim();
+    if (atual === String(m.destino).trim()) return;          // está onde foi movido → ok
+    if (atual !== String(m.origem || '').trim()) return;     // foi mudado por outro caminho → não mexe
+    res.push({ id: i.id, nome: i.nome, lote: i.lote, atual, destino: String(m.destino).trim(), quem: m.responsavel || '', quando: m.dataHora || '' });
+  });
+  return res.sort((a, b) => a.destino.localeCompare(b.destino, 'pt-BR', { numeric: true }));
+}
+function verificarEnderecosMov() {
+  const el = document.getElementById('diag-enderecos');
+  _divergEnd = enderecosDivergentes();
+  if (!_divergEnd.length) { el.innerHTML = '<div class="diag-box">✅ Todos os pisos movidos estão no endereço de destino.</div>'; return; }
+  const podeEd = podeEditar('conferencia');
+  el.innerHTML = `<div class="diag-box">
+    <b>⚠️ ${_divergEnd.length} piso(s) voltaram para o endereço antigo:</b>
+    <div style="max-height:320px;overflow:auto;margin-top:6px">
+    ${_divergEnd.map((d, k) => `<div class="diverg-linha${podeEd ? ' marcado' : ''}" data-k="${k}" ${podeEd ? `onclick="this.classList.toggle('marcado')"` : ''}>
+      ${podeEd ? `<span class="diverg-caixa"></span>` : ''}
+      <span><b>${escMapa(d.nome || '')}</b>${d.lote ? ` <span style="opacity:.7">· Lote ${escMapa(d.lote)}</span>` : ''}<br>
+      📍 está em <b>${escMapa(d.atual)}</b> → deveria estar em <b class="diverg-dest">${escMapa(d.destino)}</b><br>
+      <span style="font-size:11px;opacity:.7">movido ${d.quem ? 'por ' + escMapa(d.quem) + ' ' : ''}${d.quando ? 'em ' + escMapa(d.quando) : ''}</span></span></div>`).join('')}
+    </div>
+    ${podeEd ? `<button class="diag-btn" style="margin-top:8px;background:#2e7d32;color:#fff" onclick="corrigirEnderecosMov()">✅ Levar os marcados para o destino</button>` : '<div style="margin-top:6px;opacity:.8">Sem permissão para editar a Conferência.</div>'}
+  </div>`;
+}
+function corrigirEnderecosMov() {
+  if (!exigirEdicao('conferencia')) return;
+  const marcados = [...document.querySelectorAll('.diverg-linha.marcado')].map(c => _divergEnd[+c.dataset.k]).filter(Boolean);
+  if (!marcados.length) { toast('Nenhum piso marcado.', true); return; }
+  const lista = carregarConferencia();
+  const agora = new Date().toLocaleString('pt-BR');
+  let n = 0;
+  marcados.forEach(d => {
+    const i = lista.find(x => x.id === d.id);
+    if (i && String(i.endereco || '').trim() === d.atual) { i.endereco = d.destino; i.editadoEm = agora; n++; }
+  });
+  salvarConferencia(lista);
+  toast(`✅ ${n} piso(s) levados para o endereço de destino`);
+  if (document.getElementById('pag-conferencia')?.classList.contains('ativa')) renderConferencia();
+  verificarEnderecosMov();
 }
 async function recuperarSync(nome, lado) {
   const rotulo = nome === 'conferencia' ? 'Conferência' : 'Quebras';
@@ -6300,7 +6444,33 @@ document.addEventListener('keydown', e => {
   if (e.key === 'Escape' && document.getElementById('mapa-viewport')?.classList.contains('tela-cheia') && !document.getElementById('mapa-folha')) alternarTelaCheiaMapa();
 });
 
-const VERSAO_APP = '2026.11.06c';
+const VERSAO_APP = '2026.11.06e';
+// ----- Aviso de versão nova (aba aberta há muito tempo no PC continuaria com a versão antiga) -----
+let _ultimaChecagemVersao = 0;
+async function checarNovaVersao() {
+  if (!/^https?:$/.test(location.protocol) || document.getElementById('aviso-versao')) return;
+  if (Date.now() - _ultimaChecagemVersao < 60000) return;
+  _ultimaChecagemVersao = Date.now();
+  try {
+    const r = await fetch(location.pathname, { cache: 'no-store' });
+    if (!r.ok) return;
+    const m = (await r.text()).match(/const VERSAO_APP = '([^']+)'/);
+    if (m && m[1] > VERSAO_APP) mostrarAvisoVersao(m[1]);
+  } catch (e) {}
+}
+function mostrarAvisoVersao(nova) {
+  if (document.getElementById('aviso-versao')) return;
+  const d = document.createElement('div');
+  d.id = 'aviso-versao';
+  d.style.cssText = 'position:fixed;left:0;right:0;top:0;z-index:100000;background:#e67e22;color:#fff;padding:calc(10px + env(safe-area-inset-top)) 14px 10px;display:flex;gap:10px;align-items:center;justify-content:center;flex-wrap:wrap;font-weight:700;font-size:14px;box-shadow:0 2px 10px rgba(0,0,0,.25)';
+  d.innerHTML = `<span>🆕 Saiu uma versão nova do app (${nova}). Atualize para a sincronização funcionar certo.</span>
+    <button onclick="location.reload()" style="background:#fff;color:#a04f00;border:none;border-radius:8px;padding:8px 16px;font-weight:800;font-size:14px;cursor:pointer">🔄 Atualizar</button>`;
+  document.body.appendChild(d);
+}
+setTimeout(checarNovaVersao, 20000);
+setInterval(checarNovaVersao, 10 * 60000);
+document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') checarNovaVersao(); });
+window.addEventListener('online', () => setTimeout(checarNovaVersao, 3000));
 // ===================== MAPA LIVRE POR PÁTIO (desenho editável) =====================
 // Cada pátio é um desenho com 3 tipos de peça (unidades: 1 apt ≈ 28 x 26):
 //   { t:'rua',  rua:42, x,y,w,h, cor, rotulo? }                 → bloco colorido da rua
@@ -6370,6 +6540,9 @@ function layoutRascunhoP2() {
 }
 
 function mapasSalvos() { const m = carregarConfigApp().mapasPatios; return m && typeof m === 'object' ? m : {}; }
+// Hora do salvamento de um desenho: sempre depois do último desenho conhecido daquele pátio
+// (um desenho gravado por um aparelho com relógio adiantado não pode "segurar" as alterações novas)
+function tsNovoMapa(p) { const a = mapasSalvos()[p]; return Math.max(agoraSync(), ((a && a.ts) || 0) + 1); }
 function patiosComMapa() {
   const set = new Set([2, 4, ...Object.keys(mapasSalvos()).map(Number)]);
   return [...set].filter(p => p > 0 && mapasSalvos()[p] !== null).sort((a, b) => a - b);
@@ -6433,7 +6606,7 @@ function novoPatioMapa() {
   if (!(p > 0 && p < 100)) { toast('⚠️ Número de pátio inválido.', true); return; }
   if (patiosComMapa().includes(p)) { selecionarPatioMapa(p); return; }
   const cfg = carregarConfigApp();
-  cfg.mapasPatios = { ...mapasSalvos(), [p]: { elementos: [], ts: Date.now(), por: window._usuarioAtivo || '' } };
+  cfg.mapasPatios = { ...mapasSalvos(), [p]: { elementos: [], ts: tsNovoMapa(p), em: agoraSync(), por: window._usuarioAtivo || '' } };
   salvarConfigApp(cfg);
   selecionarPatioMapa(p);
   entrarEditorMapa();
@@ -6545,7 +6718,7 @@ function renderMapa() {
       (foraDoMapa.length ? `<br><a href="#" onclick="mostrarForaDoMapa();return false" style="color:#b35c00;font-weight:700">⚠️ ${foraDoMapa.length} item(ns) com endereço fora do desenho — ver</a>` : '') +
       (semDesenho.length ? `<br><span style="color:var(--texto-suave)">ℹ️ ${semDesenho.length} item(ns) em pátios sem desenho (${[...new Set(semDesenho.map(i => _pad2(i.patio)))].join(', ')})</span>` : '') +
       (layout.rascunho && !mapaEd.ativo ? `<br><span style="color:#b35c00">✏️ Desenho em rascunho — confira no galpão e ajuste em <b>Editar mapa</b>.</span>` : '') +
-      (layout.ts && !mapaEd.ativo ? `<br><span style="font-size:11px;color:var(--texto-suave)">💾 Desenho salvo em ${new Date(layout.ts).toLocaleString('pt-BR')}${layout.por ? ' por ' + escMapa(layout.por) : ''}</span>` : '');
+      (layout.ts && !mapaEd.ativo ? `<br><span style="font-size:11px;color:var(--texto-suave)">💾 Desenho salvo em ${new Date(Math.min(layout.em || layout.ts, agoraSync())).toLocaleString('pt-BR')}${layout.por ? ' por ' + escMapa(layout.por) : ''}</span>` : '');
   }
   const be = document.getElementById('btn-editar-mapa');
   if (be) be.style.display = usuarioAtivoIsMestre() && !mapaEd.ativo ? '' : 'none';
@@ -6572,7 +6745,7 @@ function sairEditorMapa(semPerguntar) {
 function salvarEditorMapa() {
   if (!usuarioAtivoIsMestre()) { toast('🔒 Apenas mestres/ADM podem salvar o mapa.', true); return; }
   const cfg = carregarConfigApp();
-  cfg.mapasPatios = { ...mapasSalvos(), [mapaEd.patio]: { elementos: JSON.parse(JSON.stringify(mapaEd.els)), ts: Date.now(), por: window._usuarioAtivo || '' } };
+  cfg.mapasPatios = { ...mapasSalvos(), [mapaEd.patio]: { elementos: JSON.parse(JSON.stringify(mapaEd.els)), ts: tsNovoMapa(mapaEd.patio), em: agoraSync(), por: window._usuarioAtivo || '' } };
   const envio = salvarConfigApp(cfg);
   delete _cacheLayout[mapaEd.patio];
   const p = mapaEd.patio;
@@ -7548,7 +7721,7 @@ function renderMovimentacoes() {
 function limparMovimentacoes() {
   if (!exigirEdicao('movimentacoes')) return;
   if (!confirm('Apagar todo o histórico de movimentações?\n\nIsso apaga em todos os aparelhos.')) return;
-  salvarMovLimpo(Date.now());
+  salvarMovLimpo(agoraSync());
   movSelecionadas.clear();
   salvarMovimentacoes([]);
   renderMovimentacoes();
@@ -7787,21 +7960,33 @@ async function sincronizarLista(nome, uid) {
   if (mudouLocal) {
     if (nome === 'conferencia' && document.getElementById('pag-conferencia')?.classList.contains('ativa')) renderConferencia();
     if (nome === 'quebras' && document.getElementById('pag-quebras')?.classList.contains('ativa')) renderQuebras();
+    if ((nome === 'conferencia' || nome === 'estoque') && document.getElementById('pag-mapa')?.classList.contains('ativa') && !(window.mapaEd && mapaEd.ativo)) { try { renderMapa(); } catch (e) {} }
   }
   return mudouLocal;
 }
+// Mede a diferença entre o relógio deste aparelho e o do servidor (ms; + = aparelho adiantado)
+async function medirRelogio(uid) {
+  const refRel = doc(db, 'usuarios', uid, 'dados', 'relogio');
+  const antes = Date.now();
+  await comTempoLimite(setDoc(refRel, { t: serverTimestamp(), aparelho: navigator.userAgent.slice(0, 80) }), 15000);
+  const meio = (antes + Date.now()) / 2;
+  const sn = await comTempoLimite(getDoc(refRel), 15000);
+  const srv = sn.data()?.t?.toMillis?.();
+  if (!srv) return null;
+  const off = Math.round(meio - srv);
+  window._relogioOffset = Math.abs(off) > 2000 ? off : 0; // diferença pequena = ruído da internet
+  try { localStorage.setItem('estoque_relogio_offset', String(window._relogioOffset)); } catch (e) {}
+  return off;
+}
+window.medirRelogio = () => window._usuarioUid ? medirRelogio(window._usuarioUid).catch(() => null) : Promise.resolve(null);
 // ===================== DIAGNÓSTICO DA SINCRONIZAÇÃO =====================
 window.diagnosticoSync = async function() {
   const uid = window._usuarioUid;
   const r = { versao: VERSAO_APP, hora: new Date().toLocaleString('pt-BR'), conta: window._usuarioEmail || '(não conectado)', uid: uid ? uid.slice(0, 8) : '-', online: navigator.onLine, listas: {} };
   if (!uid) return r;
   try {
-    const refRel = doc(db, 'usuarios', uid, 'dados', 'relogio');
-    const antes = Date.now();
-    await comTempoLimite(setDoc(refRel, { t: serverTimestamp(), aparelho: navigator.userAgent.slice(0, 80) }), 15000);
-    const sn = await comTempoLimite(getDoc(refRel), 15000);
-    const srv = sn.data()?.t?.toMillis?.();
-    if (srv) r.relogio = Math.round(((antes + Date.now()) / 2 - srv) / 1000); // segundos (+ adiantado / − atrasado)
+    const off = await medirRelogio(uid);
+    if (off != null) { r.relogio = Math.round(off / 1000); r.relogioCorrigido = !!window._relogioOffset; } // segundos (+ adiantado / − atrasado)
   } catch (e) { r.relogioErro = e?.code || e?.message; }
   for (const nome of ['conferencia', 'quebras']) {
     const cfg = SYNC_LISTAS[nome];
@@ -7838,11 +8023,13 @@ window.forcarVersaoAparelho = async function(nome) {
   const tombN = snap.exists() ? (snap.data().removidos || {}) : {};
   const mN = new Map(nuvem.map(i => [String(i.id), i]));
   const local = lerListaLS(cfg.chave);
-  let maior = Date.now();
+  let maior = agoraSync();
   [...nuvem, ...local].forEach(i => { if (i && i._ts > maior) maior = i._ts; });
   Object.values(tombN).forEach(t => { if (t > maior) maior = t; });
   let n = 0;
-  local.forEach(i => { const c = mN.get(String(i.id)); if (!c || _semMeta(cfg.limpar(i)) !== _semMeta(c) || tombN[String(i.id)]) { i._ts = ++maior; n++; } });
+  [...nuvem, ...local].forEach(i => { if (i && i._f) Object.values(i._f).forEach(t => { if (t > maior) maior = t; }); });
+  // itens diferentes: TODOS os campos passam a valer a partir de agora (a versão deste aparelho vence)
+  local.forEach(i => { const c = mN.get(String(i.id)); if (!c || _semMeta(cfg.limpar(i)) !== _semMeta(c) || tombN[String(i.id)]) { i._ts = ++maior; delete i._f; delete i._b; n++; } });
   localStorage.setItem(cfg.chave, JSON.stringify(local));
   await sincronizarLista(nome, uid);
   return n;
@@ -8097,6 +8284,8 @@ onAuthStateChanged(auth, async user => {
     await migrarFotosParaDB().catch(() => {});
     migrarFotosParaCloudinary().catch(() => {});
 
+    // Acerta o relógio pela hora do servidor (no máx. 4s de espera; se falhar usa a última medição)
+    await Promise.race([medirRelogio(user.uid).catch(() => null), new Promise(r => setTimeout(r, 4000))]);
     // Carrega dados iniciais do Firestore
     await carregarDoFirestore(user.uid);
     renderStatusSync();
