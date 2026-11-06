@@ -4853,6 +4853,7 @@ async function executarDiagnostico() {
           <button class="diag-btn" onclick="recuperarSync('${n}','nuvem')">📥 Usar a versão da nuvem</button></div>` : ''}`}
         ${i.estado?.erro ? `<br><span style="color:#c0392b">Último erro de envio: ${escMapa(i.estado.erro)}</span>` : ''}</div>`;
     }).join('')}
+    ${htmlCopiasSeguranca()}
     <button class="diag-btn" style="margin-top:8px" onclick="copiarTexto(JSON.stringify(_ultimoDiag, null, 1)).then(ok=>toast(ok?'📋 Relatório copiado — cole na conversa':'❌ Não copiou', !ok))">📋 Copiar relatório</button>
   </div>`;
 }
@@ -4907,6 +4908,27 @@ function corrigirEnderecosMov() {
   toast(`✅ ${n} piso(s) levados para o endereço de destino`);
   if (document.getElementById('pag-conferencia')?.classList.contains('ativa')) renderConferencia();
   verificarEnderecosMov();
+}
+// Cópias de segurança guardadas quando muitos itens sumiram de uma vez
+function htmlCopiasSeguranca() {
+  const nomes = { conferencia: '📋 Conferência', quebras: '💔 Quebras', movimentacoes: '🔄 Movimentações', erros: '⚠️ Erros' };
+  const atuais = { conferencia: carregarConferencia, quebras: carregarQuebras, movimentacoes: carregarMovimentacoes, erros: carregarErros };
+  return Object.keys(nomes).map(n => {
+    let c; try { c = JSON.parse(localStorage.getItem('estoque_copia_' + n) || 'null'); } catch (e) {}
+    if (!c || !c.itens || !c.itens.length) return '';
+    const ids = new Set(atuais[n]().map(i => String(i.id)));
+    const falta = c.itens.filter(i => i && !ids.has(String(i.id))).length;
+    return `<div class="diag-lista">♻️ <b>Cópia de segurança — ${nomes[n]}</b>: ${c.itens.length} itens de ${new Date(c.em).toLocaleString('pt-BR')}<br>
+      ${falta ? `<span style="color:#c0392b;font-weight:700">${falta} item(ns) da cópia não estão na lista agora.</span>
+      ${podeEditar(n === 'movimentacoes' ? 'movimentacoes' : n) ? `<button class="diag-btn" style="margin-top:6px;background:#2e7d32;color:#fff" onclick="restaurarCopia('${n}')">♻️ Restaurar os ${falta} que faltam</button>` : ''}` : '✅ Nada faltando em relação à cópia.'}</div>`;
+  }).join('');
+}
+function restaurarCopia(nome) {
+  if (!confirm('Colocar de volta os itens da cópia de segurança que não estão na lista agora?\n\nEles voltam para todos os aparelhos.')) return;
+  const n = window.restaurarCopiaSeguranca ? window.restaurarCopiaSeguranca(nome) : 0;
+  toast(n ? `♻️ ${n} item(ns) restaurados` : 'Nada para restaurar.');
+  if (nome === 'conferencia') renderConferencia(); else if (nome === 'quebras') renderQuebras();
+  executarDiagnostico();
 }
 async function recuperarSync(nome, lado) {
   const rotulo = nome === 'conferencia' ? 'Conferência' : 'Quebras';
@@ -6458,7 +6480,7 @@ document.addEventListener('keydown', e => {
   if (e.key === 'Escape' && document.getElementById('mapa-viewport')?.classList.contains('tela-cheia') && !document.getElementById('mapa-folha')) alternarTelaCheiaMapa();
 });
 
-const VERSAO_APP = '2026.11.06f';
+const VERSAO_APP = '2026.11.06g';
 // ----- Aviso de versão nova (aba aberta há muito tempo no PC continuaria com a versão antiga) -----
 let _ultimaChecagemVersao = 0;
 async function checarNovaVersao() {
@@ -8439,7 +8461,14 @@ function importarAntigo(nome, dados) {
     if (!s) { if (apagadoDepois(R, id, o)) return; ops.push({ id, tipo: 'novo', item: o }); }
     else { const campos = diffServidor(s, mesclarItem(o, s)); if (campos) ops.push({ id, tipo: 'campos', campos }); }
   });
-  Object.entries(st.remAntigo).forEach(([id, t]) => { const s = S.get(id); if (s && t >= tsItem(s)) ops.push({ id, tipo: 'del', ts: t }); });
+  const dels = [];
+  Object.entries(st.remAntigo).forEach(([id, t]) => { const s = S.get(id); if (s && t >= tsItem(s)) dels.push({ id, tipo: 'del', ts: t }); });
+  // PROTEÇÃO: exclusão em massa vinda de uma versão antiga (ex.: arquivo antigo publicado por engano e lista
+  // que apareceu vazia) NÃO é levada para a nuvem nova. Exclusões pequenas (uso normal) passam.
+  if (dels.length > 5 && dels.length > S.size * 0.2) {
+    console.warn(`Ignoradas ${dels.length} exclusões vindas da versão antiga (${nome})`);
+    toast(`🛡️ ${dels.length} exclusões vindas de um aparelho com versão antiga foram ignoradas (proteção)`, true);
+  } else ops.push(...dels);
   if (nome === 'movimentacoes' && limpoEm) S.forEach((s, id) => { if (tsMov(s) <= limpoEm && !ops.some(o => o.id === id)) ops.push({ id, tipo: 'del', ts: limpoEm }); });
   enviarOps(nome, ops);
   try { localStorage.setItem(chaveAssin, assin); } catch (e) {}
@@ -8471,6 +8500,9 @@ function espelhar(nome) {
   if (cfg.ordenar) lista.sort(cfg.ordenar);
   const novo = JSON.stringify(lista);
   if (novo === bruto) return; // nada mudou (comparação rápida)
+  // muitos itens sumindo de uma vez → guarda uma cópia de segurança da lista deste aparelho antes
+  const sumindo = local.filter(l => l && l.id != null && !out.has(String(l.id))).length;
+  if (sumindo > 5 && sumindo > local.length * 0.2) guardarCopiaSeguranca(nome, local);
   // houve mudança vinda de OUTRO aparelho? (para avisar)
   const agora = Date.now();
   const deFora = lista.some(i => { const l = L.get(String(i.id)); const e = st.emitidos.get(String(i.id)); return (!l || JSON.stringify(l) !== JSON.stringify(i)) && !(e && agora - e < 6000); })
@@ -8479,6 +8511,27 @@ function espelhar(nome) {
   try { cfg.aoMudar(); } catch (e) { console.error(e); }
   if (deFora && st.avisar) toast(cfg.msg);
 }
+function guardarCopiaSeguranca(nome, itens) {
+  const chave = 'estoque_copia_' + nome;
+  try {
+    const ant = JSON.parse(localStorage.getItem(chave) || 'null');
+    // não troca uma cópia boa (maior e recente) por uma menor
+    if (ant && ant.itens && ant.itens.length >= itens.length && Date.now() - ant.em < 7 * 864e5) return;
+    localStorage.setItem(chave, JSON.stringify({ em: Date.now(), itens }));
+  } catch (e) { console.warn('cópia de segurança:', e); }
+}
+window.restaurarCopiaSeguranca = function(nome) {
+  const cfg = TR[nome];
+  let copia; try { copia = JSON.parse(localStorage.getItem('estoque_copia_' + nome) || 'null'); } catch (e) {}
+  if (!copia || !copia.itens) return 0;
+  const atual = lerListaLS(cfg.chave);
+  const ids = new Set(atual.map(i => String(i.id)));
+  const faltando = copia.itens.filter(i => i && i.id != null && !ids.has(String(i.id))).map(i => { const c = { ...i }; delete c._f; delete c._b; return c; });
+  if (!faltando.length) return 0;
+  const lista = [...faltando, ...atual];
+  if (nome === 'conferencia') salvarConferencia(lista); else if (nome === 'quebras') salvarQuebras(lista); else if (nome === 'erros') salvarErros(lista); else salvarMovimentacoes(lista);
+  return faltando.length;
+};
 function agendarEspelho(nome) {
   const st = trEstado[nome]; if (!st) return;
   clearTimeout(st.timerEsp);
