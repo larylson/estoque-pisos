@@ -2032,6 +2032,12 @@ PASSOS PARA RODAR NO GITHUB PAGES:
       <button onclick="executarDiagnostico()" style="width:100%;padding:11px;border:none;border-radius:10px;background:#1a2e1a;color:#fff;font-weight:700;font-size:14px;cursor:pointer">🩺 Verificar agora</button>
       <div id="diag-resultado" style="margin-top:10px"></div>
       <div style="margin-top:14px;padding-top:12px;border-top:1px solid rgba(0,0,0,.08)">
+        <div style="font-weight:700;font-size:14px">🆘 Recuperar dados perdidos</div>
+        <p style="font-size:13px;color:var(--texto-suave);margin:4px 0 8px">Procura pisos que sumiram em todas as fontes: lista antiga na nuvem, cópia de segurança deste aparelho, Movimentações e Quebras.</p>
+        <button onclick="procurarPerdidos()" style="width:100%;padding:11px;border:none;border-radius:10px;background:#c0392b;color:#fff;font-weight:700;font-size:14px;cursor:pointer">🆘 Procurar dados perdidos</button>
+        <div id="diag-perdidos" style="margin-top:10px"></div>
+      </div>
+      <div style="margin-top:14px;padding-top:12px;border-top:1px solid rgba(0,0,0,.08)">
         <div style="font-weight:700;font-size:14px">🔁 Endereços x Movimentações</div>
         <p style="font-size:13px;color:var(--texto-suave);margin:4px 0 8px">Procura pisos da Conferência que voltaram para o endereço antigo, mesmo tendo sido movidos (a aba Movimentações guarda o destino).</p>
         <button onclick="verificarEnderecosMov()" style="width:100%;padding:11px;border:none;border-radius:10px;background:#2c5f8a;color:#fff;font-weight:700;font-size:14px;cursor:pointer">🔁 Verificar endereços</button>
@@ -4857,6 +4863,40 @@ async function executarDiagnostico() {
     <button class="diag-btn" style="margin-top:8px" onclick="copiarTexto(JSON.stringify(_ultimoDiag, null, 1)).then(ok=>toast(ok?'📋 Relatório copiado — cole na conversa':'❌ Não copiou', !ok))">📋 Copiar relatório</button>
   </div>`;
 }
+// ----- Recuperação: dados perdidos -----
+async function procurarPerdidos() {
+  const el = document.getElementById('diag-perdidos');
+  if (!window.procurarDadosPerdidos) { el.innerHTML = '<p style="color:#c0392b">Firebase não carregou neste aparelho.</p>'; return; }
+  el.innerHTML = '<p style="font-size:13px">⏳ Procurando na nuvem e neste aparelho...</p>';
+  const r = await window.procurarDadosPerdidos();
+  const nomes = { conferencia: '📋 Conferência', quebras: '💔 Quebras', movimentacoes: '🔄 Movimentações' };
+  const fontes = pf => Object.entries(pf).map(([f, q]) => `${q} da ${f}`).join(', ');
+  const exc = Object.entries(r.exclusoes).filter(([n, g]) => g.length && nomes[n]).map(([n, g]) => `<div style="font-size:12px">🗑️ ${nomes[n]}: ${g.map(([k, q]) => `<b>${q}</b> excluído(s) em ${k}`).join(' · ')}</div>`).join('');
+  el.innerHTML = `<div class="diag-box">
+    ${r.erro ? `<div style="color:#c0392b">⚠️ Não consegui ler: ${escMapa(r.erro)}</div>` : ''}
+    ${Object.entries(r.listas).map(([n, a]) => {
+      const pode = podeEditar(n);
+      const tot = a.completos.length + a.parciais.length;
+      return `<div class="diag-lista"><b>${nomes[n]}</b> — agora: ${a.agora} · lista antiga na nuvem: ${a.nuvemAntiga} · cópia do aparelho: ${a.copia}<br>
+        ${!tot ? '✅ Nada faltando nessas fontes.' : `
+        ${a.completos.length ? `<span style="color:#2e7d32;font-weight:700">${a.completos.length} completo(s) para recuperar</span> (${fontes(a.porFonte)})<br>` : ''}
+        ${a.parciais.length ? `<span style="color:#b9770e;font-weight:700">${a.parciais.length} parcial(is)</span> — reconstruídos das Movimentações/Quebras (nome, lote, bitola, tom e endereço; sem quantidades)<br>` : ''}
+        ${pode ? `<div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:6px">
+          ${a.completos.length ? `<button class="diag-btn" style="background:#2e7d32;color:#fff" onclick="restaurarPerdidos('${n}',false)">♻️ Restaurar ${a.completos.length} completo(s)</button>` : ''}
+          ${a.parciais.length ? `<button class="diag-btn" style="background:#b9770e;color:#fff" onclick="restaurarPerdidos('${n}',true)">♻️ Restaurar ${tot} (com os parciais)</button>` : ''}
+        </div>` : ''}`}</div>`;
+    }).join('')}
+    ${exc ? `<div class="diag-lista"><b>Registro de exclusões na nuvem</b>${exc}</div>` : ''}
+  </div>`;
+}
+function restaurarPerdidos(nome, parciais) {
+  if (!confirm('Colocar de volta os itens encontrados?\n\nEles voltam para TODOS os aparelhos.' + (parciais ? '\n\nOs parciais vêm marcados "Precisa de Conferência" para você conferir as quantidades.' : ''))) return;
+  const n = window.restaurarAchados ? window.restaurarAchados(nome, parciais) : 0;
+  toast(n ? `♻️ ${n} item(ns) restaurados para todos os aparelhos` : 'Nada para restaurar.');
+  if (nome === 'conferencia') renderConferencia(); else if (nome === 'quebras') renderQuebras();
+  procurarPerdidos();
+}
+
 // ----- Recuperação: pisos que voltaram para o endereço antigo depois de um "mover" -----
 let _divergEnd = [];
 function enderecosDivergentes() {
@@ -6480,7 +6520,7 @@ document.addEventListener('keydown', e => {
   if (e.key === 'Escape' && document.getElementById('mapa-viewport')?.classList.contains('tela-cheia') && !document.getElementById('mapa-folha')) alternarTelaCheiaMapa();
 });
 
-const VERSAO_APP = '2026.11.06g';
+const VERSAO_APP = '2026.11.06h';
 // ----- Aviso de versão nova (aba aberta há muito tempo no PC continuaria com a versão antiga) -----
 let _ultimaChecagemVersao = 0;
 async function checarNovaVersao() {
@@ -8664,6 +8704,87 @@ async function usarVersaoNuvemTR(nome) {
   atualizarEstadoTR(nome);
   return lista.length;
 }
+
+// ===================== RECUPERAÇÃO: procurar dados perdidos em todas as fontes =====================
+// Fontes completas: documento antigo da nuvem (lista inteira), cópia de segurança deste aparelho.
+// Fontes parciais (só conferência): movimentações (nome, lote, bitola, tom, endereço de destino) e quebras.
+window.procurarDadosPerdidos = async function() {
+  const uid = window._usuarioUid;
+  const r = { listas: {}, exclusoes: {} };
+  const lerCopia = n => { try { const c = JSON.parse(localStorage.getItem('estoque_copia_' + n) || 'null'); return (c && Array.isArray(c.itens)) ? c.itens : []; } catch (e) { return []; } };
+  const antigo = {};
+  if (uid) {
+    for (const [n, ref, campo] of [['conferencia', refConferencia, 'lista'], ['quebras', refQuebras, 'lista'], ['movimentacoes', refMovimentacoes, 'movimentacoes']]) {
+      try { const s = await comTempoLimite(getDoc(ref(uid)), 25000); antigo[n] = s.exists() ? (s.data()[campo] || []) : []; }
+      catch (e) { antigo[n] = []; r.erro = (r.erro ? r.erro + ', ' : '') + n + ': ' + (e?.code || e?.message); }
+    }
+  }
+  // exclusões registradas na nuvem (quando e quantas)
+  LISTAS_TR.forEach(n => {
+    const st = trEstado[n]; if (!st) return;
+    const grupos = {};
+    st.baldes.forEach(b => Object.values((b && b.rem) || {}).forEach(t => { if (typeof t !== 'number') return; const k = new Date(t).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }); grupos[k] = (grupos[k] || 0) + 1; }));
+    r.exclusoes[n] = Object.entries(grupos).sort((a, b) => b[1] - a[1]).slice(0, 4);
+  });
+  const atuais = { conferencia: carregarConferencia(), quebras: carregarQuebras(), movimentacoes: carregarMovimentacoes() };
+  for (const n of ['conferencia', 'quebras', 'movimentacoes']) {
+    const temAgora = new Set(atuais[n].map(i => String(i.id)));
+    const melhor = new Map(); const origem = {};
+    const considerar = (it, fonte) => {
+      if (!it || it.id == null) return; const id = String(it.id);
+      if (temAgora.has(id)) return;
+      const a = melhor.get(id);
+      if (!a || tsItem(it) > tsItem(a)) { melhor.set(id, it); origem[id] = fonte; }
+    };
+    (antigo[n] || []).forEach(i => considerar(i, 'nuvem antiga'));
+    lerCopia(n).forEach(i => considerar(i, 'cópia do aparelho'));
+    const parciais = new Map();
+    if (n === 'conferencia') {
+      // movimentações: última de cada piso
+      const movs = [...atuais.movimentacoes, ...(antigo.movimentacoes || []), ...lerCopia('movimentacoes')];
+      const ult = new Map();
+      movs.forEach(m => { if (!m || !m.confId || !m.destino) return; const u = ult.get(String(m.confId)); if (!u || tsMov(m) > tsMov(u)) ult.set(String(m.confId), m); });
+      ult.forEach((m, id) => {
+        if (temAgora.has(id) || melhor.has(id)) return;
+        parciais.set(id, { id, tipo: m.tipo || 'piso', nome: m.pisoNome || '(sem nome)', marca: m.marca || '', tamanho: m.tamanho || '', lote: m.lote || '', bitola: m.bitola || '', tonalidade: m.tonalidade || '',
+          endereco: m.destino, responsavel: m.responsavel || '', criadoEm: m.dataHora || new Date().toLocaleString('pt-BR'), reconferencia: 'precisa',
+          obs: '♻️ Recuperado das movimentações — confira as quantidades' });
+      });
+      // quebras: dados do piso de onde a quebra veio
+      [...atuais.quebras, ...(antigo.quebras || [])].forEach(q => {
+        const id = q && q.origemConfId ? String(q.origemConfId) : null;
+        if (!id || temAgora.has(id) || melhor.has(id) || parciais.has(id)) return;
+        parciais.set(id, { id, tipo: q.tipo || 'piso', nome: q.nome || '(sem nome)', marca: q.marca || '', codigo: q.codigo || '', tamanho: q.tamanho || '', lote: q.lote || '', bitola: q.bitola || '',
+          tonalidade: q.tonalidade || '', endereco: q.endereco || '', m2PorCaixa: q.m2PorCaixa || '', pecasPorCaixa: q.pecasPorCaixa || '', criadoEm: q.criadoEm || new Date().toLocaleString('pt-BR'), reconferencia: 'precisa',
+          obs: '♻️ Recuperado da aba Quebras — confira as quantidades' });
+      });
+    }
+    const porFonte = {}; Object.values(origem).forEach(f => { porFonte[f] = (porFonte[f] || 0) + 1; });
+    r.listas[n] = { completos: [...melhor.values()], parciais: [...parciais.values()], porFonte, agora: atuais[n].length, nuvemAntiga: (antigo[n] || []).length, copia: lerCopia(n).length };
+  }
+  window._achadosRecuperacao = r;
+  return r;
+};
+window.restaurarAchados = function(nome, incluirParciais) {
+  const r = window._achadosRecuperacao; if (!r || !r.listas[nome]) return 0;
+  const a = r.listas[nome];
+  const limpa = i => { const c = JSON.parse(JSON.stringify(i)); delete c._f; delete c._b; delete c._ts; return c; };
+  const novos = [...a.completos, ...(incluirParciais ? a.parciais : [])].map(limpa);
+  if (nome === 'conferencia') {
+    // se o piso foi movido DEPOIS dessa versão, já volta no endereço de destino da última movimentação
+    const ult = new Map();
+    carregarMovimentacoes().forEach(m => { if (!m || !m.confId || !m.destino) return; const u = ult.get(String(m.confId)); if (!u || tsMov(m) > tsMov(u)) ult.set(String(m.confId), m); });
+    const tsOrig = new Map([...a.completos, ...a.parciais].map(i => [String(i.id), tsItem(i)]));
+    novos.forEach(i => { const m = ult.get(String(i.id)); if (m && String(i.endereco || '').trim() === String(m.origem || '').trim() && tsMov(m) >= (tsOrig.get(String(i.id)) || 0)) i.endereco = m.destino; });
+  }
+  const atual = nome === 'conferencia' ? carregarConferencia() : nome === 'quebras' ? carregarQuebras() : carregarMovimentacoes();
+  const ids = new Set(atual.map(i => String(i.id)));
+  const faltam = novos.filter(i => !ids.has(String(i.id)));
+  if (!faltam.length) return 0;
+  const lista = [...faltam, ...atual];
+  if (nome === 'conferencia') salvarConferencia(lista); else if (nome === 'quebras') salvarQuebras(lista); else salvarMovimentacoes(lista);
+  return faltam.length;
+};
 
 // ===================== MAPA DO PÁTIO EM TEMPO REAL =====================
 // usuarios/{uid}/dados/mapas → { patios: { "4": { elementos, ts, em, por } } }
