@@ -2213,7 +2213,7 @@ PASSOS PARA RODAR NO GITHUB PAGES:
       <input type="search" id="mapa-busca" placeholder="🔍 Buscar piso, lote ou endereço..." oninput="buscarNoMapa()" style="width:100%;box-sizing:border-box;padding:11px 14px;font-size:14px;border-radius:10px;border:1.5px solid #d0c9bb;background:#fff;margin-bottom:10px" />
       <div style="display:flex;flex-wrap:wrap;gap:6px;align-items:center">
         <span style="flex:1"></span>
-        <button class="mapa-fonte-btn" onclick="window.recarregarConfigNuvem && window.recarregarConfigNuvem(true)" title="Buscar o desenho mais recente na nuvem">🔄 Atualizar</button>
+        <button class="mapa-fonte-btn" onclick="atualizarTudo(this)" title="Buscar na nuvem os pisos, as movimentações e o desenho mais recentes">🔄 Atualizar</button>
         <button class="mapa-fonte-btn" id="btn-editar-mapa" onclick="entrarEditorMapa()">✏️ Editar mapa</button>
       </div>
       <div id="mapa-resumo" style="font-size:13px;margin-top:10px;line-height:1.6"></div>
@@ -2325,6 +2325,74 @@ PASSOS PARA RODAR NO GITHUB PAGES:
 </div>
 
 <script>
+
+// ===================== REGISTRO DE ERROS (aparece no diagnóstico e no relatório) =====================
+window._logErros = (() => { try { return JSON.parse(localStorage.getItem('estoque_log_erros') || '[]'); } catch (e) { return []; } })();
+function registrarErro(onde, e) {
+  try {
+    const msg = e == null ? '' : (typeof e === 'string' ? e : ((e.code ? e.code + ': ' : '') + (e.message || e.name || String(e))));
+    const ult = window._logErros[window._logErros.length - 1];
+    if (ult && ult.onde === String(onde).slice(0, 60) && ult.msg === String(msg).slice(0, 220) && ult.t === new Date().toLocaleString('pt-BR')) return; // repetido no mesmo segundo
+    window._logErros.push({ t: new Date().toLocaleString('pt-BR'), onde: String(onde).slice(0, 60), msg: String(msg).slice(0, 220) });
+    if (window._logErros.length > 25) window._logErros.splice(0, window._logErros.length - 25);
+    localStorage.setItem('estoque_log_erros', JSON.stringify(window._logErros));
+  } catch (x) {}
+}
+window.addEventListener('error', ev => registrarErro('js', ev.error || ev.message));
+window.addEventListener('unhandledrejection', ev => registrarErro('promessa', ev.reason));
+
+// ===================== MEMÓRIA DO APARELHO (localStorage) =====================
+function ehMemoriaCheia(e) { return !!e && (e.name === 'QuotaExceededError' || e.code === 22 || e.code === 1014 || e.name === 'NS_ERROR_DOM_QUOTA_REACHED'); }
+function usoMemoriaLS() {
+  const itens = [];
+  try { for (let i = 0; i < localStorage.length; i++) { const k = localStorage.key(i); itens.push([k, (k.length + (localStorage.getItem(k) || '').length)]); } } catch (e) {}
+  itens.sort((a, b) => b[1] - a[1]);
+  return { totalKB: Math.round(itens.reduce((t, x) => t + x[1], 0) / 1024), maiores: itens.slice(0, 6).map(([k, n]) => `${k}: ${Math.round(n / 1024)} KB`) };
+}
+// Libera espaço apagando só o que não é essencial (a nuvem tem os dados)
+function liberarEspacoLS(tudo) {
+  let liberou = 0;
+  const tirar = k => { const v = localStorage.getItem(k); if (v != null) { liberou += v.length; localStorage.removeItem(k); } };
+  const listas = { conferencia: 'estoque_conferencia_v1', quebras: 'estoque_quebras_v1', movimentacoes: 'estoque_movimentacoes_v1', erros: 'estoque_erros_v1' };
+  try {
+    Object.keys(localStorage).filter(k => k.startsWith('estoque_copia_')).forEach(k => {
+      if (tudo) { tirar(k); return; }
+      // 1ª tentativa: só as cópias que já não fazem falta (tudo dela está na lista)
+      try {
+        const c = JSON.parse(localStorage.getItem(k) || 'null'); const chaveLista = listas[k.replace('estoque_copia_', '')];
+        if (!c || !Array.isArray(c.itens) || !chaveLista) { tirar(k); return; }
+        const ids = new Set((JSON.parse(localStorage.getItem(chaveLista) || '[]') || []).map(i => String(i.id)));
+        if (c.itens.every(i => !i || ids.has(String(i.id)))) tirar(k);
+      } catch (e) { tirar(k); }
+    });
+    const limite = Date.now() - 30 * 864e5;
+    Object.keys(localStorage).filter(k => k.endsWith('__removidos')).forEach(k => {
+      try { const t = JSON.parse(localStorage.getItem(k) || '{}'); const n = {}; Object.entries(t).forEach(([id, ts]) => { if (ts > limite) n[id] = ts; });
+        const antes = localStorage.getItem(k).length; localStorage.setItem(k, JSON.stringify(n)); liberou += antes - localStorage.getItem(k).length; } catch (e) {}
+    });
+  } catch (e) {}
+  registrarErro('memória', `liberou ${Math.round(liberou / 1024)} KB`);
+  return liberou;
+}
+function avisoMemoriaCheia() {
+  if (document.getElementById('aviso-memoria')) return;
+  const d = document.createElement('div'); d.id = 'aviso-memoria';
+  d.style.cssText = 'position:fixed;left:10px;right:10px;bottom:calc(80px + env(safe-area-inset-bottom));z-index:99999;background:#c0392b;color:#fff;padding:12px 14px;border-radius:12px;font-size:13px;font-weight:600;box-shadow:0 4px 18px rgba(0,0,0,.3)';
+  d.innerHTML = '⛔ A memória do app neste aparelho está cheia — a lista não pôde ser gravada aqui. As alterações continuam indo para a nuvem. Me mande o relatório de Config → 🩺 Verificar agora. <button onclick="this.parentElement.remove()" style="margin-left:6px;background:#fff;color:#c0392b;border:none;border-radius:6px;padding:4px 10px;font-weight:800">OK</button>';
+  document.body.appendChild(d);
+}
+// Grava no aparelho; se a memória estiver cheia, libera espaço e tenta de novo. Nunca derruba o app.
+function gravarLS(chave, valor) {
+  try { localStorage.setItem(chave, valor); return true; }
+  catch (e) {
+    if (!ehMemoriaCheia(e)) { registrarErro('gravar ' + chave, e); return false; }
+    liberarEspacoLS(false);
+    try { localStorage.setItem(chave, valor); return true; } catch (e2) {}
+    liberarEspacoLS(true); // ainda cheio: tira também as cópias de segurança (a nuvem tem os dados)
+    try { localStorage.setItem(chave, valor); return true; }
+    catch (e3) { registrarErro('memória cheia: ' + chave, e3); avisoMemoriaCheia(); return false; }
+  }
+}
 
 // ===================== DADOS =====================
 const CHAVE = 'estoque_pisos_v2';
@@ -2704,13 +2772,13 @@ function carimbarListaMud(chave, nova) {
 // "<chave>__pend" = { id: hora da alteração } — só sai daqui quando o servidor confirma que recebeu.
 // Assim, mesmo fechando o app sem internet, nada se perde: ao abrir de novo, é enviado.
 function carregarPend(chave) { try { return JSON.parse(localStorage.getItem(chave + '__pend')) || {}; } catch (e) { return {}; } }
-function salvarPend(chave, p) { try { if (Object.keys(p || {}).length) localStorage.setItem(chave + '__pend', JSON.stringify(p)); else localStorage.removeItem(chave + '__pend'); } catch (e) {} }
+function salvarPend(chave, p) { try { if (Object.keys(p || {}).length) gravarLS(chave + '__pend', JSON.stringify(p)); else localStorage.removeItem(chave + '__pend'); } catch (e) {} }
 // Grava a lista no aparelho e manda NA HORA só o que mudou para os outros aparelhos
 function salvarListaTempoReal(nome, chave, lista) {
   const mud = carimbarListaMud(chave, lista);
   const ids = [...mud.novos, ...Object.keys(mud.mudados), ...mud.removidos];
   if (ids.length) { const p = carregarPend(chave); ids.forEach(id => { p[id] = mud.agora; }); salvarPend(chave, p); }
-  localStorage.setItem(chave, JSON.stringify(lista));
+  gravarLS(chave, JSON.stringify(lista));
   if (ids.length) {
     marcarPendenteSync(nome);
     if (window.enviarMudancasTempoReal) { try { window.enviarMudancasTempoReal(nome, mud, lista); } catch (e) { console.error(e); } }
@@ -4859,6 +4927,20 @@ async function executarDiagnostico() {
           <button class="diag-btn" onclick="recuperarSync('${n}','nuvem')">📥 Usar a versão da nuvem</button></div>` : ''}`}
         ${i.estado?.erro ? `<br><span style="color:#c0392b">Último erro de envio: ${escMapa(i.estado.erro)}</span>` : ''}</div>`;
     }).join('')}
+    ${(() => {
+      const tr = r.tempoReal || {};
+      const nomesTR = { conferencia: 'Conferência', quebras: 'Quebras', movimentacoes: 'Movimentações', erros: 'Erros' };
+      const linhas = Object.entries(tr).map(([n, t]) => typeof t === 'string' ? `${nomesTR[n]}: ${t}` :
+        `${t.caido ? '🔴' : t.importado ? '🟢' : '🟡'} ${nomesTR[n]}: ${t.caido ? 'escuta caiu — religando' : t.importado ? 'ligado' : t.pronto ? 'importando' : 'conectando (' + t.recebidos + ')'}${t.ultimoRecebido ? ' · recebido ' + t.ultimoRecebido : ''}${t.erro ? ` · <span style="color:#c0392b">${escMapa(t.erro)}</span>` : ''}`);
+      return `<div class="diag-lista"><b>⚡ Tempo real neste aparelho</b><br><span style="font-size:12px">${linhas.join('<br>')}</span></div>`;
+    })()}
+    ${r.aparelhos ? `<div class="diag-lista"><b>📱 Aparelhos nesta conta</b> <span style="font-size:11px;opacity:.7">(último acesso)</span><br>
+      ${r.aparelhos.map(a => { const antigo = a.versao !== r.versao; return `<div style="font-size:12px;margin-top:3px">${a.eu ? '👉 ' : ''}<b>${escMapa(a.nome || '?')}</b>${a.usuario ? ' · ' + escMapa(a.usuario) : ''} ·
+        <span style="${antigo ? 'color:#c0392b;font-weight:800' : ''}">${escMapa(a.versao || '?')}${antigo ? ' ⚠️ versão diferente' : ''}</span> ·
+        ${a.visto ? new Date(a.visto).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }) : '?'} · ${a.pisos ?? '?'} pisos${a.pendentes ? ` · <span style="color:#b9770e">${a.pendentes} pendente(s)</span>` : ''}${a.tempoReal && a.tempoReal !== 'ligado' ? ` · <span style="color:#c0392b">tempo real: ${escMapa(a.tempoReal)}</span>` : ''}</div>`; }).join('')}
+      <div style="font-size:11px;opacity:.75;margin-top:4px">Aparelho com versão antiga não recebe as mudanças — feche e abra o app nele. Aparelho que não aparece aqui pode estar em outra conta Google.</div></div>` : ''}
+    ${r.erros && r.erros.length ? `<div class="diag-lista"><b>🧾 Últimos erros neste aparelho</b><br><span style="font-size:11px">${r.erros.slice(-5).reverse().map(e => `${escMapa(e.t)} · ${escMapa(e.onde)}: ${escMapa(e.msg)}`).join('<br>')}</span></div>` : ''}
+    ${r.memoria ? `<div style="font-size:11px;opacity:.75;margin-top:6px">💾 Memória do app: ${r.memoria.totalKB} KB</div>` : ''}
     ${htmlCopiasSeguranca()}
     <button class="diag-btn" style="margin-top:8px" onclick="copiarTexto(JSON.stringify(_ultimoDiag, null, 1)).then(ok=>toast(ok?'📋 Relatório copiado — cole na conversa':'❌ Não copiou', !ok))">📋 Copiar relatório</button>
   </div>`;
@@ -5007,10 +5089,17 @@ function renderStatusSync() {
     el.innerHTML = `<span>${txt}</span><button onclick="sincronizarAgora('${nome}')">🔄 Sincronizar agora</button>`;
   });
 }
-function sincronizarAgora(nome) {
-  if (!window._usuarioUid || !window.sincronizarListaAgora) { toast('📴 Não conectado à conta Google.', true); return; }
-  if (!navigator.onLine) { toast('📴 Sem internet no momento — vou enviar assim que voltar.', true); }
-  window.sincronizarListaAgora(nome, true);
+function sincronizarAgora(nome) { atualizarTudo(); }
+// Busca TUDO direto da nuvem (pisos, quebras, movimentações, desenho, usuários), envia o que estiver pendente
+// e diz o resultado de verdade.
+async function atualizarTudo(btn) {
+  if (!window._usuarioUid || !window.atualizarTudoAgora) { toast('📴 Não conectado à conta Google.', true); return; }
+  if (!navigator.onLine) { toast('📴 Sem internet no momento — as alterações ficam guardadas e vão sozinhas quando voltar.', true); return; }
+  const txt = btn ? btn.innerHTML : null;
+  if (btn) { btn.disabled = true; btn.innerHTML = '⏳ Atualizando...'; }
+  toast('⏳ Buscando tudo na nuvem...');
+  try { await window.atualizarTudoAgora(true); }
+  finally { if (btn) { btn.disabled = false; btn.innerHTML = txt; } }
 }
 window.addEventListener('offline', renderStatusSync);
 
@@ -6520,7 +6609,7 @@ document.addEventListener('keydown', e => {
   if (e.key === 'Escape' && document.getElementById('mapa-viewport')?.classList.contains('tela-cheia') && !document.getElementById('mapa-folha')) alternarTelaCheiaMapa();
 });
 
-const VERSAO_APP = '2026.11.06h';
+const VERSAO_APP = '2026.11.06i';
 // ----- Aviso de versão nova (aba aberta há muito tempo no PC continuaria com a versão antiga) -----
 let _ultimaChecagemVersao = 0;
 async function checarNovaVersao() {
@@ -8070,6 +8159,18 @@ window.diagnosticoSync = async function() {
     const off = await medirRelogio(uid);
     if (off != null) { r.relogio = Math.round(off / 1000); r.relogioCorrigido = !!window._relogioOffset; } // segundos (+ adiantado / − atrasado)
   } catch (e) { r.relogioErro = e?.code || e?.message; }
+  try {
+    const sa = await comTempoLimite(getDoc(refAparelhos(uid)), 15000);
+    const meu = idAparelho();
+    r.aparelhos = Object.entries(sa.exists() ? sa.data() : {}).map(([id, a]) => ({ eu: id === meu, nome: a.nome, versao: a.versao, usuario: a.usuario,
+      visto: a.visto?.toMillis ? a.visto.toMillis() : a.local, pisos: a.pisos, pendentes: a.pendentes, tempoReal: a.tempoReal }))
+      .sort((a, b) => (b.visto || 0) - (a.visto || 0)).slice(0, 8);
+  } catch (e) { r.aparelhosErro = e?.code || e?.message; }
+  r.tempoReal = {};
+  LISTAS_TR.forEach(n => { const st = trEstado[n]; r.tempoReal[n] = st ? { pronto: st.pronto, importado: st.importado, caido: st.morto, recebidos: st.recebidos.size + '/' + TR[n].n, enviando: st.voando, erro: st.ultimoErro || null,
+    ultimoRecebido: st.ultimoRecebido ? new Date(st.ultimoRecebido).toLocaleTimeString('pt-BR') : null, ultimoEnvio: st.ultimoEnvio ? new Date(st.ultimoEnvio).toLocaleTimeString('pt-BR') : null } : 'não iniciado'; });
+  r.memoria = usoMemoriaLS();
+  r.erros = (window._logErros || []).slice(-10);
   for (const nome of ['conferencia', 'quebras']) {
     if (TR[nome]) { r.listas[nome] = diagLista(nome); continue; }
     const cfg = SYNC_LISTAS[nome];
@@ -8339,6 +8440,10 @@ const _salvarMovsOriginal = movs => localStorage.setItem(CHAVE_MOV, JSON.stringi
 // junta alterações de aparelhos diferentes. Todos os aparelhos ficam "ouvindo" os pedaços e recebem
 // a mudança em ~1 segundo. Não depende do relógio dos aparelhos.
 const DEL = { __apagar__: true }; // marca "apagar este campo" (vira deleteField() no envio)
+function gravarNuvem(ref, dados, opcoes) {
+  try { return setDoc(ref, dados, opcoes); }
+  catch (e) { return Promise.reject(e); }
+}
 const TR = {
   conferencia:   { chave: CHAVE_CONF,    n: 32, antigoRef: uid => refConferencia(uid),   antigoCampo: 'lista',         ordenar: ordemIdDesc,
                    aoMudar: () => { if (pagAtiva('conferencia')) renderConferencia(); if (pagAtiva('mapa') && !(window.mapaEd && mapaEd.ativo)) renderMapa(); }, msg: '🔄 Conferência atualizada' },
@@ -8373,10 +8478,19 @@ function aplicarPatch(alvo, patch) {
     alvo[k] = v;
   });
 }
-function paraFirestore(v) {
+function paraFirestore(v, dentroDeLista) {
   if (v === DEL) return deleteField();
-  if (Array.isArray(v)) return JSON.parse(JSON.stringify(v));
-  if (v && typeof v === 'object') { const o = {}; Object.entries(v).forEach(([k, x]) => { if (x !== undefined) o[k] = paraFirestore(x); }); return o; }
+  if (Array.isArray(v)) {
+    if (dentroDeLista) return JSON.stringify(v); // o Firebase não aceita lista dentro de lista
+    return v.map(x => x === undefined ? null : paraFirestore(x, true));
+  }
+  if (v && typeof v === 'object') {
+    const o = {};
+    Object.entries(v).forEach(([k, x]) => { if (x === undefined || k === '' || /^__.*__$/.test(k)) return; o[k] = paraFirestore(x, false); });
+    return o;
+  }
+  if (typeof v === 'number' && !isFinite(v)) return null;
+  if (typeof v === 'function' || typeof v === 'symbol') return null;
   return v;
 }
 function itemParaNuvem(it) {
@@ -8418,17 +8532,19 @@ function enviarOps(nome, ops) {
     if (trocas.length) {
       const apagar = { itens: {} }; trocas.forEach(o => { apagar.itens[o.id] = DEL; });
       aplicarPatch(st.baldes[b], apagar);
-      setDoc(refBalde(st.uid, nome, +b), paraFirestore(apagar), { merge: true }).catch(e => erroTempoReal(nome, e, Object.keys(pb.ids)));
+      gravarNuvem(refBalde(st.uid, nome, +b), paraFirestore(apagar), { merge: true }).catch(e => erroTempoReal(nome, e, Object.keys(pb.ids)));
     }
     aplicarPatch(st.baldes[b], JSON.parse(JSON.stringify(pb.patch, (k, v) => v === DEL ? '__DEL__' : v), (k, v) => v === '__DEL__' ? DEL : v));
     st.voando++;
-    setDoc(refBalde(st.uid, nome, +b), paraFirestore(pb.patch), { merge: true })
+    let dadosNuvem;
+    try { dadosNuvem = paraFirestore(pb.patch); } catch (e) { dadosNuvem = null; registrarErro('preparar envio ' + nome, e); }
+    (dadosNuvem ? gravarNuvem(refBalde(st.uid, nome, +b), dadosNuvem, { merge: true }) : Promise.reject(new Error('dados inválidos')))
       .then(() => {
         // servidor confirmou: tira das pendências (se não houve alteração mais nova depois)
         const p = carregarPend(cfg.chave);
         Object.entries(pb.ids).forEach(([id, t]) => { if (p[id] != null && p[id] <= t) delete p[id]; });
         salvarPend(cfg.chave, p);
-        st.ultimoErro = null;
+        st.ultimoErro = null; st.ultimoEnvio = Date.now();
       })
       .catch(e => erroTempoReal(nome, e, Object.keys(pb.ids)))
       .finally(() => { st.voando--; atualizarEstadoTR(nome); });
@@ -8437,11 +8553,28 @@ function enviarOps(nome, ops) {
 }
 function erroTempoReal(nome, e, ids) {
   console.error('Tempo real ' + nome + ':', e);
+  registrarErro('enviar ' + nome, e);
   const st = trEstado[nome]; if (!st) return;
   st.ultimoErro = e?.code || e?.message || 'erro';
   (ids || []).forEach(id => st.emitidos.delete(id)); // poderá ser reenviado (com conferência de horário)
   if (st.ultimoErro === 'permission-denied') avisoPermissaoNuvem();
+  else if (st.ultimoErro === 'invalid-argument' && (st.tentativasInvalidas = (st.tentativasInvalidas || 0) + 1) > 3) { /* dado recusado: não insiste */ }
   else { clearTimeout(st.timerRetry); st.timerRetry = setTimeout(() => trSincronizar(nome), 8000); }
+  atualizarEstadoTR(nome);
+}
+// A escuta da nuvem caiu (o Firebase não religa sozinho depois de um erro) → religa com espera crescente
+const _religar = {};
+function erroOuvinte(nome, e) {
+  console.error('Escuta ' + nome + ':', e);
+  registrarErro('escuta ' + nome, e);
+  const st = trEstado[nome];
+  if (st) { st.morto = true; st.ultimoErro = e?.code || e?.message || 'erro'; }
+  if ((e?.code) === 'permission-denied') { avisoPermissaoNuvem(); atualizarEstadoTR(nome); return; }
+  const r = _religar[nome] || (_religar[nome] = { n: 0 });
+  if (!r.t) { // várias escutas caem juntas: agenda UMA religação só
+    const espera = Math.min(60000, 4000 * Math.pow(2, r.n++));
+    r.t = setTimeout(() => { r.t = null; if (window._usuarioUid) iniciarTempoReal(nome, window._usuarioUid); }, espera);
+  }
   atualizarEstadoTR(nome);
 }
 function avisoPermissaoNuvem() {
@@ -8455,7 +8588,7 @@ function avisoPermissaoNuvem() {
 function atualizarEstadoTR(nome) {
   const st = trEstado[nome]; if (!st) return;
   const n = Object.keys(carregarPend(TR[nome].chave)).length;
-  estadoSync[nome] = { enviando: st.voando > 0 && navigator.onLine, pendente: n > 0, ok: n === 0 ? Date.now() : (estadoSync[nome] || {}).ok, erro: st.ultimoErro, conectado: st.pronto };
+  estadoSync[nome] = { enviando: st.voando > 0 && navigator.onLine, pendente: n > 0, ok: n === 0 ? Date.now() : (estadoSync[nome] || {}).ok, erro: st.ultimoErro, conectado: st.pronto && st.importado && !st.morto };
   renderStatusSync();
 }
 // Compara aparelho × nuvem item a item (pelos horários de cada campo) e manda o que falta
@@ -8547,9 +8680,15 @@ function espelhar(nome) {
   const agora = Date.now();
   const deFora = lista.some(i => { const l = L.get(String(i.id)); const e = st.emitidos.get(String(i.id)); return (!l || JSON.stringify(l) !== JSON.stringify(i)) && !(e && agora - e < 6000); })
     || local.some(l => !out.has(String(l.id)) && !((st.emitidos.get(String(l.id)) || 0) > agora - 6000));
-  localStorage.setItem(cfg.chave, novo);
-  try { cfg.aoMudar(); } catch (e) { console.error(e); }
+  if (!gravarLS(cfg.chave, novo)) return;
+  st.ultimoEspelho = Date.now();
+  try { cfg.aoMudar(); } catch (e) { console.error(e); registrarErro('mostrar ' + nome, e); }
   if (deFora && st.avisar) toast(cfg.msg);
+  // cópia de segurança: se tudo dela já está na lista, não precisa mais ocupar memória
+  try {
+    const c = JSON.parse(localStorage.getItem('estoque_copia_' + nome) || 'null');
+    if (c && c.itens && c.itens.every(i => !i || out.has(String(i.id)))) localStorage.removeItem('estoque_copia_' + nome);
+  } catch (e) {}
 }
 function guardarCopiaSeguranca(nome, itens) {
   const chave = 'estoque_copia_' + nome;
@@ -8575,22 +8714,25 @@ window.restaurarCopiaSeguranca = function(nome) {
 function agendarEspelho(nome) {
   const st = trEstado[nome]; if (!st) return;
   clearTimeout(st.timerEsp);
-  st.timerEsp = setTimeout(() => { espelhar(nome); atualizarEstadoTR(nome); }, 60);
+  st.timerEsp = setTimeout(() => { try { espelhar(nome); } catch (e) { registrarErro('espelhar ' + nome, e); } atualizarEstadoTR(nome); }, 60);
 }
 function iniciarTempoReal(nome, uid) {
   const cfg = TR[nome];
   const ant = trEstado[nome];
   if (ant) ant.unsubs.forEach(u => { try { u(); } catch (e) {} });
   const st = trEstado[nome] = { uid, baldes: Array.from({ length: cfg.n }, () => null), recebidos: new Set(), pronto: false, importado: false,
-    emitidos: new Map(), voando: 0, unsubs: [], remAntigo: {}, avisar: false, antigoRecebido: false };
+    emitidos: new Map(), voando: 0, unsubs: [], remAntigo: {}, avisar: false, antigoRecebido: false, iniciadoEm: Date.now(), morto: false };
   for (let b = 0; b < cfg.n; b++) {
     st.unsubs.push(onSnapshot(refBalde(uid, nome, b), { includeMetadataChanges: true }, snap => {
-      if (trEstado[nome] !== st) return;
-      st.baldes[b] = snap.exists() ? snap.data() : {};
-      if (!snap.metadata.fromCache) st.recebidos.add(b);
-      if (!st.pronto) { if (st.recebidos.size === cfg.n) aoFicarPronto(nome, st); }
-      else agendarEspelho(nome);
-    }, e => erroTempoReal(nome, e)));
+      try {
+        if (trEstado[nome] !== st) return;
+        st.baldes[b] = snap.exists() ? snap.data() : {};
+        st.ultimoRecebido = Date.now();
+        if (!snap.metadata.fromCache) { st.recebidos.add(b); if (st.morto) { st.morto = false; if (_religar[nome]) _religar[nome].n = 0; } }
+        if (!st.pronto) { if (st.recebidos.size === cfg.n) aoFicarPronto(nome, st); }
+        else agendarEspelho(nome);
+      } catch (e) { registrarErro('receber ' + nome, e); }
+    }, e => { if (trEstado[nome] === st) erroOuvinte(nome, e); }));
   }
   atualizarEstadoTR(nome);
 }
@@ -8604,10 +8746,12 @@ function aoFicarPronto(nome, st) {
   // documento antigo: 1ª migração + ponte com aparelhos ainda na versão antiga
   parar = onSnapshot(cfg.antigoRef(st.uid), { includeMetadataChanges: true }, snap => {
     if (trEstado[nome] !== st || snap.metadata.fromCache) return;
-    importarAntigo(nome, snap.exists() ? snap.data() : {});
+    try { importarAntigo(nome, snap.exists() ? snap.data() : {}); } catch (e) { registrarErro('importar antigo ' + nome, e); }
     if (!st.antigoRecebido) { st.antigoRecebido = true; terminarImportacao(nome, st); }
     if (Date.now() > PONTE_ANTIGA_ATE && parar) { try { parar(); } catch (e) {} }
-  }, e => { console.error('doc antigo ' + nome, e); if (!st.antigoRecebido) { st.antigoRecebido = true; terminarImportacao(nome, st); } });
+  }, e => { registrarErro('doc antigo ' + nome, e); if (!st.antigoRecebido) { st.antigoRecebido = true; terminarImportacao(nome, st); } });
+  // se o documento antigo demorar demais (sinal ruim / documento grande), não deixa o aparelho esperando para sempre
+  setTimeout(() => { if (trEstado[nome] === st && !st.antigoRecebido) { st.antigoRecebido = true; registrarErro('doc antigo ' + nome, 'demorou mais de 20s — seguindo sem ele'); terminarImportacao(nome, st); } }, 20000);
   st.unsubs.push(() => parar && parar());
 }
 function terminarImportacao(nome, st) {
@@ -8616,10 +8760,10 @@ function terminarImportacao(nome, st) {
   const pend = carregarPend(cfg.chave);
   const ids = new Set(Object.keys(pend));
   if (!localStorage.getItem(flag)) lerListaLS(cfg.chave).forEach(i => { if (i && i.id != null) ids.add(String(i.id)); });
-  reconciliar(nome, [...ids]);
+  try { reconciliar(nome, [...ids]); } catch (e) { registrarErro('enviar pendências ' + nome, e); }
   st.importado = true;
   try { localStorage.setItem(flag, '1'); } catch (e) {}
-  espelhar(nome);
+  try { espelhar(nome); } catch (e) { registrarErro('espelhar ' + nome, e); }
   st.avisar = true;
   atualizarEstadoTR(nome);
 }
@@ -8804,8 +8948,8 @@ function reconciliarMapas() {
   });
   if (Object.keys(enviar).length) {
     Object.assign(mapasTR.dados, JSON.parse(JSON.stringify(enviar)));
-    setDoc(refMapas(window._usuarioUid), { patios: JSON.parse(JSON.stringify(enviar)) }, { merge: true })
-      .catch(e => { console.error('mapas:', e); if ((e?.code) === 'permission-denied') avisoPermissaoNuvem(); });
+    gravarNuvem(refMapas(window._usuarioUid), { patios: JSON.parse(JSON.stringify(enviar)) }, { merge: true })
+      .catch(e => { registrarErro('enviar mapa', e); if ((e?.code) === 'permission-denied') avisoPermissaoNuvem(); });
   }
   if (mudouLocal) {
     cfgApp.mapasPatios = novoLocal;
@@ -8818,25 +8962,110 @@ window.enviarMapaTempoReal = function(p) {
   const e = mapasSalvos()[p];
   if (!e || !window._usuarioUid) return;
   mapasTR.dados[p] = JSON.parse(JSON.stringify(e));
-  setDoc(refMapas(window._usuarioUid), { patios: { [p]: JSON.parse(JSON.stringify(e)) } }, { merge: true })
-    .catch(err => { console.error('mapas:', err); if ((err?.code) === 'permission-denied') avisoPermissaoNuvem(); });
+  gravarNuvem(refMapas(window._usuarioUid), { patios: { [p]: JSON.parse(JSON.stringify(e)) } }, { merge: true })
+    .catch(err => { registrarErro('enviar mapa', err); if ((err?.code) === 'permission-denied') avisoPermissaoNuvem(); });
 };
 function iniciarMapasTempoReal(uid) {
   if (mapasTR.unsub) { try { mapasTR.unsub(); } catch (e) {} }
   mapasTR.pronto = false; mapasTR.avisar = false;
   mapasTR.unsub = onSnapshot(refMapas(uid), { includeMetadataChanges: true }, snap => {
-    if (snap.metadata.fromCache && !mapasTR.pronto) return;
-    mapasTR.dados = JSON.parse(JSON.stringify((snap.exists() && snap.data().patios) || {}));
-    mapasTR.pronto = true;
-    reconciliarMapas();
-    mapasTR.avisar = true;
-  }, e => { console.error('onSnapshot mapas:', e); if ((e?.code) === 'permission-denied') avisoPermissaoNuvem(); });
+    try {
+      if (snap.metadata.fromCache && !mapasTR.pronto) return;
+      mapasTR.dados = JSON.parse(JSON.stringify((snap.exists() && snap.data().patios) || {}));
+      mapasTR.pronto = true; mapasTR.morto = false;
+      reconciliarMapas();
+      mapasTR.avisar = true;
+    } catch (e) { registrarErro('receber mapa', e); }
+  }, e => {
+    registrarErro('escuta mapa', e); mapasTR.morto = true;
+    if ((e?.code) === 'permission-denied') { avisoPermissaoNuvem(); return; }
+    setTimeout(() => { if (window._usuarioUid) iniciarMapasTempoReal(window._usuarioUid); }, 15000);
+  });
 }
 
 function iniciarTudoTempoReal(uid) {
   LISTAS_TR.forEach(n => iniciarTempoReal(n, uid));
   iniciarMapasTempoReal(uid);
+  registrarAparelho();
 }
+
+// ===================== ATUALIZAR TUDO AGORA (botões 🔄) =====================
+// Lê todos os pedaços direto da nuvem, mostra no aparelho, envia o que estiver pendente e religa escutas caídas.
+window.atualizarTudoAgora = async function(avisar) {
+  const uid = window._usuarioUid;
+  if (!uid) return false;
+  const erros = [];
+  await Promise.all(LISTAS_TR.map(async nome => {
+    const cfg = TR[nome];
+    let st = trEstado[nome];
+    if (!st || st.uid !== uid) { iniciarTempoReal(nome, uid); st = trEstado[nome]; }
+    try {
+      const snaps = await comTempoLimite(Promise.all(Array.from({ length: cfg.n }, (_, b) => getDoc(refBalde(uid, nome, b)))), 30000);
+      if (trEstado[nome] !== st) return;
+      snaps.forEach((sn, b) => { st.baldes[b] = sn.exists() ? sn.data() : {}; st.recebidos.add(b); });
+      st.ultimoRecebido = Date.now();
+      if (st.morto) iniciarTempoReal(nome, uid); // escuta tinha caído → religa
+      if (!st.pronto) aoFicarPronto(nome, st);
+      else if (!st.importado) { /* termina sozinho quando o documento antigo chegar (ou em 20s) */ }
+      else { espelhar(nome); trSincronizar(nome); }
+    } catch (e) { erros.push(nome + ' (' + (e?.code || e?.message || 'erro') + ')'); registrarErro('atualizar ' + nome, e); }
+  }));
+  try {
+    const sm = await comTempoLimite(getDoc(refMapas(uid)), 20000);
+    mapasTR.dados = JSON.parse(JSON.stringify((sm.exists() && sm.data().patios) || {}));
+    mapasTR.pronto = true;
+    reconciliarMapas();
+    if (mapasTR.morto) iniciarMapasTempoReal(uid);
+  } catch (e) { erros.push('mapa (' + (e?.code || e?.message) + ')'); registrarErro('atualizar mapa', e); }
+  try { await window.recarregarConfigNuvem(false); } catch (e) {}
+  if (pagAtiva('conferencia')) renderConferencia();
+  if (pagAtiva('mapa') && !(window.mapaEd && mapaEd.ativo)) renderMapa();
+  if (pagAtiva('movimentacoes')) renderMovimentacoes();
+  if (pagAtiva('quebras')) renderQuebras();
+  registrarAparelho(true);
+  const pend = LISTAS_TR.reduce((t, n) => t + Object.keys(carregarPend(TR[n].chave)).length, 0);
+  if (avisar) toast(erros.length ? `⚠️ Não consegui atualizar: ${erros.join(', ')}` : `✅ Atualizado com a nuvem — ${carregarConferencia().length} pisos na conferência${pend ? ` · enviando ${pend} alteração(ões) deste aparelho` : ''}`, erros.length > 0);
+  return !erros.length;
+};
+
+// ===================== APARELHOS CONECTADOS (versão de cada um) =====================
+const refAparelhos = uid => doc(db, 'usuarios', uid, 'dados', 'aparelhos');
+function idAparelho() {
+  let id = null; try { id = localStorage.getItem('estoque_aparelho_id'); } catch (e) {}
+  if (!id) { id = 'a' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6); try { localStorage.setItem('estoque_aparelho_id', id); } catch (e) {} }
+  return id;
+}
+function descreverAparelho() {
+  const ua = navigator.userAgent || '';
+  const tipo = /Android/i.test(ua) ? 'Celular Android' : /iPhone|iPad/i.test(ua) ? 'iPhone/iPad' : /Windows/i.test(ua) ? 'PC Windows' : /Macintosh/i.test(ua) ? 'Mac' : /Linux/i.test(ua) ? 'PC Linux' : 'Aparelho';
+  const nav = /Edg\//.test(ua) ? 'Edge' : /OPR\//.test(ua) ? 'Opera' : /Firefox/.test(ua) ? 'Firefox' : /Chrome/.test(ua) ? 'Chrome' : /Safari/.test(ua) ? 'Safari' : '';
+  const app = window.matchMedia && window.matchMedia('(display-mode: standalone)').matches;
+  return `${tipo} · ${app ? 'app instalado' : nav || 'navegador'}`;
+}
+let _ultimoRegistroAparelho = 0;
+function registrarAparelho(forcar) {
+  const uid = window._usuarioUid; if (!uid) return;
+  if (!forcar && Date.now() - _ultimoRegistroAparelho < 3 * 60000) return;
+  _ultimoRegistroAparelho = Date.now();
+  const st = trEstado.conferencia;
+  gravarNuvem(refAparelhos(uid), { [idAparelho()]: {
+    versao: VERSAO_APP, visto: serverTimestamp(), local: Date.now(), nome: descreverAparelho(), usuario: window._usuarioAtivo || '',
+    pisos: carregarConferencia().length, pendentes: LISTAS_TR.reduce((t, n) => t + Object.keys(carregarPend(TR[n].chave)).length, 0),
+    tempoReal: st ? (st.morto ? 'caído' : st.importado ? 'ligado' : st.pronto ? 'importando' : 'conectando') : 'não iniciado'
+  } }, { merge: true }).catch(e => registrarErro('registrar aparelho', e));
+}
+window.registrarAparelho = registrarAparelho;
+// Vigia: a cada minuto (com o app aberto) religa o que caiu, envia pendências e avisa que este aparelho está vivo
+setInterval(() => {
+  if (!window._usuarioUid || document.visibilityState !== 'visible') return;
+  LISTAS_TR.forEach(n => {
+    const st = trEstado[n]; if (!st) return;
+    if (!st.pronto && Date.now() - st.iniciadoEm > 45000 && navigator.onLine) { registrarErro('vigia', `${n}: não conectou em 45s (${st.recebidos.size}/${TR[n].n}) — religando`); iniciarTempoReal(n, window._usuarioUid); }
+    else if (st.importado && !st.voando && Object.keys(carregarPend(TR[n].chave)).length) trSincronizar(n);
+  });
+  registrarAparelho();
+}, 60000);
+document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') registrarAparelho(); });
 
 // ===================== AUTH =====================
 onAuthStateChanged(auth, async user => {
