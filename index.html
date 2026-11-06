@@ -6609,7 +6609,7 @@ document.addEventListener('keydown', e => {
   if (e.key === 'Escape' && document.getElementById('mapa-viewport')?.classList.contains('tela-cheia') && !document.getElementById('mapa-folha')) alternarTelaCheiaMapa();
 });
 
-const VERSAO_APP = '2026.11.06i';
+const VERSAO_APP = '2026.11.06j';
 // ----- Aviso de versão nova (aba aberta há muito tempo no PC continuaria com a versão antiga) -----
 let _ultimaChecagemVersao = 0;
 async function checarNovaVersao() {
@@ -6705,6 +6705,9 @@ function layoutRascunhoP2() {
 }
 
 function mapasSalvos() { const m = carregarConfigApp().mapasPatios; return m && typeof m === 'object' ? m : {}; }
+// Desenhos salvos NESTE aparelho que a nuvem ainda não confirmou ({ pátio: hora }). Fora isso, vale o desenho da nuvem.
+function mapasPend() { try { return JSON.parse(localStorage.getItem('estoque_mapas_pend') || '{}') || {}; } catch (e) { return {}; } }
+function salvarMapasPend(p) { if (Object.keys(p || {}).length) gravarLS('estoque_mapas_pend', JSON.stringify(p)); else localStorage.removeItem('estoque_mapas_pend'); }
 // Hora do salvamento de um desenho: sempre depois do último desenho conhecido daquele pátio
 // (um desenho gravado por um aparelho com relógio adiantado não pode "segurar" as alterações novas)
 function tsNovoMapa(p) { const a = mapasSalvos()[p]; return Math.max(agoraSync(), ((a && a.ts) || 0) + 1); }
@@ -6772,8 +6775,9 @@ function novoPatioMapa() {
   if (patiosComMapa().includes(p)) { selecionarPatioMapa(p); return; }
   const cfg = carregarConfigApp();
   cfg.mapasPatios = { ...mapasSalvos(), [p]: { elementos: [], ts: tsNovoMapa(p), em: agoraSync(), por: window._usuarioAtivo || '' } };
-  localStorage.setItem(CHAVE_CONFIG_APP, JSON.stringify(cfg));
-  if (window.enviarMapaTempoReal) window.enviarMapaTempoReal(p); // tempo real
+  gravarLS(CHAVE_CONFIG_APP, JSON.stringify(cfg));
+  { const pend = mapasPend(); pend[p] = Date.now(); salvarMapasPend(pend); }
+  if (window.enviarMapaTempoReal) window.enviarMapaTempoReal(p).catch(() => {}); // tempo real
   salvarConfigApp(cfg);
   selecionarPatioMapa(p);
   entrarEditorMapa();
@@ -6913,15 +6917,18 @@ function salvarEditorMapa() {
   if (!usuarioAtivoIsMestre()) { toast('🔒 Apenas mestres/ADM podem salvar o mapa.', true); return; }
   const cfg = carregarConfigApp();
   cfg.mapasPatios = { ...mapasSalvos(), [mapaEd.patio]: { elementos: JSON.parse(JSON.stringify(mapaEd.els)), ts: tsNovoMapa(mapaEd.patio), em: agoraSync(), por: window._usuarioAtivo || '' } };
-  localStorage.setItem(CHAVE_CONFIG_APP, JSON.stringify(cfg));
-  if (window.enviarMapaTempoReal) window.enviarMapaTempoReal(mapaEd.patio); // tempo real: vai na hora para os outros aparelhos
-  const envio = salvarConfigApp(cfg);
-  delete _cacheLayout[mapaEd.patio];
+  gravarLS(CHAVE_CONFIG_APP, JSON.stringify(cfg));
   const p = mapaEd.patio;
+  const pend = mapasPend(); pend[p] = Date.now(); salvarMapasPend(pend);
+  const envioTR = window.enviarMapaTempoReal ? window.enviarMapaTempoReal(p) : null; // tempo real: vai na hora para os outros aparelhos
+  salvarConfigApp(cfg); // (cópia para aparelhos com versão antiga)
+  delete _cacheLayout[p];
   sairEditorMapa(true);
-  if (!window._usuarioUid) { toast(`💾 Desenho do Pátio ${_pad2(p)} salvo neste aparelho (sem conexão com a conta)`, true); return; }
+  if (!window._usuarioUid || !envioTR) { toast(`💾 Desenho do Pátio ${_pad2(p)} salvo neste aparelho (sem conexão com a conta) — vai para a nuvem quando conectar`, true); return; }
   toast(`⏳ Enviando desenho do Pátio ${_pad2(p)}...`);
-  Promise.resolve(envio).then(ok => { if (ok) toast(`☁️ Desenho do Pátio ${_pad2(p)} salvo e enviado para todos os aparelhos`); });
+  const demora = setTimeout(() => toast(`⏳ O desenho ainda não chegou na nuvem (internet lenta?) — continua tentando sozinho`, true), 10000);
+  envioTR.then(() => { clearTimeout(demora); toast(`☁️ Desenho do Pátio ${_pad2(p)} salvo na nuvem — os outros aparelhos recebem na hora`); })
+    .catch(e => { clearTimeout(demora); toast(`⚠️ O desenho NÃO chegou na nuvem (${e?.code || e?.message || 'erro'}). Ele está guardado aqui e vou tentar de novo.`, true); });
 }
 function edGuardar() { mapaEd.hist.push(JSON.stringify(mapaEd.els)); if (mapaEd.hist.length > 40) mapaEd.hist.shift(); mapaEd.alterado = true; }
 function edDesfazer() {
@@ -7480,6 +7487,7 @@ function aplicarPermissoesDaNuvem(dados) {
   if (dados.config !== undefined) {
     const local = carregarConfigApp();
     const junta = mesclarConfigApp(local, dados.config || {}, 'nuvem');
+    if (window._mapasTempoRealPronto) { if (local.mapasPatios) junta.mapasPatios = local.mapasPatios; else delete junta.mapasPatios; }
     if (jsonEstavel(junta) !== jsonEstavel(local)) {
       mapaMudou = jsonEstavel(junta.mapasPatios || {}) !== jsonEstavel(local.mapasPatios || {});
       localStorage.setItem(CHAVE_CONFIG_APP, JSON.stringify(junta)); mudou = true;
@@ -8271,8 +8279,10 @@ window.sincronizarUsuariosFirestore = async function(uid) {
     try {
       const snap = await getDoc(refUsuarios(uid));
       if (snap.exists() && snap.data().config) {
+        const mapasAqui = config.mapasPatios;
         config = mesclarConfigApp(config, snap.data().config, 'local');
-        localStorage.setItem(CHAVE_CONFIG_APP, JSON.stringify(config));
+        if (window._mapasTempoRealPronto) { if (mapasAqui) config.mapasPatios = mapasAqui; else delete config.mapasPatios; }
+        gravarLS(CHAVE_CONFIG_APP, JSON.stringify(config));
       }
     } catch (e) { console.warn('Leitura antes de gravar falhou:', e); }
     const limpo = v => JSON.parse(JSON.stringify(v ?? null)); // Firestore não aceita "undefined"
@@ -8933,37 +8943,48 @@ window.restaurarAchados = function(nome, incluirParciais) {
 // ===================== MAPA DO PÁTIO EM TEMPO REAL =====================
 // usuarios/{uid}/dados/mapas → { patios: { "4": { elementos, ts, em, por } } }
 const refMapas = uid => doc(db, 'usuarios', uid, 'dados', 'mapas');
-const mapasTR = { pronto: false, unsub: null, dados: {} };
+const mapasTR = { pronto: false, unsub: null, dados: {}, enviando: {} };
+// O desenho da NUVEM é o que vale. Este aparelho só manda o dele quando foi ele que salvou e a nuvem
+// ainda não confirmou (pendente), ou quando a nuvem ainda não tem aquele pátio. Não depende de relógio.
 function reconciliarMapas() {
   if (!mapasTR.pronto || !window._usuarioUid) return;
+  window._mapasTempoRealPronto = true;
   const srv = mapasTR.dados || {};
   const cfgApp = carregarConfigApp();
-  const loc = (cfgApp.mapasPatios && typeof cfgApp.mapasPatios === 'object') ? cfgApp.mapasPatios : {};
-  const enviar = {}; const novoLocal = { ...loc }; let mudouLocal = false;
+  const loc = { ...((cfgApp.mapasPatios && typeof cfgApp.mapasPatios === 'object') ? cfgApp.mapasPatios : {}) };
+  const pend = mapasPend();
+  const enviar = []; let mudouLocal = false;
   new Set([...Object.keys(loc), ...Object.keys(srv)]).forEach(p => {
     const l = loc[p], s = srv[p];
-    const tl = (l && l.ts) || 0, ts = (s && s.ts) || 0;
-    if (l && (!s || tl > ts)) enviar[p] = l;
-    else if (s && (!l || ts > tl || (ts === tl && jsonEstavel(s) !== jsonEstavel(l)))) { novoLocal[p] = s; mudouLocal = true; }
+    if (pend[p] && l) { if (!mapasTR.enviando[p]) enviar.push(p); return; }
+    if (s) { if (!l || jsonEstavel(s) !== jsonEstavel(l)) { loc[p] = JSON.parse(JSON.stringify(s)); mudouLocal = true; } }
+    else if (l) enviar.push(p);
   });
-  if (Object.keys(enviar).length) {
-    Object.assign(mapasTR.dados, JSON.parse(JSON.stringify(enviar)));
-    gravarNuvem(refMapas(window._usuarioUid), { patios: JSON.parse(JSON.stringify(enviar)) }, { merge: true })
-      .catch(e => { registrarErro('enviar mapa', e); if ((e?.code) === 'permission-denied') avisoPermissaoNuvem(); });
-  }
   if (mudouLocal) {
-    cfgApp.mapasPatios = novoLocal;
-    localStorage.setItem(CHAVE_CONFIG_APP, JSON.stringify(cfgApp));
+    cfgApp.mapasPatios = loc;
+    gravarLS(CHAVE_CONFIG_APP, JSON.stringify(cfgApp));
+    Object.keys(_cacheLayout).forEach(k => delete _cacheLayout[k]);
     if (pagAtiva('mapa') && !(window.mapaEd && mapaEd.ativo)) { renderMapa(); if (mapasTR.avisar) toast('🔄 Desenho do mapa atualizado'); }
   }
+  enviar.forEach(p => window.enviarMapaTempoReal(p).catch(() => {}));
 }
 window.reconciliarMapas = reconciliarMapas;
 window.enviarMapaTempoReal = function(p) {
   const e = mapasSalvos()[p];
-  if (!e || !window._usuarioUid) return;
+  if (!e || !window._usuarioUid) return Promise.resolve(false);
+  const marca = mapasPend()[p];
   mapasTR.dados[p] = JSON.parse(JSON.stringify(e));
-  gravarNuvem(refMapas(window._usuarioUid), { patios: { [p]: JSON.parse(JSON.stringify(e)) } }, { merge: true })
-    .catch(err => { registrarErro('enviar mapa', err); if ((err?.code) === 'permission-denied') avisoPermissaoNuvem(); });
+  mapasTR.enviando[p] = true;
+  // uma gravação só (a lista de elementos é substituída inteira)
+  return gravarNuvem(refMapas(window._usuarioUid), { patios: { [p]: JSON.parse(JSON.stringify(e)) } }, { merge: true })
+    .then(() => { const pd = mapasPend(); if (pd[p] != null && (marca == null || pd[p] <= marca)) { delete pd[p]; salvarMapasPend(pd); } return true; })
+    .catch(err => {
+      registrarErro('enviar mapa', err);
+      if ((err?.code) === 'permission-denied') avisoPermissaoNuvem();
+      else setTimeout(() => { if (mapasPend()[p]) reconciliarMapas(); }, 15000);
+      throw err;
+    })
+    .finally(() => { mapasTR.enviando[p] = false; });
 };
 function iniciarMapasTempoReal(uid) {
   if (mapasTR.unsub) { try { mapasTR.unsub(); } catch (e) {} }
