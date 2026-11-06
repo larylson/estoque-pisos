@@ -1952,7 +1952,7 @@ PASSOS PARA RODAR NO GITHUB PAGES:
       <div class="card-titulo">📲 Aplicativo</div>
       <div style="display:flex;align-items:center;gap:12px">
         <img src="icon-192.png" alt="" style="width:56px;height:56px;border-radius:14px;box-shadow:0 2px 8px rgba(0,0,0,.15)" onerror="this.remove()" />
-        <div style="flex:1;font-size:13px;color:var(--texto-suave)" id="config-app-status">Instale o app na tela inicial do celular ou do computador.</div>
+        <div style="flex:1;font-size:13px;color:var(--texto-suave)"><div id="config-app-status">Instale o app na tela inicial do celular ou do computador.</div><div id="config-app-versao" style="font-size:11px;margin-top:4px"></div></div>
       </div>
       <button class="btn-instalar-app config-instalar" onclick="instalarApp()" style="margin-top:12px">📲 Instalar app</button>
     </div>
@@ -2164,6 +2164,7 @@ PASSOS PARA RODAR NO GITHUB PAGES:
       <input type="search" id="mapa-busca" placeholder="🔍 Buscar piso, lote ou endereço..." oninput="buscarNoMapa()" style="width:100%;box-sizing:border-box;padding:11px 14px;font-size:14px;border-radius:10px;border:1.5px solid #d0c9bb;background:#fff;margin-bottom:10px" />
       <div style="display:flex;flex-wrap:wrap;gap:6px;align-items:center">
         <span style="flex:1"></span>
+        <button class="mapa-fonte-btn" onclick="window.recarregarConfigNuvem && window.recarregarConfigNuvem(true)" title="Buscar o desenho mais recente na nuvem">🔄 Atualizar</button>
         <button class="mapa-fonte-btn" id="btn-editar-mapa" onclick="entrarEditorMapa()">✏️ Editar mapa</button>
       </div>
       <div id="mapa-resumo" style="font-size:13px;margin-top:10px;line-height:1.6"></div>
@@ -6188,6 +6189,7 @@ document.addEventListener('keydown', e => {
   if (e.key === 'Escape' && document.getElementById('mapa-viewport')?.classList.contains('tela-cheia') && !document.getElementById('mapa-folha')) alternarTelaCheiaMapa();
 });
 
+const VERSAO_APP = '2026.11.06';
 // ===================== MAPA LIVRE POR PÁTIO (desenho editável) =====================
 // Cada pátio é um desenho com 3 tipos de peça (unidades: 1 apt ≈ 28 x 26):
 //   { t:'rua',  rua:42, x,y,w,h, cor, rotulo? }                 → bloco colorido da rua
@@ -6320,7 +6322,7 @@ function novoPatioMapa() {
   if (!(p > 0 && p < 100)) { toast('⚠️ Número de pátio inválido.', true); return; }
   if (patiosComMapa().includes(p)) { selecionarPatioMapa(p); return; }
   const cfg = carregarConfigApp();
-  cfg.mapasPatios = { ...mapasSalvos(), [p]: { elementos: [] } };
+  cfg.mapasPatios = { ...mapasSalvos(), [p]: { elementos: [], ts: Date.now(), por: window._usuarioAtivo || '' } };
   salvarConfigApp(cfg);
   selecionarPatioMapa(p);
   entrarEditorMapa();
@@ -6431,7 +6433,8 @@ function renderMapa() {
     resumo.innerHTML = `🗺️ <b>${ocupados}</b> apartamento(s) ocupado(s) · <b>${itens.length}</b> item(ns) no Pátio ${_pad2(P)}` +
       (foraDoMapa.length ? `<br><a href="#" onclick="mostrarForaDoMapa();return false" style="color:#b35c00;font-weight:700">⚠️ ${foraDoMapa.length} item(ns) com endereço fora do desenho — ver</a>` : '') +
       (semDesenho.length ? `<br><span style="color:var(--texto-suave)">ℹ️ ${semDesenho.length} item(ns) em pátios sem desenho (${[...new Set(semDesenho.map(i => _pad2(i.patio)))].join(', ')})</span>` : '') +
-      (layout.rascunho && !mapaEd.ativo ? `<br><span style="color:#b35c00">✏️ Desenho em rascunho — confira no galpão e ajuste em <b>Editar mapa</b>.</span>` : '');
+      (layout.rascunho && !mapaEd.ativo ? `<br><span style="color:#b35c00">✏️ Desenho em rascunho — confira no galpão e ajuste em <b>Editar mapa</b>.</span>` : '') +
+      (layout.ts && !mapaEd.ativo ? `<br><span style="font-size:11px;color:var(--texto-suave)">💾 Desenho salvo em ${new Date(layout.ts).toLocaleString('pt-BR')}${layout.por ? ' por ' + escMapa(layout.por) : ''}</span>` : '');
   }
   const be = document.getElementById('btn-editar-mapa');
   if (be) be.style.display = usuarioAtivoIsMestre() && !mapaEd.ativo ? '' : 'none';
@@ -6458,12 +6461,14 @@ function sairEditorMapa(semPerguntar) {
 function salvarEditorMapa() {
   if (!usuarioAtivoIsMestre()) { toast('🔒 Apenas mestres/ADM podem salvar o mapa.', true); return; }
   const cfg = carregarConfigApp();
-  cfg.mapasPatios = { ...mapasSalvos(), [mapaEd.patio]: { elementos: mapaEd.els } };
-  salvarConfigApp(cfg);
+  cfg.mapasPatios = { ...mapasSalvos(), [mapaEd.patio]: { elementos: JSON.parse(JSON.stringify(mapaEd.els)), ts: Date.now(), por: window._usuarioAtivo || '' } };
+  const envio = salvarConfigApp(cfg);
   delete _cacheLayout[mapaEd.patio];
   const p = mapaEd.patio;
   sairEditorMapa(true);
-  toast(`✅ Desenho do Pátio ${_pad2(p)} salvo para todos os aparelhos`);
+  if (!window._usuarioUid) { toast(`💾 Desenho do Pátio ${_pad2(p)} salvo neste aparelho (sem conexão com a conta)`, true); return; }
+  toast(`⏳ Enviando desenho do Pátio ${_pad2(p)}...`);
+  Promise.resolve(envio).then(ok => { if (ok) toast(`☁️ Desenho do Pátio ${_pad2(p)} salvo e enviado para todos os aparelhos`); });
 }
 function edGuardar() { mapaEd.hist.push(JSON.stringify(mapaEd.els)); if (mapaEd.hist.length > 40) mapaEd.hist.shift(); mapaEd.alterado = true; }
 function edDesfazer() {
@@ -6900,7 +6905,29 @@ function salvarPermissoes(p) {
 }
 function salvarConfigApp(c) {
   localStorage.setItem(CHAVE_CONFIG_APP, JSON.stringify(c || {}));
-  if (window._usuarioUid && window.sincronizarUsuariosFirestore) sincronizarUsuariosFirestore(window._usuarioUid);
+  if (window._usuarioUid && window.sincronizarUsuariosFirestore) return sincronizarUsuariosFirestore(window._usuarioUid);
+  return Promise.resolve(false);
+}
+// Desenhos do mapa: cada pátio guarda a hora em que foi salvo (ts). Ao juntar aparelho + nuvem,
+// vence o desenho mais recente de cada pátio — um aparelho desatualizado não sobrescreve mais.
+function mesclarMapasPatios(local, nuvem) {
+  const out = {};
+  const L = local && typeof local === 'object' ? local : {}, N = nuvem && typeof nuvem === 'object' ? nuvem : {};
+  new Set([...Object.keys(L), ...Object.keys(N)]).forEach(k => {
+    const a = L[k], b = N[k];
+    if (a === undefined) { out[k] = b; return; }
+    if (b === undefined) { out[k] = a; return; }
+    const ta = (a && a.ts) || 0, tb = (b && b.ts) || 0;
+    out[k] = ta > tb ? a : b; // empate → nuvem
+  });
+  return out;
+}
+// Junta a config do aparelho com a da nuvem (mapas por hora; o resto vale o que veio)
+function mesclarConfigApp(local, nuvem, prioridade) {
+  const base = prioridade === 'local' ? { ...(nuvem || {}), ...(local || {}) } : { ...(local || {}), ...(nuvem || {}) };
+  const mapas = mesclarMapasPatios((local || {}).mapasPatios, (nuvem || {}).mapasPatios);
+  if (Object.keys(mapas).length) base.mapasPatios = mapas; else delete base.mapasPatios;
+  return base;
 }
 
 function usuarioAtivoValido() {
@@ -6996,14 +7023,26 @@ function aplicarPermissoesDaNuvem(dados) {
     const n = JSON.stringify(dados.permissoes || {});
     if (n !== JSON.stringify(carregarPermissoes())) { localStorage.setItem(CHAVE_PERMISSOES, n); mudou = true; }
   }
+  let mapaMudou = false;
   if (dados.config !== undefined) {
-    const n = JSON.stringify(dados.config || {});
-    if (n !== JSON.stringify(carregarConfigApp())) { localStorage.setItem(CHAVE_CONFIG_APP, n); mudou = true; }
+    const local = carregarConfigApp();
+    const junta = mesclarConfigApp(local, dados.config || {}, 'nuvem');
+    if (jsonEstavel(junta) !== jsonEstavel(local)) {
+      mapaMudou = jsonEstavel(junta.mapasPatios || {}) !== jsonEstavel(local.mapasPatios || {});
+      localStorage.setItem(CHAVE_CONFIG_APP, JSON.stringify(junta)); mudou = true;
+    }
+    // este aparelho tem um desenho mais novo que a nuvem → envia
+    if (jsonEstavel(junta.mapasPatios || {}) !== jsonEstavel((dados.config || {}).mapasPatios || {}) && window._usuarioUid && window.sincronizarUsuariosFirestore) {
+      setTimeout(() => sincronizarUsuariosFirestore(window._usuarioUid), 500);
+    }
   }
   if (mudou) {
     aplicarPermissoes();
     renderOrdemAbas();
-    if (document.getElementById('pag-mapa')?.classList.contains('ativa') && !mapaEd.ativo) renderMapa();
+    if (document.getElementById('pag-mapa')?.classList.contains('ativa') && !mapaEd.ativo) {
+      renderMapa();
+      if (mapaMudou) toast('🔄 Desenho do mapa atualizado');
+    }
   }
   return mudou;
 }
@@ -7176,6 +7215,8 @@ function renderConfig() {
   renderBotoesRua();
   renderOrdemAbas();
   aplicarTema();
+  const ver = document.getElementById('config-app-versao');
+  if (ver) ver.innerHTML = `🏷️ Versão do app: <b>${VERSAO_APP}</b> — confira se é a mesma em todos os aparelhos`;
   const cardOrdem = document.getElementById('config-ordem-card');
   if (cardOrdem) cardOrdem.style.display = usuarioAtivoIsMestre() ? 'block' : 'none';
 }
@@ -7620,11 +7661,45 @@ window.sincronizarUsuariosFirestore = async function(uid) {
   try {
     const lista = carregarUsuarios();
     const senhas = carregarSenhas();
-    await setDoc(refUsuarios(uid), { lista, senhas, permissoes: carregarPermissoes(), config: carregarConfigApp(), atualizadoEm: serverTimestamp() });
-  } catch(e) { console.error('Erro ao sincronizar usuários:', e); }
+    // Junta os desenhos do mapa com os da nuvem antes de gravar (vence o mais recente de cada pátio)
+    let config = carregarConfigApp();
+    try {
+      const snap = await getDoc(refUsuarios(uid));
+      if (snap.exists() && snap.data().config) {
+        config = mesclarConfigApp(config, snap.data().config, 'local');
+        localStorage.setItem(CHAVE_CONFIG_APP, JSON.stringify(config));
+      }
+    } catch (e) { console.warn('Leitura antes de gravar falhou:', e); }
+    const limpo = v => JSON.parse(JSON.stringify(v ?? null)); // Firestore não aceita "undefined"
+    await setDoc(refUsuarios(uid), { lista: limpo(lista), senhas: limpo(senhas), permissoes: limpo(carregarPermissoes()), config: limpo(config), atualizadoEm: serverTimestamp() });
+    return true;
+  } catch(e) {
+    console.error('Erro ao sincronizar usuários:', e);
+    toast('⚠️ Não foi possível enviar as configurações para a nuvem (' + (e?.code || e?.message || 'erro') + ')', true);
+    return false;
+  }
 };
 
 window.sincronizarErrosFirestore = uid => sincronizarLista('erros', uid);
+// Busca de novo usuários/acessos/config/mapas na nuvem (ao voltar para o app ou pelo botão 🔄)
+window.recarregarConfigNuvem = async function(avisar) {
+  if (!window._usuarioUid) { if (avisar) toast('⚠️ Sem conexão com a conta.', true); return false; }
+  try {
+    const snap = await getDoc(refUsuarios(window._usuarioUid));
+    if (!snap.exists()) return false;
+    const d = snap.data();
+    if (d.lista && JSON.stringify(d.lista) !== JSON.stringify(carregarUsuarios())) { localStorage.setItem(CHAVE_USUARIOS, JSON.stringify(d.lista)); atualizarSelectResponsavel(); }
+    const mudou = aplicarPermissoesDaNuvem(d);
+    if (avisar) toast(mudou ? '🔄 Atualizado com a nuvem' : '✅ Já está com a versão mais recente');
+    return mudou;
+  } catch (e) { if (avisar) toast('⚠️ Não foi possível buscar na nuvem (' + (e?.code || e?.message || 'erro') + ')', true); return false; }
+};
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'visible' && window._usuarioUid) {
+    window.recarregarConfigNuvem(false);
+    ['conferencia', 'quebras', 'erros'].forEach(n => sincronizarLista(n, window._usuarioUid));
+  }
+});
 window.sincronizarEstoqueFirestore = uid => sincronizarLista('estoque', uid);
 
 window.sincronizarMovimentacoesFirestore = async function(uid) {
@@ -7846,7 +7921,6 @@ onAuthStateChanged(auth, async user => {
 
     // Listener em tempo real — Usuários
     const unsubUsuarios = onSnapshot(refUsuarios(user.uid), snap => {
-      if (_primeiraVezUsuarios) { _primeiraVezUsuarios = false; return; }
       if (!snap.exists()) return;
       const listaRemota = snap.data().lista || [];
       const senhasRemota = snap.data().senhas || {};
