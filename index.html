@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Estoque Santa Marta — novo endereço</title>
+<meta name="theme-color" content="#1a2e1a">
+<style>
+  :root { color-scheme: light dark; }
+  body { margin:0; min-height:100vh; display:flex; align-items:center; justify-content:center; font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif; background:#f4efe6; color:#1a2e1a; padding:16px; box-sizing:border-box; }
+  .caixa { max-width:420px; width:100%; background:#fff; border-radius:16px; padding:22px; box-shadow:0 6px 24px rgba(0,0,0,.12); text-align:center; }
+  h1 { font-size:20px; margin:0 0 8px; }
+  p { font-size:15px; line-height:1.5; margin:8px 0; }
+  a.botao { display:block; margin-top:14px; padding:14px; border-radius:12px; background:#1a2e1a; color:#fff; font-weight:800; text-decoration:none; font-size:16px; }
+  .peq { font-size:13px; color:#666; }
+  @media (prefers-color-scheme: dark) { body { background:#0f170f; color:#e8f0e8; } .caixa { background:#1c261c; } a.botao { background:#3e7d3e; } .peq { color:#aab4aa; } }
+</style>
+<script>
+  // O app mudou de endereço: larylson.github.io/estoque-pisos → larylson.github.io/santamarta
+  var NOVO = 'https://larylson.github.io/santamarta/';
+  var destino = NOVO + (location.search || '') + (location.hash || '');
+  // desliga o service worker antigo SÓ deste endereço (o do app novo continua)
+  try {
+    if ('serviceWorker' in navigator) navigator.serviceWorker.getRegistrations().then(function (rs) {
+      rs.forEach(function (r) { if (r.scope.indexOf('/estoque-pisos/') !== -1) r.unregister(); });
+    });
+  } catch (e) {}
+  setTimeout(function () { location.replace(destino); }, 1200);
+</script>
+</head>
+<body>
+  <div class="caixa">
+    <h1>📦 O app mudou de endereço</h1>
+    <p>O Estoque Santa Marta agora fica em<br><b>larylson.github.io/santamarta</b></p>
+    <p class="peq">Abrindo o endereço novo… Se você tinha o app instalado, instale de novo pelo endereço novo (botão 📲 Instalar) e apague o ícone antigo. Seus dados continuam.</p>
+    <a class="botao" id="ir" href="https://larylson.github.io/santamarta/">Abrir o app</a>
+  </div>
+  <script>document.getElementById('ir').href = destino;</script>
+</body>
+</html>
